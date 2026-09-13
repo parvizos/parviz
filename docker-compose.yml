@@ -1,0 +1,15 @@
+services:
+  parviz:
+    build: .
+    container_name: parviz
+    ports:
+      - "3000:3000"
+    environment:
+      # Задай свои значения в .env рядом с этим файлом (или в окружении).
+      - APP_PASSWORD=${APP_PASSWORD:-parviz}
+      - AUTH_SECRET=${AUTH_SECRET:-change-me-to-a-long-random-string}
+      - DATABASE_URL=file:./data/parviz.db
+      - APP_TIMEZONE=${APP_TIMEZONE:-Europe/Moscow}
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped

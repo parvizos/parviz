@@ -1,0 +1,19 @@
+{
+  "name": "ParvizOS",
+  "short_name": "ParvizOS",
+  "description": "Личная операционная система: дела, проекты, финансы, учёба.",
+  "lang": "ru",
+  "start_url": "/segodnya",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0d0d10",
+  "theme_color": "#0d0d10",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

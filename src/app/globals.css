@@ -1,0 +1,203 @@
+@import "tailwindcss";
+
+/*
+  ParvizOS — дизайн-система.
+  Один набор токенов, две темы. Всё строится из этих переменных,
+  чтобы интерфейс читался как единое целое, а не набор случайных экранов.
+*/
+
+:root {
+  /* Поверхности */
+  --bg: #f6f6f8;
+  --surface: #ffffff;
+  --surface-2: #f1f1f4;
+  --surface-3: #e9e9ee;
+
+  /* Границы */
+  --border: #e5e5ea;
+  --border-strong: #d5d5dd;
+
+  /* Текст */
+  --text: #191921;
+  --muted: #6a6a76;
+  --faint: #9a9aa6;
+
+  /* Акцент */
+  --accent: #5b5bd6;
+  --accent-hover: #4d4dc4;
+  --accent-fg: #ffffff;
+  --accent-soft: #ecebfb;
+  --accent-soft-text: #4a4ac2;
+
+  /* Семантика */
+  --danger: #d64545;
+  --danger-soft: #fbeaea;
+  --success: #2f9e6f;
+  --success-soft: #e8f5ee;
+  --warning: #c9832a;
+  --warning-soft: #f9f0e2;
+
+  /* Приоритеты задач */
+  --p-high: #d64545;
+  --p-med: #c9832a;
+  --p-low: #5b7cd6;
+
+  --ring: color-mix(in oklab, var(--accent) 40%, transparent);
+  --shadow-sm: 0 1px 2px rgba(20, 20, 30, 0.06);
+  --shadow-md: 0 4px 16px rgba(20, 20, 30, 0.08);
+  --shadow-lg: 0 12px 40px rgba(20, 20, 30, 0.16);
+}
+
+.dark {
+  --bg: #0d0d10;
+  --surface: #161619;
+  --surface-2: #1d1d22;
+  --surface-3: #26262c;
+
+  --border: #26262d;
+  --border-strong: #35353d;
+
+  --text: #ececef;
+  --muted: #a1a1ad;
+  --faint: #6c6c78;
+
+  --accent: #6d6df0;
+  --accent-hover: #8080f5;
+  --accent-fg: #ffffff;
+  --accent-soft: #201f3a;
+  --accent-soft-text: #b3b3f7;
+
+  --danger: #e46464;
+  --danger-soft: #2c1a1c;
+  --success: #4bb98a;
+  --success-soft: #14261f;
+  --warning: #dda054;
+  --warning-soft: #2a2113;
+
+  --p-high: #e46464;
+  --p-med: #dda054;
+  --p-low: #8098e6;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.55);
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-soft-text: var(--accent-soft-text);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-p-high: var(--p-high);
+  --color-p-med: var(--p-med);
+  --color-p-low: var(--p-low);
+
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", "Noto Sans", "Liberation Sans", Arial, sans-serif,
+    "Apple Color Emoji", "Segoe UI Emoji";
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code",
+    "Roboto Mono", "Liberation Mono", Menlo, Consolas, monospace;
+}
+
+* {
+  border-color: var(--border);
+}
+
+html {
+  color-scheme: light;
+}
+html.dark {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Единый фокус-ринг по всему приложению */
+:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--ring);
+  border-radius: 8px;
+}
+
+/* Аккуратный скроллбар */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--faint);
+  background-clip: content-box;
+}
+
+/* Числа в финансах/датах — табличные, чтобы не «прыгали» */
+.tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+@keyframes overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.animate-overlay-in {
+  animation: overlay-in 0.14s ease-out;
+}
+.animate-panel-in {
+  animation: panel-in 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
