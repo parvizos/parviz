@@ -29,7 +29,7 @@ async function main() {
 
   const [study] = await db
     .insert(areas)
-    .values({ name: "Учёба", color: "#5b5bd6", icon: "🎓", position: 0 })
+    .values({ name: "Универ", color: "#5b5bd6", icon: "🎓", position: 0 })
     .returning();
   const [personal] = await db
     .insert(areas)
