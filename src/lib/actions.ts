@@ -8,8 +8,12 @@ import {
   areas,
   projects,
   tasks,
+  subjects,
+  lessons,
+  notes,
   PROJECT_STATUSES,
   TASK_STATUSES,
+  LESSON_KINDS,
 } from "@/db/schema";
 
 function revalidateAll() {
@@ -32,6 +36,7 @@ const createTaskSchema = z.object({
   notes: z.string().max(10_000).nullable().optional(),
   projectId: nullableId,
   areaId: nullableId,
+  subjectId: nullableId,
   scheduledDate: isoDate,
   dueDate: isoDate,
   priority: z.coerce.number().int().min(0).max(3).optional(),
@@ -53,6 +58,15 @@ export async function createTask(input: CreateTaskInput) {
       .limit(1);
     if (proj?.areaId && !areaId) areaId = proj.areaId;
   }
+  // Домашка по предмету наследует сферу предмета.
+  if (data.subjectId && !areaId) {
+    const [subj] = await db
+      .select({ areaId: subjects.areaId })
+      .from(subjects)
+      .where(eq(subjects.id, data.subjectId))
+      .limit(1);
+    if (subj?.areaId) areaId = subj.areaId;
+  }
 
   const [row] = await db
     .insert(tasks)
@@ -61,6 +75,7 @@ export async function createTask(input: CreateTaskInput) {
       notes: data.notes ?? null,
       projectId: data.projectId ?? null,
       areaId,
+      subjectId: data.subjectId ?? null,
       scheduledDate: data.scheduledDate ?? null,
       dueDate: data.dueDate ?? null,
       priority: (data.priority ?? 0) as 0 | 1 | 2 | 3,
@@ -88,6 +103,7 @@ const updateTaskSchema = z.object({
   notes: z.string().max(10_000).nullable().optional(),
   projectId: nullableId,
   areaId: nullableId,
+  subjectId: nullableId,
   scheduledDate: isoDate,
   dueDate: isoDate,
   priority: z.coerce.number().int().min(0).max(3).optional(),
@@ -232,5 +248,176 @@ export async function archiveArea(id: string) {
 export async function deleteArea(id: string) {
   await schemaReady();
   await db.delete(areas).where(eq(areas.id, id));
+  revalidateAll();
+}
+
+/* ───────────────────────  Предметы  ─────────────────────── */
+
+const createSubjectSchema = z.object({
+  name: z.string().trim().min(1, "Введите название").max(200),
+  teacher: z.string().max(200).nullable().optional(),
+  color: z.string().max(32).nullable().optional(),
+  icon: z.string().max(32).nullable().optional(),
+  areaId: nullableId,
+});
+
+export type CreateSubjectInput = z.input<typeof createSubjectSchema>;
+
+export async function createSubject(input: CreateSubjectInput) {
+  await schemaReady();
+  const data = createSubjectSchema.parse(input);
+  const [row] = await db
+    .insert(subjects)
+    .values({
+      name: data.name,
+      teacher: data.teacher ?? null,
+      color: data.color ?? null,
+      icon: data.icon ?? null,
+      areaId: data.areaId ?? null,
+    })
+    .returning({ id: subjects.id });
+  revalidateAll();
+  return row;
+}
+
+const updateSubjectSchema = z.object({
+  name: z.string().trim().min(1).max(200).optional(),
+  teacher: z.string().max(200).nullable().optional(),
+  color: z.string().max(32).nullable().optional(),
+  icon: z.string().max(32).nullable().optional(),
+  areaId: nullableId,
+});
+
+export type UpdateSubjectInput = z.input<typeof updateSubjectSchema>;
+
+export async function updateSubject(id: string, input: UpdateSubjectInput) {
+  await schemaReady();
+  const data = updateSubjectSchema.parse(input);
+  await db.update(subjects).set(data).where(eq(subjects.id, id));
+  revalidateAll();
+}
+
+export async function deleteSubject(id: string) {
+  await schemaReady();
+  // Занятия удалятся каскадом; у задач и конспектов ссылка обнулится.
+  await db.delete(subjects).where(eq(subjects.id, id));
+  revalidateAll();
+}
+
+/* ───────────────────────  Занятия (расписание)  ─────────────────────── */
+
+const timeStr = z
+  .string()
+  .regex(/^\d{2}:\d{2}$/)
+  .nullable()
+  .optional();
+
+const createLessonSchema = z.object({
+  subjectId: z.string().min(1),
+  dayOfWeek: z.coerce.number().int().min(1).max(7),
+  startTime: timeStr,
+  endTime: timeStr,
+  location: z.string().max(120).nullable().optional(),
+  kind: z.enum(LESSON_KINDS).optional(),
+  note: z.string().max(2000).nullable().optional(),
+});
+
+export type CreateLessonInput = z.input<typeof createLessonSchema>;
+
+export async function createLesson(input: CreateLessonInput) {
+  await schemaReady();
+  const data = createLessonSchema.parse(input);
+  const [row] = await db
+    .insert(lessons)
+    .values({
+      subjectId: data.subjectId,
+      dayOfWeek: data.dayOfWeek,
+      startTime: data.startTime ?? null,
+      endTime: data.endTime ?? null,
+      location: data.location ?? null,
+      kind: data.kind ?? "lecture",
+      note: data.note ?? null,
+    })
+    .returning({ id: lessons.id });
+  revalidateAll();
+  return row;
+}
+
+const updateLessonSchema = z.object({
+  dayOfWeek: z.coerce.number().int().min(1).max(7).optional(),
+  startTime: timeStr,
+  endTime: timeStr,
+  location: z.string().max(120).nullable().optional(),
+  kind: z.enum(LESSON_KINDS).optional(),
+  note: z.string().max(2000).nullable().optional(),
+});
+
+export type UpdateLessonInput = z.input<typeof updateLessonSchema>;
+
+export async function updateLesson(id: string, input: UpdateLessonInput) {
+  await schemaReady();
+  const data = updateLessonSchema.parse(input);
+  await db.update(lessons).set(data).where(eq(lessons.id, id));
+  revalidateAll();
+}
+
+export async function deleteLesson(id: string) {
+  await schemaReady();
+  await db.delete(lessons).where(eq(lessons.id, id));
+  revalidateAll();
+}
+
+/* ───────────────────────  Конспекты  ─────────────────────── */
+
+const createNoteSchema = z.object({
+  title: z.string().trim().min(1, "Введите заголовок").max(300),
+  body: z.string().max(50_000).nullable().optional(),
+  subjectId: nullableId,
+  pinned: z.boolean().optional(),
+});
+
+export type CreateNoteInput = z.input<typeof createNoteSchema>;
+
+export async function createNote(input: CreateNoteInput) {
+  await schemaReady();
+  const data = createNoteSchema.parse(input);
+  const [row] = await db
+    .insert(notes)
+    .values({
+      title: data.title,
+      body: data.body ?? null,
+      subjectId: data.subjectId ?? null,
+      pinned: data.pinned ?? false,
+    })
+    .returning({ id: notes.id });
+  revalidateAll();
+  return row;
+}
+
+const updateNoteSchema = z.object({
+  title: z.string().trim().min(1).max(300).optional(),
+  body: z.string().max(50_000).nullable().optional(),
+  subjectId: nullableId,
+  pinned: z.boolean().optional(),
+});
+
+export type UpdateNoteInput = z.input<typeof updateNoteSchema>;
+
+export async function updateNote(id: string, input: UpdateNoteInput) {
+  await schemaReady();
+  const data = updateNoteSchema.parse(input);
+  await db.update(notes).set(data).where(eq(notes.id, id));
+  revalidateAll();
+}
+
+export async function toggleNotePin(id: string, pinned: boolean) {
+  await schemaReady();
+  await db.update(notes).set({ pinned }).where(eq(notes.id, id));
+  revalidateAll();
+}
+
+export async function deleteNote(id: string) {
+  await schemaReady();
+  await db.delete(notes).where(eq(notes.id, id));
   revalidateAll();
 }

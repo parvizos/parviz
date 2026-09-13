@@ -8,6 +8,13 @@
       "when": 1789332777989,
       "tag": "0000_faulty_nightshade",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1789335769391,
+      "tag": "0001_old_clint_barton",
+      "breakpoints": true
     }
   ]
 }

@@ -4,10 +4,17 @@ export type ProjectOption = {
   name: string;
   areaId: string | null;
 };
+export type SubjectOption = {
+  id: string;
+  name: string;
+  color: string | null;
+  areaId: string | null;
+};
 
 export type TaskPrefill = {
   projectId?: string | null;
   areaId?: string | null;
+  subjectId?: string | null;
   scheduledDate?: string | null;
 };
 

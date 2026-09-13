@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Check, Flag, CalendarDays, Folder } from "lucide-react";
+import { Check, Flag, CalendarDays, Folder, GraduationCap } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { toggleTask } from "@/lib/actions";
 import { relativeLabel, dateTone } from "@/lib/dates";
@@ -21,12 +21,14 @@ export function TaskItem({
   today,
   showProject = true,
   showArea = true,
+  showSubject = true,
   showDate = true,
 }: {
   task: TaskWithContext;
   today: string;
   showProject?: boolean;
   showArea?: boolean;
+  showSubject?: boolean;
   showDate?: boolean;
 }) {
   const { openTask } = useUi();
@@ -93,6 +95,12 @@ export function TaskItem({
             <span className="inline-flex items-center gap-1">
               <Folder size={13} />
               <span className="truncate">{task.projectName}</span>
+            </span>
+          )}
+          {showSubject && task.subjectName && (
+            <span className="inline-flex items-center gap-1">
+              <GraduationCap size={13} />
+              <span className="truncate">{task.subjectName}</span>
             </span>
           )}
           {showArea && task.areaName && (

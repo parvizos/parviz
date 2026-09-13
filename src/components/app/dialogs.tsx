@@ -30,6 +30,7 @@ import {
   clientAddDays,
   type AreaOption,
   type ProjectOption,
+  type SubjectOption,
   type TaskPrefill,
 } from "./types";
 
@@ -133,12 +134,14 @@ export function TaskDialog({
   prefill,
   areaOptions,
   projectOptions,
+  subjectOptions,
 }: {
   onClose: () => void;
   task?: TaskWithContext | null;
   prefill?: TaskPrefill;
   areaOptions: AreaOption[];
   projectOptions: ProjectOption[];
+  subjectOptions: SubjectOption[];
 }) {
   const editing = !!task;
   const [title, setTitle] = useState(task?.title ?? "");
@@ -151,6 +154,9 @@ export function TaskDialog({
     task?.projectId ?? prefill?.projectId ?? "",
   );
   const [areaId, setAreaId] = useState(task?.areaId ?? prefill?.areaId ?? "");
+  const [subjectId, setSubjectId] = useState(
+    task?.subjectId ?? prefill?.subjectId ?? "",
+  );
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -175,6 +181,7 @@ export function TaskDialog({
           priority,
           projectId: projectId || null,
           areaId: areaId || null,
+          subjectId: subjectId || null,
         };
         if (editing && task) await updateTask(task.id, payload);
         else await createTask(payload);
@@ -287,6 +294,22 @@ export function TaskDialog({
             </Select>
           </Field>
         </div>
+
+        {subjectOptions.length > 0 && (
+          <Field label="Предмет" hint="Задача станет домашкой по предмету">
+            <Select
+              value={subjectId}
+              onChange={(e) => setSubjectId(e.target.value)}
+            >
+              <option value="">Без предмета</option>
+              {subjectOptions.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        )}
       </div>
     </Modal>
   );

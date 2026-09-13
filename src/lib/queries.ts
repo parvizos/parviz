@@ -13,13 +13,27 @@ import {
   sql,
 } from "drizzle-orm";
 import { db, schemaReady } from "@/db";
-import { areas, projects, tasks, type Task, type Area } from "@/db/schema";
-import { todayISO } from "@/lib/dates";
+import {
+  areas,
+  projects,
+  tasks,
+  subjects,
+  lessons,
+  notes,
+  type Task,
+  type Area,
+  type Subject,
+  type Lesson,
+  type Note,
+} from "@/db/schema";
+import { todayISO, isoWeekday } from "@/lib/dates";
 
 export type TaskWithContext = Task & {
   projectName: string | null;
   areaName: string | null;
   areaColor: string | null;
+  subjectName: string | null;
+  subjectColor: string | null;
 };
 
 const taskSelection = {
@@ -27,6 +41,8 @@ const taskSelection = {
   projectName: projects.name,
   areaName: areas.name,
   areaColor: areas.color,
+  subjectName: subjects.name,
+  subjectColor: subjects.color,
 };
 
 function taskBaseQuery() {
@@ -34,7 +50,8 @@ function taskBaseQuery() {
     .select(taskSelection)
     .from(tasks)
     .leftJoin(projects, eq(tasks.projectId, projects.id))
-    .leftJoin(areas, eq(tasks.areaId, areas.id));
+    .leftJoin(areas, eq(tasks.areaId, areas.id))
+    .leftJoin(subjects, eq(tasks.subjectId, subjects.id));
 }
 
 const openTask = eq(tasks.status, "open");
@@ -283,4 +300,179 @@ export async function getProjectOptions() {
     .from(projects)
     .where(ne(projects.status, "archived"))
     .orderBy(asc(projects.position), asc(projects.createdAt));
+}
+
+/* ───────────────────────  Учёба  ─────────────────────── */
+
+export type SubjectWithCounts = Subject & {
+  lessonCount: number;
+  homeworkOpen: number;
+  noteCount: number;
+};
+
+export type LessonWithSubject = Lesson & {
+  subjectName: string;
+  subjectColor: string | null;
+  subjectIcon: string | null;
+};
+
+export type NoteWithSubject = Note & {
+  subjectName: string | null;
+  subjectColor: string | null;
+};
+
+const lessonSelection = {
+  ...getTableColumns(lessons),
+  subjectName: subjects.name,
+  subjectColor: subjects.color,
+  subjectIcon: subjects.icon,
+};
+
+function lessonBaseQuery() {
+  return db
+    .select(lessonSelection)
+    .from(lessons)
+    .innerJoin(subjects, eq(lessons.subjectId, subjects.id));
+}
+
+export async function getSubjectsWithCounts(): Promise<SubjectWithCounts[]> {
+  await schemaReady();
+  const base = await db
+    .select(getTableColumns(subjects))
+    .from(subjects)
+    .where(isNull(subjects.archivedAt))
+    .orderBy(asc(subjects.position), asc(subjects.createdAt));
+
+  const lessonCounts = await db
+    .select({ subjectId: lessons.subjectId, c: sql<number>`count(*)` })
+    .from(lessons)
+    .groupBy(lessons.subjectId);
+  const hwCounts = await db
+    .select({ subjectId: tasks.subjectId, c: sql<number>`count(*)` })
+    .from(tasks)
+    .where(and(isNotNull(tasks.subjectId), eq(tasks.status, "open")))
+    .groupBy(tasks.subjectId);
+  const noteCounts = await db
+    .select({ subjectId: notes.subjectId, c: sql<number>`count(*)` })
+    .from(notes)
+    .where(isNotNull(notes.subjectId))
+    .groupBy(notes.subjectId);
+
+  const lMap = new Map(lessonCounts.map((r) => [r.subjectId, r.c]));
+  const hMap = new Map(hwCounts.map((r) => [r.subjectId, r.c]));
+  const nMap = new Map(noteCounts.map((r) => [r.subjectId, r.c]));
+
+  return base.map((s) => ({
+    ...s,
+    lessonCount: lMap.get(s.id) ?? 0,
+    homeworkOpen: hMap.get(s.id) ?? 0,
+    noteCount: nMap.get(s.id) ?? 0,
+  }));
+}
+
+export async function getSubjectOptions() {
+  await schemaReady();
+  return db
+    .select({ id: subjects.id, name: subjects.name, color: subjects.color, areaId: subjects.areaId })
+    .from(subjects)
+    .where(isNull(subjects.archivedAt))
+    .orderBy(asc(subjects.position), asc(subjects.createdAt));
+}
+
+export async function getSubject(id: string): Promise<Subject | null> {
+  await schemaReady();
+  const [row] = await db
+    .select()
+    .from(subjects)
+    .where(eq(subjects.id, id))
+    .limit(1);
+  return row ?? null;
+}
+
+export async function getSubjectLessons(id: string): Promise<LessonWithSubject[]> {
+  await schemaReady();
+  return lessonBaseQuery()
+    .where(eq(lessons.subjectId, id))
+    .orderBy(asc(lessons.dayOfWeek), asc(lessons.startTime));
+}
+
+export async function getSubjectHomework(id: string): Promise<TaskWithContext[]> {
+  await schemaReady();
+  return taskBaseQuery()
+    .where(eq(tasks.subjectId, id))
+    .orderBy(
+      asc(sql`case when ${tasks.status} = 'open' then 0 else 1 end`),
+      asc(tasks.scheduledDate),
+      desc(tasks.priority),
+      asc(tasks.createdAt),
+    );
+}
+
+export async function getSubjectNotes(id: string): Promise<NoteWithSubject[]> {
+  await schemaReady();
+  return db
+    .select({
+      ...getTableColumns(notes),
+      subjectName: subjects.name,
+      subjectColor: subjects.color,
+    })
+    .from(notes)
+    .leftJoin(subjects, eq(notes.subjectId, subjects.id))
+    .where(eq(notes.subjectId, id))
+    .orderBy(desc(notes.pinned), desc(notes.updatedAt));
+}
+
+export type ScheduleDay = { iso: number; lessons: LessonWithSubject[] };
+
+export async function getScheduleByDay(): Promise<ScheduleDay[]> {
+  await schemaReady();
+  const rows = await lessonBaseQuery().orderBy(
+    asc(lessons.dayOfWeek),
+    asc(lessons.startTime),
+  );
+  const days: ScheduleDay[] = [1, 2, 3, 4, 5, 6, 7].map((iso) => ({
+    iso,
+    lessons: [],
+  }));
+  for (const r of rows) {
+    const d = days.find((x) => x.iso === r.dayOfWeek);
+    if (d) d.lessons.push(r);
+  }
+  return days;
+}
+
+export async function getTodayLessons(): Promise<LessonWithSubject[]> {
+  await schemaReady();
+  const wd = isoWeekday(todayISO());
+  return lessonBaseQuery()
+    .where(eq(lessons.dayOfWeek, wd))
+    .orderBy(asc(lessons.startTime));
+}
+
+export async function getNotes(): Promise<NoteWithSubject[]> {
+  await schemaReady();
+  return db
+    .select({
+      ...getTableColumns(notes),
+      subjectName: subjects.name,
+      subjectColor: subjects.color,
+    })
+    .from(notes)
+    .leftJoin(subjects, eq(notes.subjectId, subjects.id))
+    .orderBy(desc(notes.pinned), desc(notes.updatedAt));
+}
+
+export async function getNote(id: string): Promise<NoteWithSubject | null> {
+  await schemaReady();
+  const [row] = await db
+    .select({
+      ...getTableColumns(notes),
+      subjectName: subjects.name,
+      subjectColor: subjects.color,
+    })
+    .from(notes)
+    .leftJoin(subjects, eq(notes.subjectId, subjects.id))
+    .where(eq(notes.id, id))
+    .limit(1);
+  return row ?? null;
 }

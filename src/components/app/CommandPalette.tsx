@@ -13,10 +13,13 @@ import {
   FolderKanban,
   Layers,
   Folder,
+  CalendarRange,
+  GraduationCap,
+  NotebookPen,
   CornerDownLeft,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
-import type { AreaOption, ProjectOption } from "./types";
+import type { AreaOption, ProjectOption, SubjectOption } from "./types";
 
 type Command = {
   id: string;
@@ -31,18 +34,24 @@ export function CommandPalette({
   onClose,
   areas,
   projects,
+  subjects,
   onNewTask,
   onNewProject,
   onNewArea,
+  onNewSubject,
+  onNewNote,
   onToggleTheme,
 }: {
   open: boolean;
   onClose: () => void;
   areas: AreaOption[];
   projects: ProjectOption[];
+  subjects: SubjectOption[];
   onNewTask: () => void;
   onNewProject: () => void;
   onNewArea: () => void;
+  onNewSubject: () => void;
+  onNewNote: () => void;
   onToggleTheme: () => void;
 }) {
   const router = useRouter();
@@ -64,11 +73,16 @@ export function CommandPalette({
       { id: "new-task", label: "Новая задача", hint: "N", icon: <Plus size={16} />, run: act(onNewTask) },
       { id: "new-project", label: "Новый проект", icon: <Plus size={16} />, run: act(onNewProject) },
       { id: "new-area", label: "Новая сфера", icon: <Plus size={16} />, run: act(onNewArea) },
+      { id: "new-subject", label: "Новый предмет", icon: <Plus size={16} />, run: act(onNewSubject) },
+      { id: "new-note", label: "Новый конспект", icon: <Plus size={16} />, run: act(onNewNote) },
       { id: "nav-today", label: "Сегодня", icon: <CalendarDays size={16} />, run: go("/segodnya") },
       { id: "nav-inbox", label: "Входящие", icon: <Inbox size={16} />, run: go("/vhodyaschie") },
       { id: "nav-upcoming", label: "Предстоящее", icon: <CalendarClock size={16} />, run: go("/predstoyaschee") },
       { id: "nav-projects", label: "Проекты", icon: <FolderKanban size={16} />, run: go("/proekty") },
       { id: "nav-areas", label: "Сферы", icon: <Layers size={16} />, run: go("/sfery") },
+      { id: "nav-schedule", label: "Расписание", icon: <CalendarRange size={16} />, run: go("/raspisanie") },
+      { id: "nav-subjects", label: "Предметы", icon: <GraduationCap size={16} />, run: go("/predmety") },
+      { id: "nav-notes", label: "Конспекты", icon: <NotebookPen size={16} />, run: go("/konspekty") },
       { id: "theme", label: "Переключить тему", icon: <Sun size={16} />, run: act(onToggleTheme) },
       ...projects.map((p) => ({
         id: `p-${p.id}`,
@@ -76,6 +90,13 @@ export function CommandPalette({
         hint: "проект",
         icon: <Folder size={16} />,
         run: go(`/proekty/${p.id}`),
+      })),
+      ...subjects.map((s) => ({
+        id: `s-${s.id}`,
+        label: s.name,
+        hint: "предмет",
+        icon: <GraduationCap size={16} />,
+        run: go(`/predmety/${s.id}`),
       })),
       ...areas.map((a) => ({
         id: `a-${a.id}`,
@@ -90,7 +111,7 @@ export function CommandPalette({
         run: go(`/sfery/${a.id}`),
       })),
     ];
-  }, [router, onClose, onNewTask, onNewProject, onNewArea, onToggleTheme, projects, areas]);
+  }, [router, onClose, onNewTask, onNewProject, onNewArea, onNewSubject, onNewNote, onToggleTheme, projects, subjects, areas]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();

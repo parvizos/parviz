@@ -37,6 +37,12 @@ export function addDaysISO(iso: string, days: number): string {
   return dt.toISOString().slice(0, 10);
 }
 
+/** День недели по ISO: 1 — понедельник … 7 — воскресенье. */
+export function isoWeekday(iso: string): number {
+  const day = isoToUTC(iso).getUTCDay(); // 0 — воскресенье
+  return day === 0 ? 7 : day;
+}
+
 /** Разница в целых днях: b - a (по датам, без времени). */
 export function diffDays(aISO: string, bISO: string): number {
   return Math.round(

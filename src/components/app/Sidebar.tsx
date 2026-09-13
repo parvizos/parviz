@@ -8,6 +8,8 @@ import {
   CalendarClock,
   FolderKanban,
   Layers,
+  CalendarRange,
+  BookText,
   Plus,
   Wallet,
   Users,
@@ -49,11 +51,16 @@ const MAIN: NavItem[] = [
   { href: "/sfery", label: "Сферы", icon: Layers },
 ];
 
+const STUDY: NavItem[] = [
+  { href: "/raspisanie", label: "Расписание", icon: CalendarRange },
+  { href: "/predmety", label: "Предметы", icon: GraduationCap },
+  { href: "/konspekty", label: "Конспекты", icon: BookText },
+];
+
 const SOON: { label: string; icon: LucideIcon }[] = [
   { label: "Финансы", icon: Wallet },
   { label: "Люди", icon: Users },
   { label: "Организации", icon: Building2 },
-  { label: "Учёба", icon: GraduationCap },
   { label: "Ежедневник", icon: NotebookPen },
 ];
 
@@ -204,6 +211,35 @@ export function Sidebar({
                       {a.openTaskCount}
                     </span>
                   )}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+
+        {/* Учёба */}
+        <div className="mt-6 px-3">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-faint">
+            Учёба
+          </span>
+        </div>
+        <ul className="mt-1 flex flex-col gap-0.5">
+          {STUDY.map((item) => {
+            const active = isActive(pathname, item.href);
+            return (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  onClick={onNavigate}
+                  className={cn(
+                    "flex h-9 items-center gap-3 rounded-xl px-3 text-[14px] transition-colors",
+                    active
+                      ? "bg-accent-soft font-medium text-accent-soft-text"
+                      : "text-muted hover:bg-surface-2 hover:text-text",
+                  )}
+                >
+                  <item.icon size={17} className="shrink-0" />
+                  <span className="flex-1">{item.label}</span>
                 </Link>
               </li>
             );

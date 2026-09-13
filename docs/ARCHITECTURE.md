@@ -89,17 +89,21 @@ organizations(id, name, kind, note, …)
 `transaction ↔ person/organization`, `lesson ↔ organization` (вуз). История
 общения и долгов собирается по `links`, ведущим к человеку.
 
-### Учёба
+### Учёба — реализовано
 
 ```
-subjects(id, name, areaId?, teacherPersonId?, color…)
-lessons(id, subjectId, dayOfWeek|date, startTime, endTime, room…)   // расписание
-notes(id, title, body, subjectId?, lessonId?…)                       // конспекты
+subjects(id, name, teacher, color, icon, areaId?…)                 // предметы
+lessons(id, subjectId, dayOfWeek 1–7, startTime, endTime, kind, location…)  // расписание
+notes(id, title, body, subjectId?, pinned…)                        // конспекты
+tasks.subjectId  →  subjects.id                                    // домашка
 ```
 
-Домашка — это обычная `task`, связанная с `subject`/`lesson` через `links`,
-поэтому она автоматически попадает в «Сегодня» и «Предстоящее». Учёба —
-частный случай сферы, а не отдельный мир.
+Домашка — это **обычная задача** с прямой ссылкой `tasks.subjectId` (как
+`projectId`/`areaId`): отдельной сущности «домашка» нет, поэтому она сразу
+попадает в «Сегодня» и «Предстоящее», а на странице предмета собрана вместе с
+расписанием и конспектами. На «Сегодня» показываются пары текущего дня
+(`getTodayLessons`). Предмет наследует сферу, а домашка — сферу предмета, так
+что учёба — частный случай сферы, а не отдельный мир.
 
 ### Ежедневник
 

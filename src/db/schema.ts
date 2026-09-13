@@ -179,6 +179,10 @@ export const tasks = sqliteTable(
     areaId: text("area_id").references(() => areas.id, {
       onDelete: "set null",
     }),
+    /** Предмет (для домашки): задача, привязанная к дисциплине. */
+    subjectId: text("subject_id").references(() => subjects.id, {
+      onDelete: "set null",
+    }),
     /** Когда сделать (попадает в «Сегодня»/«Предстоящее»): YYYY-MM-DD. */
     scheduledDate: text("scheduled_date"),
     /** Крайний срок: YYYY-MM-DD. */
@@ -193,9 +197,81 @@ export const tasks = sqliteTable(
     index("tasks_status_idx").on(t.status),
     index("tasks_project_idx").on(t.projectId),
     index("tasks_area_idx").on(t.areaId),
+    index("tasks_subject_idx").on(t.subjectId),
     index("tasks_scheduled_idx").on(t.scheduledDate),
     index("tasks_due_idx").on(t.dueDate),
   ],
+);
+
+/* ───────────────────────  Домен: Учёба  ─────────────────────── */
+
+/** Учебный предмет/дисциплина. */
+export const subjects = sqliteTable(
+  "subjects",
+  {
+    id: id(),
+    name: text("name").notNull(),
+    teacher: text("teacher"),
+    color: text("color"),
+    icon: text("icon"),
+    areaId: text("area_id").references(() => areas.id, { onDelete: "set null" }),
+    position: integer("position").notNull().default(0),
+    archivedAt: integer("archived_at", { mode: "timestamp_ms" }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("subjects_position_idx").on(t.position)],
+);
+
+export const LESSON_KINDS = [
+  "lecture",
+  "seminar",
+  "lab",
+  "practice",
+  "other",
+] as const;
+export type LessonKind = (typeof LESSON_KINDS)[number];
+
+/** Занятие в расписании: еженедельное, по дню недели (ISO: 1 — Пн … 7 — Вс). */
+export const lessons = sqliteTable(
+  "lessons",
+  {
+    id: id(),
+    subjectId: text("subject_id")
+      .notNull()
+      .references(() => subjects.id, { onDelete: "cascade" }),
+    dayOfWeek: integer("day_of_week").notNull(),
+    /** Время в формате "HH:MM". */
+    startTime: text("start_time"),
+    endTime: text("end_time"),
+    location: text("location"),
+    kind: text("kind").$type<LessonKind>().notNull().default("lecture"),
+    note: text("note"),
+    position: integer("position").notNull().default(0),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    index("lessons_subject_idx").on(t.subjectId),
+    index("lessons_day_idx").on(t.dayOfWeek),
+  ],
+);
+
+/** Конспект / заметка (блокнот). */
+export const notes = sqliteTable(
+  "notes",
+  {
+    id: id(),
+    title: text("title").notNull(),
+    body: text("body"),
+    subjectId: text("subject_id").references(() => subjects.id, {
+      onDelete: "set null",
+    }),
+    pinned: integer("pinned", { mode: "boolean" }).notNull().default(false),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("notes_subject_idx").on(t.subjectId)],
 );
 
 export type Area = typeof areas.$inferSelect;
@@ -205,3 +281,9 @@ export type NewProject = typeof projects.$inferInsert;
 export type Task = typeof tasks.$inferSelect;
 export type NewTask = typeof tasks.$inferInsert;
 export type Tag = typeof tags.$inferSelect;
+export type Subject = typeof subjects.$inferSelect;
+export type NewSubject = typeof subjects.$inferInsert;
+export type Lesson = typeof lessons.$inferSelect;
+export type NewLesson = typeof lessons.$inferInsert;
+export type Note = typeof notes.$inferSelect;
+export type NewNote = typeof notes.$inferInsert;

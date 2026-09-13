@@ -11,6 +11,7 @@ export function TaskGroup({
   tone = "default",
   showProject = true,
   showArea = true,
+  showSubject = true,
   showDate = true,
   right,
 }: {
@@ -21,6 +22,7 @@ export function TaskGroup({
   tone?: "default" | "danger";
   showProject?: boolean;
   showArea?: boolean;
+  showSubject?: boolean;
   showDate?: boolean;
   right?: ReactNode;
 }) {
@@ -51,6 +53,7 @@ export function TaskGroup({
             today={today}
             showProject={showProject}
             showArea={showArea}
+            showSubject={showSubject}
             showDate={showDate}
           />
         ))}

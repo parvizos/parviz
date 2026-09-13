@@ -9,8 +9,21 @@ import {
   type ReactNode,
 } from "react";
 import { TaskDialog, ProjectDialog, AreaDialog } from "./dialogs";
+import {
+  SubjectDialog,
+  LessonDialog,
+  NoteDialog,
+  type SubjectForEdit,
+  type LessonForEdit,
+  type NoteForEdit,
+} from "./study-dialogs";
 import { CommandPalette } from "./CommandPalette";
-import type { AreaOption, ProjectOption, TaskPrefill } from "./types";
+import type {
+  AreaOption,
+  ProjectOption,
+  SubjectOption,
+  TaskPrefill,
+} from "./types";
 import type { TaskWithContext } from "@/lib/queries";
 import type { ProjectStatus } from "@/db/schema";
 
@@ -36,6 +49,12 @@ interface UiValue {
   openEditProject: (p: ProjectForEdit) => void;
   openNewArea: () => void;
   openEditArea: (a: AreaForEdit) => void;
+  openNewSubject: () => void;
+  openEditSubject: (s: SubjectForEdit) => void;
+  openNewLesson: (opts?: { subjectId?: string | null; day?: number }) => void;
+  openEditLesson: (l: LessonForEdit) => void;
+  openNewNote: (opts?: { subjectId?: string | null }) => void;
+  openEditNote: (n: NoteForEdit) => void;
   openCommand: () => void;
   toggleTheme: () => void;
   theme: "light" | "dark";
@@ -53,10 +72,12 @@ export function UiProvider({
   children,
   areaOptions,
   projectOptions,
+  subjectOptions,
 }: {
   children: ReactNode;
   areaOptions: AreaOption[];
   projectOptions: ProjectOption[];
+  subjectOptions: SubjectOption[];
 }) {
   const [task, setTask] = useState<{
     open: boolean;
@@ -72,6 +93,21 @@ export function UiProvider({
     open: false,
     area: null,
   });
+  const [subject, setSubject] = useState<{
+    open: boolean;
+    subject: SubjectForEdit | null;
+  }>({ open: false, subject: null });
+  const [lesson, setLesson] = useState<{
+    open: boolean;
+    lesson: LessonForEdit | null;
+    subjectId?: string | null;
+    day?: number;
+  }>({ open: false, lesson: null });
+  const [note, setNote] = useState<{
+    open: boolean;
+    note: NoteForEdit | null;
+    subjectId?: string | null;
+  }>({ open: false, note: null });
   const [cmdOpen, setCmdOpen] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">("light");
 
@@ -116,9 +152,47 @@ export function UiProvider({
     (a: AreaForEdit) => setArea({ open: true, area: a }),
     [],
   );
+  const openNewSubject = useCallback(
+    () => setSubject({ open: true, subject: null }),
+    [],
+  );
+  const openEditSubject = useCallback(
+    (s: SubjectForEdit) => setSubject({ open: true, subject: s }),
+    [],
+  );
+  const openNewLesson = useCallback(
+    (opts?: { subjectId?: string | null; day?: number }) =>
+      setLesson({
+        open: true,
+        lesson: null,
+        subjectId: opts?.subjectId ?? null,
+        day: opts?.day,
+      }),
+    [],
+  );
+  const openEditLesson = useCallback(
+    (l: LessonForEdit) => setLesson({ open: true, lesson: l }),
+    [],
+  );
+  const openNewNote = useCallback(
+    (opts?: { subjectId?: string | null }) =>
+      setNote({ open: true, note: null, subjectId: opts?.subjectId ?? null }),
+    [],
+  );
+  const openEditNote = useCallback(
+    (n: NoteForEdit) => setNote({ open: true, note: n }),
+    [],
+  );
   const openCommand = useCallback(() => setCmdOpen(true), []);
 
-  const anyOpen = task.open || project.open || area.open || cmdOpen;
+  const anyOpen =
+    task.open ||
+    project.open ||
+    area.open ||
+    subject.open ||
+    lesson.open ||
+    note.open ||
+    cmdOpen;
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -154,6 +228,12 @@ export function UiProvider({
         openEditProject,
         openNewArea,
         openEditArea,
+        openNewSubject,
+        openEditSubject,
+        openNewLesson,
+        openEditLesson,
+        openNewNote,
+        openEditNote,
         openCommand,
         toggleTheme,
         theme,
@@ -168,6 +248,7 @@ export function UiProvider({
           prefill={task.prefill}
           areaOptions={areaOptions}
           projectOptions={projectOptions}
+          subjectOptions={subjectOptions}
         />
       )}
       {project.open && (
@@ -184,15 +265,42 @@ export function UiProvider({
           area={area.area}
         />
       )}
+      {subject.open && (
+        <SubjectDialog
+          onClose={() => setSubject((s) => ({ ...s, open: false }))}
+          subject={subject.subject}
+          areaOptions={areaOptions}
+        />
+      )}
+      {lesson.open && (
+        <LessonDialog
+          onClose={() => setLesson((s) => ({ ...s, open: false }))}
+          lesson={lesson.lesson}
+          subjectOptions={subjectOptions}
+          defaultSubjectId={lesson.subjectId}
+          defaultDay={lesson.day}
+        />
+      )}
+      {note.open && (
+        <NoteDialog
+          onClose={() => setNote((s) => ({ ...s, open: false }))}
+          note={note.note}
+          subjectOptions={subjectOptions}
+          defaultSubjectId={note.subjectId}
+        />
+      )}
       {cmdOpen && (
         <CommandPalette
           open
           onClose={() => setCmdOpen(false)}
           areas={areaOptions}
           projects={projectOptions}
+          subjects={subjectOptions}
           onNewTask={() => openNewTask()}
           onNewProject={() => openNewProject()}
           onNewArea={openNewArea}
+          onNewSubject={openNewSubject}
+          onNewNote={() => openNewNote()}
           onToggleTheme={toggleTheme}
         />
       )}
