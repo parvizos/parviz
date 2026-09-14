@@ -26,6 +26,7 @@ import {
   Award,
   AlarmClock,
   Timer,
+  BarChart3,
   Sun,
   Moon,
   LogOut,
@@ -70,6 +71,7 @@ const STUDY: NavItem[] = [
   { href: "/sessiya", label: "Сессия", icon: AlarmClock },
   { href: "/konspekty", label: "Конспекты", icon: BookText },
   { href: "/focus", label: "Фокус", icon: Timer },
+  { href: "/uchyoba", label: "Аналитика", icon: BarChart3 },
 ];
 
 const FINANCE: NavItem[] = [

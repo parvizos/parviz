@@ -27,6 +27,9 @@ import {
   exams,
   attendance,
   studySessions,
+  topics,
+  materials,
+  files,
 } from "./schema";
 
 const rub = (n: number) => n * 100; // рубли → копейки
@@ -215,7 +218,7 @@ async function main() {
     { subjectId: hist.id, date: today(-10), status: "excused" },
   ]);
 
-  // Учебные сессии (таймер фокуса).
+  // Учебные сессии (таймер фокуса) — за последние недели, для графика.
   await db.insert(studySessions).values([
     { subjectId: ma.id, seconds: 50 * 60, date: today(0) },
     { subjectId: prog.id, seconds: 25 * 60, date: today(0) },
@@ -223,6 +226,45 @@ async function main() {
     { subjectId: hist.id, seconds: 40 * 60, date: today(-2) },
     { subjectId: prog.id, seconds: 90 * 60, date: today(-3) },
     { subjectId: ma.id, seconds: 25 * 60, date: today(-5) },
+    { subjectId: prog.id, seconds: 60 * 60, date: today(-9) },
+    { subjectId: ma.id, seconds: 75 * 60, date: today(-11) },
+    { subjectId: hist.id, seconds: 45 * 60, date: today(-16) },
+    { subjectId: ma.id, seconds: 90 * 60, date: today(-18) },
+    { subjectId: prog.id, seconds: 50 * 60, date: today(-24) },
+  ]);
+
+  // Программа курса: темы с разными статусами.
+  await db.insert(topics).values([
+    { subjectId: ma.id, title: "Пределы и непрерывность", status: "known", position: 0 },
+    { subjectId: ma.id, title: "Производная и дифференциал", status: "known", position: 1 },
+    { subjectId: ma.id, title: "Ряды", status: "learning", position: 2 },
+    { subjectId: ma.id, title: "Интегралы", status: "review", position: 3 },
+    { subjectId: ma.id, title: "Функции нескольких переменных", status: "not_started", position: 4 },
+    { subjectId: prog.id, title: "Массивы и строки", status: "known", position: 0 },
+    { subjectId: prog.id, title: "Рекурсия", status: "known", position: 1 },
+    { subjectId: prog.id, title: "Динамическое программирование", status: "learning", position: 2 },
+    { subjectId: prog.id, title: "Графы", status: "not_started", position: 3 },
+  ]);
+
+  // Материалы: файл в базе + ссылки.
+  const formulaBuf = Buffer.from(
+    "Формулы по матанализу\n\nЗамечательные пределы: lim (sin x)/x = 1 при x→0\nПроизводная степени: (x^n)' = n·x^(n-1)\nОсновная формула Ньютона–Лейбница.\n",
+    "utf8",
+  );
+  const [formulaFile] = await db
+    .insert(files)
+    .values({
+      name: "Формулы_матан.txt",
+      mime: "text/plain",
+      data: formulaBuf,
+      size: formulaBuf.length,
+    })
+    .returning();
+  await db.insert(materials).values([
+    { subjectId: ma.id, title: "Методичка по матанализу", kind: "link", url: "https://drive.google.com/file/methodichka" },
+    { subjectId: ma.id, title: "Формулы (шпаргалка)", kind: "file", fileId: formulaFile.id },
+    { subjectId: ma.id, title: "Лекция: ряды", kind: "video", url: "https://www.youtube.com/watch?v=ryady" },
+    { subjectId: prog.id, title: "Курс на Stepik", kind: "link", url: "https://stepik.org/course/123" },
   ]);
 
   await db.insert(tasks).values([
@@ -467,7 +509,7 @@ async function main() {
   });
 
   console.log(
-    "Готово: демо-данные (сферы, задачи, учёба, оценки, сессия, посещаемость, фокус, ежедневник, финансы, долги, планы, цели, люди).",
+    "Готово: демо-данные (сферы, задачи, учёба, оценки, сессия, посещаемость, фокус, темы, материалы, ежедневник, финансы, долги, планы, цели, люди).",
   );
 }
 

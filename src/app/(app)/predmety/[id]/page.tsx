@@ -13,6 +13,8 @@ import {
   getSubjectExams,
   getAttendanceStatsBySubject,
   getSubjectAttendance,
+  getSubjectTopics,
+  getSubjectMaterials,
 } from "@/lib/study-queries";
 import { todayISO, ruMonthDayShort } from "@/lib/dates";
 import { areaColor } from "@/lib/task-format";
@@ -27,6 +29,7 @@ import {
   NewGradeButton,
   NewExamButton,
 } from "@/components/app/study2-items";
+import { TopicList, SubjectMaterials } from "@/components/app/study3-items";
 import {
   EditSubjectButton,
   NewLessonButton,
@@ -54,17 +57,29 @@ export default async function SubjectDetailPage({
   const subject = await getSubject(id);
   if (!subject) notFound();
 
-  const [lessons, homework, notes, grades, averages, exams, attStatsMap, attHistory] =
-    await Promise.all([
-      getSubjectLessons(id),
-      getSubjectHomework(id),
-      getSubjectNotes(id),
-      getGrades({ subjectId: id }),
-      getSubjectAverages(),
-      getSubjectExams(id),
-      getAttendanceStatsBySubject(),
-      getSubjectAttendance(id),
-    ]);
+  const [
+    lessons,
+    homework,
+    notes,
+    grades,
+    averages,
+    exams,
+    attStatsMap,
+    attHistory,
+    topics,
+    materials,
+  ] = await Promise.all([
+    getSubjectLessons(id),
+    getSubjectHomework(id),
+    getSubjectNotes(id),
+    getGrades({ subjectId: id }),
+    getSubjectAverages(),
+    getSubjectExams(id),
+    getAttendanceStatsBySubject(),
+    getSubjectAttendance(id),
+    getSubjectTopics(id),
+    getSubjectMaterials(id),
+  ]);
   const today = todayISO();
   const avg = averages.find((a) => a.subjectId === id) ?? null;
   const att = attStatsMap.get(id) ?? null;
@@ -292,6 +307,14 @@ export default async function SubjectDetailPage({
         )}
       </section>
 
+      {/* Программа курса */}
+      <section className="mb-8">
+        <h2 className="mb-2.5 px-1 text-[13px] font-semibold uppercase tracking-wide text-muted">
+          Программа
+        </h2>
+        <TopicList subjectId={id} topics={topics} />
+      </section>
+
       {/* Домашка */}
       <section className="mb-8">
         <h2 className="mb-2.5 px-1 text-[13px] font-semibold uppercase tracking-wide text-muted">
@@ -320,6 +343,11 @@ export default async function SubjectDetailPage({
             Домашки нет. Добавленные задания попадут в «Сегодня» и «Предстоящее».
           </p>
         )}
+      </section>
+
+      {/* Материалы */}
+      <section className="mb-8">
+        <SubjectMaterials subjectId={id} materials={materials} />
       </section>
 
       {/* Конспекты */}

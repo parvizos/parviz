@@ -428,6 +428,73 @@ export const studySessions = sqliteTable(
 export type StudySession = typeof studySessions.$inferSelect;
 export type NewStudySession = typeof studySessions.$inferInsert;
 
+/* Статус темы в программе курса. */
+export const TOPIC_STATUSES = [
+  "not_started",
+  "learning",
+  "known",
+  "review",
+] as const;
+export type TopicStatus = (typeof TOPIC_STATUSES)[number];
+
+/** Тема из программы курса: что пройдено и насколько усвоено. */
+export const topics = sqliteTable(
+  "topics",
+  {
+    id: id(),
+    subjectId: text("subject_id")
+      .notNull()
+      .references(() => subjects.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    status: text("status").$type<TopicStatus>().notNull().default("not_started"),
+    position: integer("position").notNull().default(0),
+    note: text("note"),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("topics_subject_idx").on(t.subjectId)],
+);
+
+export type Topic = typeof topics.$inferSelect;
+export type NewTopic = typeof topics.$inferInsert;
+
+/** Универсальное файловое вложение — хранится в базе (бэкап одним файлом). */
+export const files = sqliteTable("files", {
+  id: id(),
+  name: text("name").notNull(),
+  mime: text("mime").notNull(),
+  data: blob("data", { mode: "buffer" }).notNull(),
+  size: integer("size").notNull().default(0),
+  createdAt: createdAt(),
+});
+
+export type FileRow = typeof files.$inferSelect;
+
+/* Тип учебного материала. */
+export const MATERIAL_KINDS = ["link", "file", "book", "video", "other"] as const;
+export type MaterialKind = (typeof MATERIAL_KINDS)[number];
+
+/** Материал по предмету: ссылка (методичка, запись лекции) или файл. */
+export const materials = sqliteTable(
+  "materials",
+  {
+    id: id(),
+    subjectId: text("subject_id")
+      .notNull()
+      .references(() => subjects.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    kind: text("kind").$type<MaterialKind>().notNull().default("link"),
+    url: text("url"),
+    fileId: text("file_id").references(() => files.id, { onDelete: "set null" }),
+    note: text("note"),
+    createdAt: createdAt(),
+  },
+  (t) => [index("materials_subject_idx").on(t.subjectId)],
+);
+
+export type Material = typeof materials.$inferSelect;
+export type NewMaterial = typeof materials.$inferInsert;
+
 /* ───────────────────────  Домен: Ежедневник  ─────────────────────── */
 
 /** Запись ежедневника: одна на день. Настроение (1–5) и свободный текст. */

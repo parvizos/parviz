@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, schemaReady } from "@/db";
 import {
@@ -9,9 +9,14 @@ import {
   exams,
   attendance,
   studySessions,
+  topics,
+  materials,
   GRADE_KINDS,
   EXAM_KINDS,
   ATTENDANCE_STATUSES,
+  TOPIC_STATUSES,
+  MATERIAL_KINDS,
+  type TopicStatus,
 } from "@/db/schema";
 
 function revalidateAll() {
@@ -234,5 +239,103 @@ export async function logStudySession(
 export async function deleteStudySession(id: string) {
   await schemaReady();
   await db.delete(studySessions).where(eq(studySessions.id, id));
+  revalidateAll();
+}
+
+/* ─────────────────────────  Программа курса (темы)  ───────────────────────── */
+
+const topicSchema = z.object({
+  subjectId: z.string().min(1),
+  title: z.string().trim().min(1, "Введите тему").max(300),
+  status: z.enum(TOPIC_STATUSES).optional(),
+  note: z.string().max(1000).nullable().optional(),
+});
+
+export async function createTopic(input: z.input<typeof topicSchema>) {
+  await schemaReady();
+  const data = topicSchema.parse(input);
+  const [{ n }] = await db
+    .select({ n: sql<number>`count(*)` })
+    .from(topics)
+    .where(eq(topics.subjectId, data.subjectId));
+  const [row] = await db
+    .insert(topics)
+    .values({
+      subjectId: data.subjectId,
+      title: data.title,
+      status: data.status ?? "not_started",
+      note: data.note ?? null,
+      position: n ?? 0,
+    })
+    .returning({ id: topics.id });
+  revalidateAll();
+  return row;
+}
+
+const topicPatchSchema = topicSchema.partial();
+
+export async function updateTopic(id: string, input: z.input<typeof topicPatchSchema>) {
+  await schemaReady();
+  const data = topicPatchSchema.parse(input);
+  await db.update(topics).set(data).where(eq(topics.id, id));
+  revalidateAll();
+}
+
+export async function setTopicStatus(id: string, status: TopicStatus) {
+  await schemaReady();
+  await db.update(topics).set({ status }).where(eq(topics.id, id));
+  revalidateAll();
+}
+
+export async function deleteTopic(id: string) {
+  await schemaReady();
+  await db.delete(topics).where(eq(topics.id, id));
+  revalidateAll();
+}
+
+/* ───────────────────────────  Материалы  ─────────────────────────── */
+
+const materialSchema = z.object({
+  subjectId: z.string().min(1),
+  title: z.string().trim().min(1, "Введите название").max(300),
+  kind: z.enum(MATERIAL_KINDS).optional(),
+  url: z.string().trim().max(1000).nullable().optional(),
+  fileId: z.string().min(1).nullable().optional(),
+  note: z.string().max(500).nullable().optional(),
+});
+
+export async function createMaterial(input: z.input<typeof materialSchema>) {
+  await schemaReady();
+  const data = materialSchema.parse(input);
+  const [row] = await db
+    .insert(materials)
+    .values({
+      subjectId: data.subjectId,
+      title: data.title,
+      kind: data.kind ?? "link",
+      url: data.url || null,
+      fileId: data.fileId ?? null,
+      note: data.note ?? null,
+    })
+    .returning({ id: materials.id });
+  revalidateAll();
+  return row;
+}
+
+const materialPatchSchema = materialSchema.partial();
+
+export async function updateMaterial(
+  id: string,
+  input: z.input<typeof materialPatchSchema>,
+) {
+  await schemaReady();
+  const data = materialPatchSchema.parse(input);
+  await db.update(materials).set(data).where(eq(materials.id, id));
+  revalidateAll();
+}
+
+export async function deleteMaterial(id: string) {
+  await schemaReady();
+  await db.delete(materials).where(eq(materials.id, id));
   revalidateAll();
 }

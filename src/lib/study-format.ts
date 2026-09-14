@@ -3,6 +3,8 @@ import type {
   GradeKind,
   ExamKind,
   AttendanceStatus,
+  TopicStatus,
+  MaterialKind,
 } from "@/db/schema";
 
 /** Дни недели в ISO-порядке: 1 — понедельник … 7 — воскресенье. */
@@ -110,4 +112,54 @@ export function formatDuration(seconds: number): string {
   const mm = m % 60;
   if (h > 0) return mm > 0 ? `${h} ч ${mm} мин` : `${h} ч`;
   return `${m} мин`;
+}
+
+/* ── Программа курса (темы) ── */
+
+export const TOPIC_STATUSES_ORDER: TopicStatus[] = [
+  "not_started",
+  "learning",
+  "known",
+  "review",
+];
+
+export const TOPIC_STATUS_META: Record<
+  TopicStatus,
+  { label: string; short: string; tone: "muted" | "warning" | "success" | "accent" }
+> = {
+  not_started: { label: "Не начато", short: "—", tone: "muted" },
+  learning: { label: "Учу", short: "Учу", tone: "warning" },
+  known: { label: "Знаю", short: "Знаю", tone: "success" },
+  review: { label: "Повторить", short: "Повт", tone: "accent" },
+};
+
+/** Следующий статус темы по кругу (для клика). */
+export function nextTopicStatus(s: TopicStatus): TopicStatus {
+  const i = TOPIC_STATUSES_ORDER.indexOf(s);
+  return TOPIC_STATUSES_ORDER[(i + 1) % TOPIC_STATUSES_ORDER.length];
+}
+
+/* ── Материалы ── */
+
+export const MATERIAL_KINDS_ORDER: MaterialKind[] = [
+  "link",
+  "file",
+  "book",
+  "video",
+  "other",
+];
+
+export const MATERIAL_KIND_META: Record<MaterialKind, { label: string }> = {
+  link: { label: "Ссылка" },
+  file: { label: "Файл" },
+  book: { label: "Книга" },
+  video: { label: "Видео" },
+  other: { label: "Другое" },
+};
+
+/** Байты → «3.2 МБ» / «540 КБ». */
+export function formatBytes(n: number): string {
+  if (n < 1024) return `${n} Б`;
+  if (n < 1024 * 1024) return `${Math.round(n / 1024)} КБ`;
+  return `${(n / 1024 / 1024).toFixed(1)} МБ`;
 }

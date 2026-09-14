@@ -57,6 +57,13 @@
       "when": 1789400118674,
       "tag": "0007_next_nicolaos",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1789420700033,
+      "tag": "0008_cynical_tyger_tiger",
+      "breakpoints": true
     }
   ]
 }

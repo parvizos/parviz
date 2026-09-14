@@ -22,12 +22,18 @@ import {
   attendance,
   studySessions,
   lessons,
+  topics,
+  materials,
+  files,
   type Grade,
   type Exam,
   type Attendance,
   type AttendanceStatus,
+  type Topic,
+  type TopicStatus,
+  type Material,
 } from "@/db/schema";
-import { todayISO, diffDays, addDaysISO } from "@/lib/dates";
+import { todayISO, diffDays, addDaysISO, ruMonthDayShort } from "@/lib/dates";
 
 export type { AttendanceStatus };
 
@@ -363,4 +369,200 @@ export async function getStudyStats(): Promise<StudyStats> {
       seconds: r.seconds,
     })),
   };
+}
+
+/* ─────────────────────────  Программа курса (темы)  ───────────────────────── */
+
+export async function getSubjectTopics(subjectId: string): Promise<Topic[]> {
+  await schemaReady();
+  return db
+    .select()
+    .from(topics)
+    .where(eq(topics.subjectId, subjectId))
+    .orderBy(asc(topics.position), asc(topics.createdAt));
+}
+
+export type TopicProgress = {
+  total: number;
+  known: number;
+  learning: number;
+  review: number;
+  notStarted: number;
+  pct: number; // known / total
+};
+
+export function topicProgress(list: { status: TopicStatus }[]): TopicProgress {
+  const p: TopicProgress = {
+    total: list.length,
+    known: 0,
+    learning: 0,
+    review: 0,
+    notStarted: 0,
+    pct: 0,
+  };
+  for (const t of list) {
+    if (t.status === "known") p.known++;
+    else if (t.status === "learning") p.learning++;
+    else if (t.status === "review") p.review++;
+    else p.notStarted++;
+  }
+  p.pct = p.total > 0 ? p.known / p.total : 0;
+  return p;
+}
+
+/** Прогресс по темам для всех предметов (для аналитики/сводки). */
+export async function getTopicProgressBySubject(): Promise<
+  Map<string, TopicProgress>
+> {
+  await schemaReady();
+  const rows = await db.select().from(topics);
+  const bySubject = new Map<string, TopicStatus[]>();
+  for (const t of rows) {
+    const arr = bySubject.get(t.subjectId) ?? [];
+    arr.push(t.status);
+    bySubject.set(t.subjectId, arr);
+  }
+  const out = new Map<string, TopicProgress>();
+  for (const [sid, statuses] of bySubject) {
+    out.set(sid, topicProgress(statuses.map((s) => ({ status: s }))));
+  }
+  return out;
+}
+
+/* ───────────────────────────  Материалы  ─────────────────────────── */
+
+export type MaterialRow = Material & {
+  fileName: string | null;
+  fileSize: number | null;
+};
+
+export async function getSubjectMaterials(
+  subjectId: string,
+): Promise<MaterialRow[]> {
+  await schemaReady();
+  return db
+    .select({
+      ...getTableColumns(materials),
+      fileName: files.name,
+      fileSize: files.size,
+    })
+    .from(materials)
+    .leftJoin(files, eq(materials.fileId, files.id))
+    .where(eq(materials.subjectId, subjectId))
+    .orderBy(desc(materials.createdAt));
+}
+
+/* ───────────────────────────  Аналитика учёбы  ─────────────────────────── */
+
+function lastMonths(n: number): string[] {
+  const now = todayISO().slice(0, 7);
+  const [y, m] = now.split("-").map(Number);
+  const out: string[] = [];
+  for (let i = n - 1; i >= 0; i--) {
+    out.push(new Date(Date.UTC(y, m - 1 - i, 1)).toISOString().slice(0, 7));
+  }
+  return out;
+}
+
+export type GpaPoint = { month: string; gpa5: number };
+
+/** Накопительный средний балл (взвеш. по кредитам) на конец каждого месяца. */
+export async function getGpaByMonth(n = 9): Promise<GpaPoint[]> {
+  await schemaReady();
+  const [subs, allGrades] = await Promise.all([
+    db.select({ id: subjects.id, credits: subjects.credits }).from(subjects),
+    db.select().from(grades),
+  ]);
+  const creditOf = new Map(subs.map((s) => [s.id, s.credits]));
+
+  return lastMonths(n).map((month) => {
+    const upto = allGrades.filter((g) => g.date.slice(0, 7) <= month);
+    // Взвешенный процент по предмету.
+    const bySub = new Map<string, { sum: number; w: number }>();
+    for (const g of upto) {
+      const cur = bySub.get(g.subjectId) ?? { sum: 0, w: 0 };
+      cur.sum += (g.value / g.maxValue) * g.weight;
+      cur.w += g.weight;
+      bySub.set(g.subjectId, cur);
+    }
+    const subjPct = [...bySub.entries()].map(([sid, v]) => ({
+      pct: v.w > 0 ? v.sum / v.w : 0,
+      credits: creditOf.get(sid) ?? null,
+    }));
+    const weighted =
+      subjPct.length > 0 && subjPct.every((s) => s.credits && s.credits > 0);
+    let sum = 0;
+    let w = 0;
+    for (const s of subjPct) {
+      const cw = weighted ? (s.credits as number) : 1;
+      sum += s.pct * cw;
+      w += cw;
+    }
+    return { month, gpa5: w > 0 ? (sum / w) * 5 : 0 };
+  });
+}
+
+export type WeekPoint = { label: string; seconds: number };
+
+/** Часы фокуса по неделям (последние `weeks` 7-дневных окон). */
+export async function getFocusByWeek(weeks = 8): Promise<WeekPoint[]> {
+  await schemaReady();
+  const today = todayISO();
+  const rows = await db
+    .select({ date: studySessions.date, seconds: studySessions.seconds })
+    .from(studySessions)
+    .where(gte(studySessions.date, addDaysISO(today, -7 * weeks + 1)));
+
+  const out: WeekPoint[] = [];
+  for (let i = weeks - 1; i >= 0; i--) {
+    const end = addDaysISO(today, -7 * i);
+    const start = addDaysISO(end, -6);
+    const seconds = rows
+      .filter((r) => r.date >= start && r.date <= end)
+      .reduce((s, r) => s + r.seconds, 0);
+    out.push({ label: ruMonthDayShort(start), seconds });
+  }
+  return out;
+}
+
+export type GradeBar = { grade: number; count: number };
+
+/** Распределение оценок, приведённых к 5-балльной шкале (2..5). */
+export async function getGradeDistribution(): Promise<GradeBar[]> {
+  await schemaReady();
+  const rows = await db
+    .select({ value: grades.value, maxValue: grades.maxValue })
+    .from(grades);
+  const buckets = new Map<number, number>([
+    [2, 0],
+    [3, 0],
+    [4, 0],
+    [5, 0],
+  ]);
+  for (const r of rows) {
+    const b = Math.max(2, Math.min(5, Math.round((r.value / r.maxValue) * 5)));
+    buckets.set(b, (buckets.get(b) ?? 0) + 1);
+  }
+  return [...buckets.entries()].map(([grade, count]) => ({ grade, count }));
+}
+
+export async function getAttendanceSummary(): Promise<AttendanceStats> {
+  await schemaReady();
+  const rows = await db
+    .select({ status: attendance.status, c: sql<number>`count(*)` })
+    .from(attendance)
+    .groupBy(attendance.status);
+  const s: AttendanceStats = {
+    present: 0,
+    absent: 0,
+    late: 0,
+    excused: 0,
+    total: 0,
+    pct: 1,
+  };
+  for (const r of rows) s[r.status] = r.c;
+  const counted = s.present + s.absent + s.late;
+  s.total = counted + s.excused;
+  s.pct = counted > 0 ? (s.present + s.late) / counted : 1;
+  return s;
 }
