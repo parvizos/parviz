@@ -4,7 +4,15 @@
  * Сброс:   удали файл базы (data/parviz.db) и запусти снова.
  */
 import { db, schemaReady } from "./index";
-import { areas, projects, tasks, subjects, lessons, notes } from "./schema";
+import {
+  areas,
+  projects,
+  tasks,
+  subjects,
+  lessons,
+  notes,
+  journal,
+} from "./schema";
 
 for (const f of [".env.local", ".env"]) {
   try {
@@ -154,7 +162,22 @@ async function main() {
     { title: "Подготовить доклад по истории", subjectId: hist.id, areaId: study.id, scheduledDate: today(4), priority: 1 },
   ]);
 
-  console.log("Готово: добавлены демо-данные (сферы, проект, задачи, учёба).");
+  await db.insert(journal).values([
+    {
+      date: today(-1),
+      mood: 4,
+      body: "Разобрался с пределами, дошёл до практики.\nВечером устал, но день продуктивный.",
+    },
+    {
+      date: today(0),
+      mood: 3,
+      body: "План на день: лаба по программированию и продукты.",
+    },
+  ]);
+
+  console.log(
+    "Готово: добавлены демо-данные (сферы, проект, задачи, учёба, ежедневник).",
+  );
 }
 
 main()

@@ -274,6 +274,19 @@ export const notes = sqliteTable(
   (t) => [index("notes_subject_idx").on(t.subjectId)],
 );
 
+/* ───────────────────────  Домен: Ежедневник  ─────────────────────── */
+
+/** Запись ежедневника: одна на день. Настроение (1–5) и свободный текст. */
+export const journal = sqliteTable("journal", {
+  id: id(),
+  /** День записи: YYYY-MM-DD, уникальный. */
+  date: text("date").notNull().unique(),
+  mood: integer("mood"),
+  body: text("body"),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
 export type Area = typeof areas.$inferSelect;
 export type NewArea = typeof areas.$inferInsert;
 export type Project = typeof projects.$inferSelect;
@@ -287,3 +300,5 @@ export type Lesson = typeof lessons.$inferSelect;
 export type NewLesson = typeof lessons.$inferInsert;
 export type Note = typeof notes.$inferSelect;
 export type NewNote = typeof notes.$inferInsert;
+export type Journal = typeof journal.$inferSelect;
+export type NewJournal = typeof journal.$inferInsert;

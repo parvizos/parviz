@@ -16,6 +16,7 @@ import {
   CalendarRange,
   GraduationCap,
   NotebookPen,
+  BookText,
   CornerDownLeft,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
@@ -78,11 +79,12 @@ export function CommandPalette({
       { id: "nav-today", label: "Сегодня", icon: <CalendarDays size={16} />, run: go("/segodnya") },
       { id: "nav-inbox", label: "Входящие", icon: <Inbox size={16} />, run: go("/vhodyaschie") },
       { id: "nav-upcoming", label: "Предстоящее", icon: <CalendarClock size={16} />, run: go("/predstoyaschee") },
+      { id: "nav-dnevnik", label: "Ежедневник", icon: <NotebookPen size={16} />, run: go("/dnevnik") },
       { id: "nav-projects", label: "Проекты", icon: <FolderKanban size={16} />, run: go("/proekty") },
       { id: "nav-areas", label: "Сферы", icon: <Layers size={16} />, run: go("/sfery") },
       { id: "nav-schedule", label: "Расписание", icon: <CalendarRange size={16} />, run: go("/raspisanie") },
       { id: "nav-subjects", label: "Предметы", icon: <GraduationCap size={16} />, run: go("/predmety") },
-      { id: "nav-notes", label: "Конспекты", icon: <NotebookPen size={16} />, run: go("/konspekty") },
+      { id: "nav-notes", label: "Конспекты", icon: <BookText size={16} />, run: go("/konspekty") },
       { id: "theme", label: "Переключить тему", icon: <Sun size={16} />, run: act(onToggleTheme) },
       ...projects.map((p) => ({
         id: `p-${p.id}`,

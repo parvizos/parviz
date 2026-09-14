@@ -11,6 +11,7 @@ import {
   subjects,
   lessons,
   notes,
+  journal,
   PROJECT_STATUSES,
   TASK_STATUSES,
   LESSON_KINDS,
@@ -419,5 +420,40 @@ export async function toggleNotePin(id: string, pinned: boolean) {
 export async function deleteNote(id: string) {
   await schemaReady();
   await db.delete(notes).where(eq(notes.id, id));
+  revalidateAll();
+}
+
+/* ───────────────────────  Ежедневник  ─────────────────────── */
+
+const upsertJournalSchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  mood: z.coerce.number().int().min(1).max(5).nullable().optional(),
+  body: z.string().max(50_000).nullable().optional(),
+});
+
+export type UpsertJournalInput = {
+  mood?: number | null;
+  body?: string | null;
+};
+
+/** Создать или обновить запись за день (одна запись на дату). */
+export async function upsertJournal(date: string, input: UpsertJournalInput) {
+  await schemaReady();
+  const data = upsertJournalSchema.parse({ date, ...input });
+  await db
+    .insert(journal)
+    .values({
+      date: data.date,
+      mood: data.mood ?? null,
+      body: data.body ?? null,
+    })
+    .onConflictDoUpdate({
+      target: journal.date,
+      set: {
+        mood: data.mood ?? null,
+        body: data.body ?? null,
+        updatedAt: new Date(),
+      },
+    });
   revalidateAll();
 }

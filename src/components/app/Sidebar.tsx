@@ -47,6 +47,7 @@ const MAIN: NavItem[] = [
   { href: "/segodnya", label: "Сегодня", icon: CalendarDays, badge: "today" },
   { href: "/vhodyaschie", label: "Входящие", icon: Inbox, badge: "inbox" },
   { href: "/predstoyaschee", label: "Предстоящее", icon: CalendarClock },
+  { href: "/dnevnik", label: "Ежедневник", icon: NotebookPen },
   { href: "/proekty", label: "Проекты", icon: FolderKanban },
   { href: "/sfery", label: "Сферы", icon: Layers },
 ];
@@ -61,7 +62,6 @@ const SOON: { label: string; icon: LucideIcon }[] = [
   { label: "Финансы", icon: Wallet },
   { label: "Люди", icon: Users },
   { label: "Организации", icon: Building2 },
-  { label: "Ежедневник", icon: NotebookPen },
 ];
 
 function isActive(pathname: string, href: string): boolean {

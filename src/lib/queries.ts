@@ -20,11 +20,13 @@ import {
   subjects,
   lessons,
   notes,
+  journal,
   type Task,
   type Area,
   type Subject,
   type Lesson,
   type Note,
+  type Journal,
 } from "@/db/schema";
 import { todayISO, isoWeekday } from "@/lib/dates";
 
@@ -441,12 +443,17 @@ export async function getScheduleByDay(): Promise<ScheduleDay[]> {
   return days;
 }
 
-export async function getTodayLessons(): Promise<LessonWithSubject[]> {
+export async function getLessonsForWeekday(
+  wd: number,
+): Promise<LessonWithSubject[]> {
   await schemaReady();
-  const wd = isoWeekday(todayISO());
   return lessonBaseQuery()
     .where(eq(lessons.dayOfWeek, wd))
     .orderBy(asc(lessons.startTime));
+}
+
+export function getTodayLessons(): Promise<LessonWithSubject[]> {
+  return getLessonsForWeekday(isoWeekday(todayISO()));
 }
 
 export async function getNotes(): Promise<NoteWithSubject[]> {
@@ -475,4 +482,33 @@ export async function getNote(id: string): Promise<NoteWithSubject | null> {
     .where(eq(notes.id, id))
     .limit(1);
   return row ?? null;
+}
+
+/* ───────────────────────  Ежедневник  ─────────────────────── */
+
+export async function getJournalEntry(date: string): Promise<Journal | null> {
+  await schemaReady();
+  const [row] = await db
+    .select()
+    .from(journal)
+    .where(eq(journal.date, date))
+    .limit(1);
+  return row ?? null;
+}
+
+/** Задачи, запланированные на конкретный день (любой статус). */
+export async function getDayTasks(date: string): Promise<TaskWithContext[]> {
+  await schemaReady();
+  return taskBaseQuery()
+    .where(eq(tasks.scheduledDate, date))
+    .orderBy(
+      asc(sql`case when ${tasks.status} = 'open' then 0 else 1 end`),
+      desc(tasks.priority),
+      asc(tasks.createdAt),
+    );
+}
+
+export async function getRecentJournalEntries(limit = 20): Promise<Journal[]> {
+  await schemaReady();
+  return db.select().from(journal).orderBy(desc(journal.date)).limit(limit);
 }
