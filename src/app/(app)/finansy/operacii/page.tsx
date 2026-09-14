@@ -1,4 +1,4 @@
-import { Receipt } from "lucide-react";
+import { Receipt, Table2 } from "lucide-react";
 import { getTransactions } from "@/lib/queries";
 import {
   currentMonth,
@@ -43,6 +43,15 @@ export default async function TransactionsPage({
         title="Операции"
         actions={
           <div className="flex items-center gap-2">
+            <a
+              href="/api/export/finance"
+              download
+              title="Экспорт всех операций в CSV"
+              aria-label="Экспорт в CSV"
+              className="flex h-8 w-8 items-center justify-center rounded-[10px] border border-border text-muted transition-colors hover:bg-surface-2 hover:text-text"
+            >
+              <Table2 size={16} />
+            </a>
             <MonthNav month={month} />
             <NewTransactionButton />
           </div>

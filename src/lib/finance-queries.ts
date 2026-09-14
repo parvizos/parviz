@@ -289,6 +289,21 @@ export async function getPlanned(): Promise<PlannedWithContext[]> {
   }));
 }
 
+/** Планы, у которых наступила дата (для напоминаний в «Сегодня»). */
+export async function getDuePlanned(): Promise<PlannedWithContext[]> {
+  const all = await getPlanned();
+  return all.filter((p) => p.due);
+}
+
+/** Долги к возврату сегодня или просроченные (для «Сегодня»). */
+export async function getDueDebts(): Promise<DebtWithOutstanding[]> {
+  const today = todayISO();
+  const all = await getDebts();
+  return all.filter(
+    (d) => !d.settled && d.dueDate != null && d.dueDate <= today,
+  );
+}
+
 export async function getDuePlannedCount(): Promise<number> {
   await schemaReady();
   const today = todayISO();

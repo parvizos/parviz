@@ -6,7 +6,7 @@ import { formatMoneyShort } from "@/lib/money";
 import { PageHeader, EmptyState } from "@/components/ui/misc";
 import { AccountCard } from "@/components/app/finance-items";
 import { NewAccountButton } from "@/components/app/finance-buttons";
-import { RatesCard } from "@/components/app/finance2-items";
+import { RatesCard, CurrencyConverter } from "@/components/app/finance2-items";
 
 export const metadata = { title: "Счета" };
 export const dynamic = "force-dynamic";
@@ -19,6 +19,9 @@ export default async function AccountsPage() {
     getCurrencyRates(),
   ]);
   const usedRates = rates.filter((r) => r.inUse);
+  const converterRates = rates
+    .filter((r) => r.rateToBase != null)
+    .map((r) => ({ code: r.code, rateToBase: r.rateToBase as number }));
 
   return (
     <div>
@@ -48,8 +51,11 @@ export default async function AccountsPage() {
           </div>
 
           {usedRates.length > 0 && (
-            <div className="mt-6">
+            <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-2">
               <RatesCard rates={usedRates} base={base} />
+              {converterRates.length > 0 && (
+                <CurrencyConverter rates={converterRates} base={base} />
+              )}
             </div>
           )}
         </>

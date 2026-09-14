@@ -14,13 +14,14 @@ import {
   Pencil,
   Repeat,
   Target,
+  ArrowLeftRight,
 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Field, Input, Select } from "@/components/ui/Field";
 import { cn } from "@/lib/cn";
 import { formatMoney, formatMoneyShort, parseAmount, minorToInput } from "@/lib/money";
-import { currencySymbol } from "@/lib/currency";
+import { currencySymbol, currencyMeta } from "@/lib/currency";
 import { ruMonthDayShort } from "@/lib/dates";
 import { financeColor } from "@/lib/finance-format";
 import {
@@ -804,6 +805,102 @@ export function GoalCard({ goal }: { goal: GoalWithProgress }) {
           remaining={goal.remaining}
         />
       )}
+    </div>
+  );
+}
+
+/* ─────────────────────────  Конвертер валют  ───────────────────────── */
+
+export function CurrencyConverter({
+  rates,
+  base,
+}: {
+  rates: { code: string; rateToBase: number }[];
+  base: string;
+}) {
+  const map = new Map<string, number>([[base, 1], ...rates.map((r) => [r.code, r.rateToBase] as const)]);
+  const codes = [base, ...rates.map((r) => r.code)];
+
+  const [amount, setAmount] = useState("100");
+  const [from, setFrom] = useState(codes[1] ?? base);
+  const [to, setTo] = useState(base);
+
+  const value = Number(amount.replace(",", ".")) || 0;
+  const rateFrom = map.get(from) ?? 1;
+  const rateTo = map.get(to) ?? 1;
+  const converted = (value * rateFrom) / rateTo;
+  const unitRate = rateFrom / rateTo;
+
+  const fmt = (n: number) =>
+    n.toLocaleString("ru-RU", { maximumFractionDigits: 2 });
+
+  function swap() {
+    setFrom(to);
+    setTo(from);
+  }
+
+  return (
+    <div className="rounded-2xl border border-border bg-surface p-4">
+      <div className="mb-3 flex items-center gap-2">
+        <ArrowLeftRight size={15} className="text-muted" />
+        <h2 className="text-[13px] font-semibold uppercase tracking-wide text-muted">
+          Конвертер
+        </h2>
+      </div>
+      <div className="flex items-end gap-2">
+        <div className="flex-1">
+          <Input
+            inputMode="decimal"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            className="h-11 text-[16px] tabular"
+            aria-label="Сумма"
+          />
+        </div>
+        <Select
+          value={from}
+          onChange={(e) => setFrom(e.target.value)}
+          className="h-11 w-24"
+          aria-label="Из валюты"
+        >
+          {codes.map((c) => (
+            <option key={c} value={c}>
+              {currencySymbol(c)} {c}
+            </option>
+          ))}
+        </Select>
+        <button
+          type="button"
+          onClick={swap}
+          aria-label="Поменять местами"
+          className="flex h-11 w-9 shrink-0 items-center justify-center rounded-xl text-muted transition-colors hover:bg-surface-2 hover:text-text"
+        >
+          <ArrowLeftRight size={16} />
+        </button>
+        <Select
+          value={to}
+          onChange={(e) => setTo(e.target.value)}
+          className="h-11 w-24"
+          aria-label="В валюту"
+        >
+          {codes.map((c) => (
+            <option key={c} value={c}>
+              {currencySymbol(c)} {c}
+            </option>
+          ))}
+        </Select>
+      </div>
+      <div className="mt-3 flex items-baseline justify-between">
+        <span className="text-[20px] font-semibold tabular text-text">
+          {fmt(converted)}{" "}
+          <span className="text-[14px] font-normal text-muted">
+            {currencySymbol(to)}
+          </span>
+        </span>
+        <span className="text-[12px] text-faint tabular">
+          1 {from} = {fmt(unitRate)} {currencyMeta(to).symbol}
+        </span>
+      </div>
     </div>
   );
 }

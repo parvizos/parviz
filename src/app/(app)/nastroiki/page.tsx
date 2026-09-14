@@ -1,4 +1,4 @@
-import { Download, Database, Clock, ShieldCheck } from "lucide-react";
+import { Download, Database, Clock, ShieldCheck, Table2 } from "lucide-react";
 import { listBackups } from "@/lib/backup";
 import { appTimeZone } from "@/lib/dates";
 import { PageHeader } from "@/components/ui/misc";
@@ -47,14 +47,28 @@ export default async function SettingsPage() {
                 в одной базе. Скачай полный консистентный снимок в любой момент
                 и держи копию где хочешь.
               </p>
-              <a
-                href="/api/export"
-                download
-                className="mt-4 inline-flex h-10 items-center gap-2 rounded-xl bg-accent px-4 text-sm font-medium text-accent-fg shadow-[var(--shadow-sm)] transition-colors hover:bg-accent-hover"
-              >
-                <Download size={16} />
-                Скачать базу (.db)
-              </a>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <a
+                  href="/api/export"
+                  download
+                  className="inline-flex h-10 items-center gap-2 rounded-xl bg-accent px-4 text-sm font-medium text-accent-fg shadow-[var(--shadow-sm)] transition-colors hover:bg-accent-hover"
+                >
+                  <Download size={16} />
+                  Скачать базу (.db)
+                </a>
+                <a
+                  href="/api/export/finance"
+                  download
+                  className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-surface px-4 text-sm font-medium text-text transition-colors hover:bg-surface-2 hover:border-border-strong"
+                >
+                  <Table2 size={16} />
+                  Операции в CSV
+                </a>
+              </div>
+              <p className="mt-2 text-[12px] text-faint">
+                CSV открывается в Excel и Google Таблицах — все операции с валютой
+                и привязками.
+              </p>
             </div>
           </div>
         </div>
