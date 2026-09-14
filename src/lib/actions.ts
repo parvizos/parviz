@@ -383,8 +383,8 @@ export async function deleteLesson(id: string) {
 /* ───────────────────────  Конспекты  ─────────────────────── */
 
 const createNoteSchema = z.object({
-  title: z.string().trim().min(1, "Введите заголовок").max(300),
-  body: z.string().max(50_000).nullable().optional(),
+  title: z.string().trim().max(300).optional(),
+  body: z.string().max(200_000).nullable().optional(),
   subjectId: nullableId,
   pinned: z.boolean().optional(),
 });
@@ -397,7 +397,7 @@ export async function createNote(input: CreateNoteInput) {
   const [row] = await db
     .insert(notes)
     .values({
-      title: data.title,
+      title: data.title ?? "",
       body: data.body ?? null,
       subjectId: data.subjectId ?? null,
       pinned: data.pinned ?? false,
@@ -405,6 +405,20 @@ export async function createNote(input: CreateNoteInput) {
     .returning({ id: notes.id });
   revalidateAll();
   return row;
+}
+
+/** Тихое авто-сохранение конспекта из полноэкранного редактора (без ревалидации). */
+export async function autosaveNote(
+  id: string,
+  input: { title?: string; body?: string | null },
+) {
+  await schemaReady();
+  const patch: Record<string, unknown> = {};
+  if (input.title !== undefined) patch.title = input.title.slice(0, 300);
+  if (input.body !== undefined) patch.body = input.body ?? null;
+  if (Object.keys(patch).length === 0) return;
+  patch.updatedAt = new Date();
+  await db.update(notes).set(patch).where(eq(notes.id, id));
 }
 
 const updateNoteSchema = z.object({
@@ -440,7 +454,7 @@ export async function deleteNote(id: string) {
 const upsertJournalSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   mood: z.coerce.number().int().min(1).max(5).nullable().optional(),
-  body: z.string().max(50_000).nullable().optional(),
+  body: z.string().max(200_000).nullable().optional(),
 });
 
 export type UpsertJournalInput = {
@@ -468,6 +482,30 @@ export async function upsertJournal(date: string, input: UpsertJournalInput) {
       },
     });
   revalidateAll();
+}
+
+/** Тихое авто-сохранение записи дня (без ревалидации всего приложения). */
+export async function autosaveJournal(
+  date: string,
+  input: { mood?: number | null; body?: string | null },
+) {
+  await schemaReady();
+  const data = upsertJournalSchema.parse({ date, ...input });
+  await db
+    .insert(journal)
+    .values({
+      date: data.date,
+      mood: data.mood ?? null,
+      body: data.body ?? null,
+    })
+    .onConflictDoUpdate({
+      target: journal.date,
+      set: {
+        mood: data.mood ?? null,
+        body: data.body ?? null,
+        updatedAt: new Date(),
+      },
+    });
 }
 
 /* ───────────────────────  Счета  ─────────────────────── */

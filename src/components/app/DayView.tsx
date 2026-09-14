@@ -16,6 +16,7 @@ import {
   diffDays,
 } from "@/lib/dates";
 import { moodOf } from "@/lib/journal-format";
+import { excerpt } from "@/lib/text";
 import { JournalEditor } from "./JournalEditor";
 import { DayJump } from "./DayJump";
 import { TaskGroup } from "./TaskGroup";
@@ -160,7 +161,7 @@ export async function DayView({ date }: { date: string }) {
                     {ruWeekday(e.date)}, {ruMonthDayShort(e.date)}
                   </span>
                   <span className="min-w-0 flex-1 truncate text-[13.5px] text-text">
-                    {e.body?.split("\n")[0] || (m ? m.label : "")}
+                    {excerpt(e.body, 90) || (m ? m.label : "")}
                   </span>
                 </Link>
               );

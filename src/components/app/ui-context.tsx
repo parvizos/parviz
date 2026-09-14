@@ -12,10 +12,8 @@ import { TaskDialog, ProjectDialog, AreaDialog } from "./dialogs";
 import {
   SubjectDialog,
   LessonDialog,
-  NoteDialog,
   type SubjectForEdit,
   type LessonForEdit,
-  type NoteForEdit,
 } from "./study-dialogs";
 import {
   AccountDialog,
@@ -32,6 +30,8 @@ import {
   type OrganizationForEdit,
 } from "./crm-dialogs";
 import { CommandPalette } from "./CommandPalette";
+import { useRouter } from "next/navigation";
+import { createNote } from "@/lib/actions";
 import type {
   AreaOption,
   ProjectOption,
@@ -73,7 +73,6 @@ interface UiValue {
   openNewLesson: (opts?: { subjectId?: string | null; day?: number }) => void;
   openEditLesson: (l: LessonForEdit) => void;
   openNewNote: (opts?: { subjectId?: string | null }) => void;
-  openEditNote: (n: NoteForEdit) => void;
   openNewTransaction: (prefill?: TransactionPrefill) => void;
   openTransaction: (tx: TransactionForEdit) => void;
   openNewAccount: () => void;
@@ -140,11 +139,6 @@ export function UiProvider({
     subjectId?: string | null;
     day?: number;
   }>({ open: false, lesson: null });
-  const [note, setNote] = useState<{
-    open: boolean;
-    note: NoteForEdit | null;
-    subjectId?: string | null;
-  }>({ open: false, note: null });
   const [transaction, setTransaction] = useState<{
     open: boolean;
     tx: TransactionForEdit | null;
@@ -170,6 +164,7 @@ export function UiProvider({
   }>({ open: false, organization: null });
   const [cmdOpen, setCmdOpen] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">("light");
+  const router = useRouter();
 
   useEffect(() => {
     // Читаем актуальную тему из DOM после монтирования (внешнее состояние).
@@ -235,13 +230,15 @@ export function UiProvider({
     [],
   );
   const openNewNote = useCallback(
-    (opts?: { subjectId?: string | null }) =>
-      setNote({ open: true, note: null, subjectId: opts?.subjectId ?? null }),
-    [],
-  );
-  const openEditNote = useCallback(
-    (n: NoteForEdit) => setNote({ open: true, note: n }),
-    [],
+    (opts?: { subjectId?: string | null }) => {
+      void (async () => {
+        try {
+          const row = await createNote({ subjectId: opts?.subjectId ?? null });
+          if (row?.id) router.push(`/konspekty/${row.id}`);
+        } catch {}
+      })();
+    },
+    [router],
   );
   const openNewTransaction = useCallback(
     (prefill?: TransactionPrefill) =>
@@ -294,7 +291,6 @@ export function UiProvider({
     area.open ||
     subject.open ||
     lesson.open ||
-    note.open ||
     transaction.open ||
     account.open ||
     category.open ||
@@ -341,7 +337,6 @@ export function UiProvider({
         openNewLesson,
         openEditLesson,
         openNewNote,
-        openEditNote,
         openNewTransaction,
         openTransaction,
         openNewAccount,
@@ -398,14 +393,6 @@ export function UiProvider({
           subjectOptions={subjectOptions}
           defaultSubjectId={lesson.subjectId}
           defaultDay={lesson.day}
-        />
-      )}
-      {note.open && (
-        <NoteDialog
-          onClose={() => setNote((s) => ({ ...s, open: false }))}
-          note={note.note}
-          subjectOptions={subjectOptions}
-          defaultSubjectId={note.subjectId}
         />
       )}
       {transaction.open && (

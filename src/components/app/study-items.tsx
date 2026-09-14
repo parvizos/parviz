@@ -7,6 +7,7 @@ import { cn } from "@/lib/cn";
 import { toggleNotePin } from "@/lib/actions";
 import { LESSON_KIND_META } from "@/lib/study-format";
 import { areaColor } from "@/lib/task-format";
+import { excerpt } from "@/lib/text";
 import { useUi } from "./ui-context";
 import type {
   LessonWithSubject,
@@ -67,11 +68,12 @@ export function LessonRow({
 }
 
 export function NoteCard({ note }: { note: NoteWithSubject }) {
-  const { openEditNote } = useUi();
   const [pinned, setPinned] = useState(note.pinned);
   const [, startTransition] = useTransition();
+  const snippet = excerpt(note.body, 200);
 
   function togglePin(e: MouseEvent) {
+    e.preventDefault();
     e.stopPropagation();
     const next = !pinned;
     setPinned(next);
@@ -85,25 +87,14 @@ export function NoteCard({ note }: { note: NoteWithSubject }) {
   }
 
   return (
-    <div className="group relative flex flex-col rounded-2xl border border-border bg-surface p-4 transition-colors hover:border-border-strong">
-      <button
-        onClick={() =>
-          openEditNote({
-            id: note.id,
-            title: note.title,
-            body: note.body,
-            subjectId: note.subjectId,
-            pinned: note.pinned,
-          })
-        }
-        className="min-w-0 text-left"
-      >
+    <div className="group relative flex flex-col rounded-2xl border border-border bg-surface p-4 transition-colors hover:border-border-strong hover:bg-surface-2">
+      <Link href={`/konspekty/${note.id}`} className="min-w-0">
         <h3 className="truncate pr-7 text-[15px] font-medium text-text">
-          {note.title}
+          {note.title || "Без названия"}
         </h3>
-        {note.body && (
-          <p className="mt-1.5 line-clamp-3 whitespace-pre-wrap text-[13px] leading-relaxed text-muted">
-            {note.body}
+        {snippet && (
+          <p className="mt-1.5 line-clamp-3 text-[13px] leading-relaxed text-muted">
+            {snippet}
           </p>
         )}
         {note.subjectName && (
@@ -115,13 +106,13 @@ export function NoteCard({ note }: { note: NoteWithSubject }) {
             {note.subjectName}
           </div>
         )}
-      </button>
+      </Link>
       <button
         onClick={togglePin}
         aria-label={pinned ? "Открепить" : "Закрепить"}
         title={pinned ? "Открепить" : "Закрепить"}
         className={cn(
-          "absolute right-2.5 top-2.5 flex h-7 w-7 items-center justify-center rounded-lg transition-colors",
+          "absolute right-2.5 top-2.5 z-10 flex h-7 w-7 items-center justify-center rounded-lg transition-colors",
           pinned
             ? "text-accent"
             : "text-faint opacity-0 hover:bg-surface-2 group-hover:opacity-100",
