@@ -23,6 +23,7 @@ import {
   Moon,
   LogOut,
   Command,
+  Settings,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
@@ -325,6 +326,20 @@ export function Sidebar({
           {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
           {theme === "dark" ? "Светлая тема" : "Тёмная тема"}
         </button>
+        <Link
+          href="/nastroiki"
+          onClick={onNavigate}
+          aria-label="Настройки"
+          title="Настройки"
+          className={cn(
+            "flex h-9 w-9 items-center justify-center rounded-xl transition-colors",
+            isActive(pathname, "/nastroiki")
+              ? "bg-accent-soft text-accent-soft-text"
+              : "text-muted hover:bg-surface-2 hover:text-text",
+          )}
+        >
+          <Settings size={16} />
+        </Link>
         <form action={logout}>
           <button
             type="submit"

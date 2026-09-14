@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { UiProvider } from "@/components/app/ui-context";
 import { AppShell } from "@/components/app/AppShell";
+import { backupIfDue } from "@/lib/backup";
 import {
   getSidebarCounts,
   getAreasWithCounts,
@@ -42,6 +43,9 @@ export default async function AppLayout({
     getPersonOptions(),
     getOrganizationOptions(),
   ]);
+
+  // Ежедневный снимок базы (раз в день на процесс, best-effort).
+  await backupIfDue().catch(() => {});
 
   const areaLinks = areas.map((a) => ({
     id: a.id,

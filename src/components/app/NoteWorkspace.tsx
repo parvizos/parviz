@@ -1,13 +1,22 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Pin, Trash2, Check, Loader2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Pin,
+  Trash2,
+  Check,
+  Loader2,
+  Maximize2,
+  Minimize2,
+} from "lucide-react";
 import { cn } from "@/lib/cn";
 import { stripHtml } from "@/lib/text";
 import { autosaveNote, updateNote, toggleNotePin, deleteNote } from "@/lib/actions";
 import { RichEditor } from "./RichEditor";
+import { useUi } from "./ui-context";
 import type { SubjectOption } from "./types";
 
 function countWords(text: string): number {
@@ -36,6 +45,7 @@ export function NoteWorkspace({
   subjectOptions: SubjectOption[];
 }) {
   const router = useRouter();
+  const { focusMode, setFocusMode } = useUi();
   const [title, setTitle] = useState(note.title);
   const [subjectId, setSubjectId] = useState(note.subjectId ?? "");
   const [pinned, setPinned] = useState(note.pinned);
@@ -47,6 +57,9 @@ export function NoteWorkspace({
 
   const titleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bodyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Выходим из режима фокуса, когда покидаем конспект.
+  useEffect(() => () => setFocusMode(false), [setFocusMode]);
 
   function markSaved() {
     setStatus("saved");
@@ -143,6 +156,19 @@ export function NoteWorkspace({
           ))}
         </select>
 
+        <button
+          onClick={() => setFocusMode(!focusMode)}
+          aria-label={focusMode ? "Выйти из фокуса" : "Режим фокуса"}
+          title={focusMode ? "Выйти из фокуса" : "Режим фокуса"}
+          className={cn(
+            "flex h-8 w-8 items-center justify-center rounded-lg transition-colors",
+            focusMode
+              ? "text-accent"
+              : "text-faint hover:bg-surface-2 hover:text-text",
+          )}
+        >
+          {focusMode ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+        </button>
         <button
           onClick={onPin}
           aria-label={pinned ? "Открепить" : "Закрепить"}

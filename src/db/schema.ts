@@ -2,6 +2,7 @@ import {
   integer,
   sqliteTable,
   text,
+  blob,
   index,
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
@@ -479,3 +480,17 @@ export type Organization = typeof organizations.$inferSelect;
 export type NewOrganization = typeof organizations.$inferInsert;
 export type Person = typeof people.$inferSelect;
 export type NewPerson = typeof people.$inferInsert;
+
+/* ─────────────────────  Вложения (картинки)  ───────────────────── */
+
+/** Картинки конспектов — хранятся прямо в базе, чтобы бэкап был одним файлом. */
+export const images = sqliteTable("images", {
+  id: id(),
+  mime: text("mime").notNull(),
+  data: blob("data", { mode: "buffer" }).notNull(),
+  size: integer("size").notNull().default(0),
+  createdAt: createdAt(),
+});
+
+export type Image = typeof images.$inferSelect;
+export type NewImage = typeof images.$inferInsert;

@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react";
 import { Menu, Plus, Search } from "lucide-react";
 import { IconButton } from "@/components/ui/Button";
+import { cn } from "@/lib/cn";
 import { Sidebar } from "./Sidebar";
 import { useUi } from "./ui-context";
 
@@ -24,12 +25,17 @@ export function AppShell({
   children: ReactNode;
 }) {
   const [drawer, setDrawer] = useState(false);
-  const { openNewTask, openCommand } = useUi();
+  const { openNewTask, openCommand, focusMode } = useUi();
 
   return (
     <div className="min-h-full">
       {/* Меню на десктопе */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[264px] border-r border-border lg:block">
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-30 hidden w-[264px] border-r border-border lg:block",
+          focusMode && "lg:hidden",
+        )}
+      >
         <Sidebar counts={counts} areas={areas} />
       </aside>
 
@@ -51,9 +57,14 @@ export function AppShell({
         </div>
       )}
 
-      <div className="lg:pl-[264px]">
+      <div className={cn(focusMode ? "" : "lg:pl-[264px]")}>
         {/* Верхняя панель — только на телефоне */}
-        <header className="sticky top-0 z-20 flex h-14 items-center gap-1 border-b border-border bg-surface/85 px-2 backdrop-blur lg:hidden">
+        <header
+          className={cn(
+            "sticky top-0 z-20 flex h-14 items-center gap-1 border-b border-border bg-surface/85 px-2 backdrop-blur lg:hidden",
+            focusMode && "hidden",
+          )}
+        >
           <IconButton label="Меню" onClick={() => setDrawer(true)}>
             <Menu size={20} />
           </IconButton>

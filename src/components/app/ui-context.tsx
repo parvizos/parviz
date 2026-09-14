@@ -86,6 +86,8 @@ interface UiValue {
   openCommand: () => void;
   toggleTheme: () => void;
   theme: "light" | "dark";
+  focusMode: boolean;
+  setFocusMode: (v: boolean) => void;
 }
 
 const Ctx = createContext<UiValue | null>(null);
@@ -164,6 +166,7 @@ export function UiProvider({
   }>({ open: false, organization: null });
   const [cmdOpen, setCmdOpen] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [focusMode, setFocusMode] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -350,6 +353,8 @@ export function UiProvider({
         openCommand,
         toggleTheme,
         theme,
+        focusMode,
+        setFocusMode,
       }}
     >
       {children}

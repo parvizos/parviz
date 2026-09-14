@@ -16,13 +16,18 @@ if (url.startsWith("file:")) {
   }
 }
 
-const client = createClient({
+export const client = createClient({
   url,
   authToken: process.env.DATABASE_AUTH_TOKEN,
 });
 
 export const db = drizzle(client, { schema });
 export { schema };
+
+/** Путь к файлу локальной БД (или null, если БД удалённая). */
+export function databaseFilePath(): string | null {
+  return url.startsWith("file:") ? url.slice("file:".length) : null;
+}
 
 let ready: Promise<void> | null = null;
 
