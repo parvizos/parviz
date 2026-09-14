@@ -15,6 +15,8 @@ import {
   accounts,
   categories,
   transactions,
+  organizations,
+  people,
 } from "./schema";
 
 const rub = (n: number) => n * 100; // рубли → копейки
@@ -212,8 +214,74 @@ async function main() {
     { accountId: card.id, kind: "transfer", toAccountId: piggy.id, amount: rub(5000), date: today(-7), note: "Отложил" },
   ]);
 
+  // Люди и организации.
+  const [univ] = await db
+    .insert(organizations)
+    .values({ name: "МГУ", kind: "university", color: "#5b5bd6", icon: "🎓", note: "Мой университет." })
+    .returning();
+  const [cafe] = await db
+    .insert(organizations)
+    .values({ name: "Кофейня «Бариста»", kind: "company", color: "#c9832a", icon: "☕", note: "Подработка по выходным." })
+    .returning();
+
+  const [supervisor] = await db
+    .insert(people)
+    .values({
+      name: "Иванов И. И.",
+      role: "Научный руководитель",
+      organizationId: univ.id,
+      email: "ivanov@msu.ru",
+      icon: "👨‍🏫",
+      color: "#5b5bd6",
+      note: "Ведёт мою курсовую.",
+    })
+    .returning();
+  const [anya] = await db
+    .insert(people)
+    .values({
+      name: "Аня",
+      role: "Одногруппница",
+      organizationId: univ.id,
+      phone: "+7 999 123-45-67",
+      icon: "🙂",
+      color: "#c4488f",
+      birthday: today(9),
+    })
+    .returning();
+  await db.insert(people).values({
+    name: "Марк",
+    role: "Старший бариста",
+    organizationId: cafe.id,
+    icon: "☕",
+    color: "#c9832a",
+  });
+
+  await db.insert(tasks).values([
+    {
+      title: "Обсудить курсовую с научруком",
+      personId: supervisor.id,
+      projectId: course.id,
+      subjectId: ma.id,
+      areaId: study.id,
+      scheduledDate: today(2),
+      priority: 2,
+    },
+  ]);
+  await db.insert(transactions).values([
+    {
+      accountId: card.id,
+      kind: "expense",
+      categoryId: cFood.id,
+      amount: rub(450),
+      date: today(-2),
+      note: "Кофе с Аней",
+      personId: anya.id,
+      areaId: personal.id,
+    },
+  ]);
+
   console.log(
-    "Готово: демо-данные (сферы, проект, задачи, учёба, ежедневник, финансы).",
+    "Готово: демо-данные (сферы, проект, задачи, учёба, ежедневник, финансы, люди).",
   );
 }
 

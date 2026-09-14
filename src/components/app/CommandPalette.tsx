@@ -19,6 +19,8 @@ import {
   BookText,
   Wallet,
   Receipt,
+  Users,
+  Building2,
   CornerDownLeft,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
@@ -44,6 +46,7 @@ export function CommandPalette({
   onNewSubject,
   onNewNote,
   onNewTransaction,
+  onNewPerson,
   onToggleTheme,
 }: {
   open: boolean;
@@ -57,6 +60,7 @@ export function CommandPalette({
   onNewSubject: () => void;
   onNewNote: () => void;
   onNewTransaction: () => void;
+  onNewPerson: () => void;
   onToggleTheme: () => void;
 }) {
   const router = useRouter();
@@ -81,6 +85,7 @@ export function CommandPalette({
       { id: "new-subject", label: "Новый предмет", icon: <Plus size={16} />, run: act(onNewSubject) },
       { id: "new-note", label: "Новый конспект", icon: <Plus size={16} />, run: act(onNewNote) },
       { id: "new-tx", label: "Новая операция", icon: <Plus size={16} />, run: act(onNewTransaction) },
+      { id: "new-person", label: "Новый человек", icon: <Plus size={16} />, run: act(onNewPerson) },
       { id: "nav-today", label: "Сегодня", icon: <CalendarDays size={16} />, run: go("/segodnya") },
       { id: "nav-inbox", label: "Входящие", icon: <Inbox size={16} />, run: go("/vhodyaschie") },
       { id: "nav-upcoming", label: "Предстоящее", icon: <CalendarClock size={16} />, run: go("/predstoyaschee") },
@@ -92,6 +97,8 @@ export function CommandPalette({
       { id: "nav-notes", label: "Конспекты", icon: <BookText size={16} />, run: go("/konspekty") },
       { id: "nav-finansy", label: "Финансы", icon: <Wallet size={16} />, run: go("/finansy") },
       { id: "nav-operacii", label: "Операции", icon: <Receipt size={16} />, run: go("/finansy/operacii") },
+      { id: "nav-lyudi", label: "Люди", icon: <Users size={16} />, run: go("/lyudi") },
+      { id: "nav-organizacii", label: "Организации", icon: <Building2 size={16} />, run: go("/organizacii") },
       { id: "theme", label: "Переключить тему", icon: <Sun size={16} />, run: act(onToggleTheme) },
       ...projects.map((p) => ({
         id: `p-${p.id}`,
@@ -120,7 +127,7 @@ export function CommandPalette({
         run: go(`/sfery/${a.id}`),
       })),
     ];
-  }, [router, onClose, onNewTask, onNewProject, onNewArea, onNewSubject, onNewNote, onNewTransaction, onToggleTheme, projects, subjects, areas]);
+  }, [router, onClose, onNewTask, onNewProject, onNewArea, onNewSubject, onNewNote, onNewTransaction, onNewPerson, onToggleTheme, projects, subjects, areas]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();

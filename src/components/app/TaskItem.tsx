@@ -1,7 +1,14 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Check, Flag, CalendarDays, Folder, GraduationCap } from "lucide-react";
+import {
+  Check,
+  Flag,
+  CalendarDays,
+  Folder,
+  GraduationCap,
+  User,
+} from "lucide-react";
 import { cn } from "@/lib/cn";
 import { toggleTask } from "@/lib/actions";
 import { relativeLabel, dateTone } from "@/lib/dates";
@@ -101,6 +108,12 @@ export function TaskItem({
             <span className="inline-flex items-center gap-1">
               <GraduationCap size={13} />
               <span className="truncate">{task.subjectName}</span>
+            </span>
+          )}
+          {task.personName && (
+            <span className="inline-flex items-center gap-1">
+              <User size={13} />
+              <span className="truncate">{task.personName}</span>
             </span>
           )}
           {showArea && task.areaName && (

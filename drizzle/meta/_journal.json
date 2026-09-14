@@ -29,6 +29,13 @@
       "when": 1789377301216,
       "tag": "0003_broken_juggernaut",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1789378245250,
+      "tag": "0004_milky_bruce_banner",
+      "breakpoints": true
     }
   ]
 }

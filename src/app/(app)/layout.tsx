@@ -9,6 +9,8 @@ import {
   getSubjectOptions,
   getAccountOptions,
   getCategoryOptions,
+  getPersonOptions,
+  getOrganizationOptions,
 } from "@/lib/queries";
 
 // Данные читаются из БД на каждый запрос — не пытаемся пререндерить статически.
@@ -27,6 +29,8 @@ export default async function AppLayout({
     subjectOptions,
     accountOptions,
     categoryOptions,
+    personOptions,
+    organizationOptions,
   ] = await Promise.all([
     getSidebarCounts(),
     getAreasWithCounts(),
@@ -35,6 +39,8 @@ export default async function AppLayout({
     getSubjectOptions(),
     getAccountOptions(),
     getCategoryOptions(),
+    getPersonOptions(),
+    getOrganizationOptions(),
   ]);
 
   const areaLinks = areas.map((a) => ({
@@ -52,6 +58,8 @@ export default async function AppLayout({
       subjectOptions={subjectOptions}
       accountOptions={accountOptions}
       categoryOptions={categoryOptions}
+      personOptions={personOptions}
+      organizationOptions={organizationOptions}
     >
       <AppShell counts={counts} areas={areaLinks}>
         {children}

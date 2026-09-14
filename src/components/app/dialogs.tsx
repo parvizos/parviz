@@ -31,6 +31,7 @@ import {
   type AreaOption,
   type ProjectOption,
   type SubjectOption,
+  type PersonOption,
   type TaskPrefill,
 } from "./types";
 
@@ -135,6 +136,7 @@ export function TaskDialog({
   areaOptions,
   projectOptions,
   subjectOptions,
+  personOptions,
 }: {
   onClose: () => void;
   task?: TaskWithContext | null;
@@ -142,6 +144,7 @@ export function TaskDialog({
   areaOptions: AreaOption[];
   projectOptions: ProjectOption[];
   subjectOptions: SubjectOption[];
+  personOptions: PersonOption[];
 }) {
   const editing = !!task;
   const [title, setTitle] = useState(task?.title ?? "");
@@ -156,6 +159,9 @@ export function TaskDialog({
   const [areaId, setAreaId] = useState(task?.areaId ?? prefill?.areaId ?? "");
   const [subjectId, setSubjectId] = useState(
     task?.subjectId ?? prefill?.subjectId ?? "",
+  );
+  const [personId, setPersonId] = useState(
+    task?.personId ?? prefill?.personId ?? "",
   );
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -182,6 +188,7 @@ export function TaskDialog({
           projectId: projectId || null,
           areaId: areaId || null,
           subjectId: subjectId || null,
+          personId: personId || null,
         };
         if (editing && task) await updateTask(task.id, payload);
         else await createTask(payload);
@@ -305,6 +312,22 @@ export function TaskDialog({
               {subjectOptions.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        )}
+
+        {personOptions.length > 0 && (
+          <Field label="Человек" hint="С кем связана задача">
+            <Select
+              value={personId}
+              onChange={(e) => setPersonId(e.target.value)}
+            >
+              <option value="">Без человека</option>
+              {personOptions.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
                 </option>
               ))}
             </Select>

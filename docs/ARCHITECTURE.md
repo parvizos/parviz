@@ -82,16 +82,20 @@ transactions(id, accountId, toAccountId?, categoryId?, kind, amount, date,
 ушло на учёбу за месяц. Когда появятся Люди/Организации, к операции добавятся
 `personId`/`organizationId` тем же способом.
 
-### Люди и организации (личный CRM)
+### Люди и организации — реализовано
 
 ```
-people(id, name, note, birthday?, …контакты)
-organizations(id, name, kind, note, …)
+organizations(id, name, kind, note, url…)
+people(id, name, role, organizationId?, phone, email, birthday?, note…)
+tasks.personId  →  people.id        // с кем задача
+transactions.personId  →  people.id // кому/от кого
 ```
 
-Связи: `task ↔ person` (с кем задача), `person ↔ organization` (где работает/учится),
-`transaction ↔ person/organization`, `lesson ↔ organization` (вуз). История
-общения и долгов собирается по `links`, ведущим к человеку.
+Связи сделаны прямыми FK: `person ↔ organization` (где учится/работает),
+`task ↔ person`, `transaction ↔ person`. На странице человека собираются его
+задачи (`getPersonTasks`) и операции (`getPersonTransactions`) — граф замкнут:
+одна задача может ссылаться сразу на проект, предмет, человека и сферу.
+Ближайшие дни рождения считаются на лету из `people.birthday`.
 
 ### Учёба — реализовано
 

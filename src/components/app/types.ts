@@ -18,11 +18,14 @@ export type CategoryOption = {
   kind: "income" | "expense";
   color: string | null;
 };
+export type PersonOption = { id: string; name: string; color: string | null };
+export type OrganizationOption = { id: string; name: string };
 
 export type TaskPrefill = {
   projectId?: string | null;
   areaId?: string | null;
   subjectId?: string | null;
+  personId?: string | null;
   scheduledDate?: string | null;
 };
 
@@ -34,6 +37,7 @@ export type TransactionPrefill = {
   areaId?: string | null;
   projectId?: string | null;
   subjectId?: string | null;
+  personId?: string | null;
 };
 
 /** Локальная «сегодня» в часовом поясе браузера — для быстрых кнопок дат. */

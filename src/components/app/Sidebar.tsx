@@ -68,9 +68,9 @@ const FINANCE: NavItem[] = [
   { href: "/finansy/kategorii", label: "Категории", icon: Tags },
 ];
 
-const SOON: { label: string; icon: LucideIcon }[] = [
-  { label: "Люди", icon: Users },
-  { label: "Организации", icon: Building2 },
+const PEOPLE: NavItem[] = [
+  { href: "/lyudi", label: "Люди", icon: Users },
+  { href: "/organizacii", label: "Организации", icon: Building2 },
 ];
 
 function isActive(pathname: string, href: string): boolean {
@@ -286,27 +286,33 @@ export function Sidebar({
           })}
         </ul>
 
-        {/* Скоро */}
+        {/* Люди */}
         <div className="mt-6 px-3">
           <span className="text-[11px] font-semibold uppercase tracking-wider text-faint">
-            Скоро
+            Люди
           </span>
         </div>
         <ul className="mt-1 flex flex-col gap-0.5">
-          {SOON.map((item) => (
-            <li key={item.label}>
-              <div
-                className="flex h-9 cursor-default items-center gap-3 rounded-xl px-3 text-[14px] text-faint/70"
-                title="В разработке"
-              >
-                <item.icon size={17} className="shrink-0 opacity-60" />
-                <span className="flex-1">{item.label}</span>
-                <span className="rounded-full bg-surface-2 px-1.5 text-[10px] text-faint">
-                  скоро
-                </span>
-              </div>
-            </li>
-          ))}
+          {PEOPLE.map((item) => {
+            const active = isActive(pathname, item.href);
+            return (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  onClick={onNavigate}
+                  className={cn(
+                    "flex h-9 items-center gap-3 rounded-xl px-3 text-[14px] transition-colors",
+                    active
+                      ? "bg-accent-soft font-medium text-accent-soft-text"
+                      : "text-muted hover:bg-surface-2 hover:text-text",
+                  )}
+                >
+                  <item.icon size={17} className="shrink-0" />
+                  <span className="flex-1">{item.label}</span>
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       </nav>
 

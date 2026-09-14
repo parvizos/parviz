@@ -35,6 +35,7 @@ import {
   type AreaOption,
   type ProjectOption,
   type SubjectOption,
+  type PersonOption,
   type AccountOption,
   type CategoryOption,
   type TransactionPrefill,
@@ -375,6 +376,7 @@ export type TransactionForEdit = {
   areaId: string | null;
   projectId: string | null;
   subjectId: string | null;
+  personId: string | null;
 };
 
 export function TransactionDialog({
@@ -386,6 +388,7 @@ export function TransactionDialog({
   areaOptions,
   projectOptions,
   subjectOptions,
+  personOptions,
 }: {
   onClose: () => void;
   tx?: TransactionForEdit | null;
@@ -395,6 +398,7 @@ export function TransactionDialog({
   areaOptions: AreaOption[];
   projectOptions: ProjectOption[];
   subjectOptions: SubjectOption[];
+  personOptions: PersonOption[];
 }) {
   const editing = !!tx;
   const [kind, setKind] = useState<TransactionKind>(
@@ -416,6 +420,9 @@ export function TransactionDialog({
   );
   const [subjectId, setSubjectId] = useState(
     tx?.subjectId ?? prefill?.subjectId ?? "",
+  );
+  const [personId, setPersonId] = useState(
+    tx?.personId ?? prefill?.personId ?? "",
   );
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -451,6 +458,7 @@ export function TransactionDialog({
           areaId: kind === "transfer" ? null : areaId || null,
           projectId: kind === "transfer" ? null : projectId || null,
           subjectId: kind === "transfer" ? null : subjectId || null,
+          personId: kind === "transfer" ? null : personId || null,
         };
         if (editing && tx) await updateTransaction(tx.id, payload);
         else await createTransaction(payload);
@@ -609,7 +617,7 @@ export function TransactionDialog({
             <div className="mb-2 text-[12px] font-medium text-faint">
               Привязка (необязательно)
             </div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Select value={areaId} onChange={(e) => setAreaId(e.target.value)}>
                 <option value="">Сфера</option>
                 {areaOptions.map((a) => (
@@ -635,6 +643,17 @@ export function TransactionDialog({
               >
                 <option value="">Проект</option>
                 {projectOptions.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </Select>
+              <Select
+                value={personId}
+                onChange={(e) => setPersonId(e.target.value)}
+              >
+                <option value="">Человек</option>
+                {personOptions.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name}
                   </option>

@@ -15,12 +15,15 @@ import {
   accounts,
   categories,
   transactions,
+  organizations,
+  people,
   PROJECT_STATUSES,
   TASK_STATUSES,
   LESSON_KINDS,
   ACCOUNT_KINDS,
   CATEGORY_KINDS,
   TRANSACTION_KINDS,
+  ORG_KINDS,
 } from "@/db/schema";
 
 function revalidateAll() {
@@ -44,6 +47,7 @@ const createTaskSchema = z.object({
   projectId: nullableId,
   areaId: nullableId,
   subjectId: nullableId,
+  personId: nullableId,
   scheduledDate: isoDate,
   dueDate: isoDate,
   priority: z.coerce.number().int().min(0).max(3).optional(),
@@ -83,6 +87,7 @@ export async function createTask(input: CreateTaskInput) {
       projectId: data.projectId ?? null,
       areaId,
       subjectId: data.subjectId ?? null,
+      personId: data.personId ?? null,
       scheduledDate: data.scheduledDate ?? null,
       dueDate: data.dueDate ?? null,
       priority: (data.priority ?? 0) as 0 | 1 | 2 | 3,
@@ -111,6 +116,7 @@ const updateTaskSchema = z.object({
   projectId: nullableId,
   areaId: nullableId,
   subjectId: nullableId,
+  personId: nullableId,
   scheduledDate: isoDate,
   dueDate: isoDate,
   priority: z.coerce.number().int().min(0).max(3).optional(),
@@ -584,6 +590,7 @@ const createTransactionSchema = z.object({
   areaId: nullableId,
   projectId: nullableId,
   subjectId: nullableId,
+  personId: nullableId,
 });
 
 export type CreateTransactionInput = z.input<typeof createTransactionSchema>;
@@ -619,6 +626,7 @@ export async function createTransaction(input: CreateTransactionInput) {
       areaId: data.areaId ?? null,
       projectId: data.projectId ?? null,
       subjectId: data.subjectId ?? null,
+      personId: data.kind === "transfer" ? null : data.personId ?? null,
     })
     .returning({ id: transactions.id });
   revalidateAll();
@@ -636,6 +644,7 @@ const updateTransactionSchema = z.object({
   areaId: nullableId,
   projectId: nullableId,
   subjectId: nullableId,
+  personId: nullableId,
 });
 
 export type UpdateTransactionInput = z.input<typeof updateTransactionSchema>;
@@ -655,6 +664,7 @@ export async function updateTransaction(
     });
     patch.toAccountId = norm.toAccountId;
     patch.categoryId = norm.categoryId;
+    if (data.kind === "transfer") patch.personId = null;
   }
   await db.update(transactions).set(patch).where(eq(transactions.id, id));
   revalidateAll();
@@ -663,5 +673,113 @@ export async function updateTransaction(
 export async function deleteTransaction(id: string) {
   await schemaReady();
   await db.delete(transactions).where(eq(transactions.id, id));
+  revalidateAll();
+}
+
+/* ───────────────────────  Организации  ─────────────────────── */
+
+const createOrganizationSchema = z.object({
+  name: z.string().trim().min(1, "Введите название").max(160),
+  kind: z.enum(ORG_KINDS).optional(),
+  note: z.string().max(2000).nullable().optional(),
+  url: z.string().max(300).nullable().optional(),
+  color: z.string().max(32).nullable().optional(),
+  icon: z.string().max(32).nullable().optional(),
+});
+
+export type CreateOrganizationInput = z.input<typeof createOrganizationSchema>;
+
+export async function createOrganization(input: CreateOrganizationInput) {
+  await schemaReady();
+  const data = createOrganizationSchema.parse(input);
+  const [row] = await db
+    .insert(organizations)
+    .values({
+      name: data.name,
+      kind: data.kind ?? "other",
+      note: data.note ?? null,
+      url: data.url ?? null,
+      color: data.color ?? null,
+      icon: data.icon ?? null,
+    })
+    .returning({ id: organizations.id });
+  revalidateAll();
+  return row;
+}
+
+const updateOrganizationSchema = createOrganizationSchema.partial();
+export type UpdateOrganizationInput = z.input<typeof updateOrganizationSchema>;
+
+export async function updateOrganization(
+  id: string,
+  input: UpdateOrganizationInput,
+) {
+  await schemaReady();
+  const data = updateOrganizationSchema.parse(input);
+  await db.update(organizations).set(data).where(eq(organizations.id, id));
+  revalidateAll();
+}
+
+export async function deleteOrganization(id: string) {
+  await schemaReady();
+  // У людей ссылка на организацию обнулится (set null).
+  await db.delete(organizations).where(eq(organizations.id, id));
+  revalidateAll();
+}
+
+/* ───────────────────────  Люди  ─────────────────────── */
+
+const createPersonSchema = z.object({
+  name: z.string().trim().min(1, "Введите имя").max(160),
+  role: z.string().max(160).nullable().optional(),
+  organizationId: nullableId,
+  phone: z.string().max(64).nullable().optional(),
+  email: z.string().max(160).nullable().optional(),
+  birthday: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .nullable()
+    .optional(),
+  note: z.string().max(4000).nullable().optional(),
+  color: z.string().max(32).nullable().optional(),
+  icon: z.string().max(32).nullable().optional(),
+});
+
+export type CreatePersonInput = z.input<typeof createPersonSchema>;
+
+export async function createPerson(input: CreatePersonInput) {
+  await schemaReady();
+  const data = createPersonSchema.parse(input);
+  const [row] = await db
+    .insert(people)
+    .values({
+      name: data.name,
+      role: data.role ?? null,
+      organizationId: data.organizationId ?? null,
+      phone: data.phone ?? null,
+      email: data.email ?? null,
+      birthday: data.birthday ?? null,
+      note: data.note ?? null,
+      color: data.color ?? null,
+      icon: data.icon ?? null,
+    })
+    .returning({ id: people.id });
+  revalidateAll();
+  return row;
+}
+
+const updatePersonSchema = createPersonSchema.partial();
+export type UpdatePersonInput = z.input<typeof updatePersonSchema>;
+
+export async function updatePerson(id: string, input: UpdatePersonInput) {
+  await schemaReady();
+  const data = updatePersonSchema.parse(input);
+  await db.update(people).set(data).where(eq(people.id, id));
+  revalidateAll();
+}
+
+export async function deletePerson(id: string) {
+  await schemaReady();
+  await db.delete(people).where(eq(people.id, id));
   revalidateAll();
 }

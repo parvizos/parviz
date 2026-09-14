@@ -27,6 +27,8 @@ import {
   accounts,
   categories,
   transactions,
+  organizations,
+  people,
   type Task,
   type Area,
   type Subject,
@@ -36,6 +38,8 @@ import {
   type Account,
   type Category,
   type Transaction,
+  type Organization,
+  type Person,
 } from "@/db/schema";
 import { todayISO, isoWeekday } from "@/lib/dates";
 
@@ -45,6 +49,7 @@ export type TaskWithContext = Task & {
   areaColor: string | null;
   subjectName: string | null;
   subjectColor: string | null;
+  personName: string | null;
 };
 
 const taskSelection = {
@@ -54,6 +59,7 @@ const taskSelection = {
   areaColor: areas.color,
   subjectName: subjects.name,
   subjectColor: subjects.color,
+  personName: people.name,
 };
 
 function taskBaseQuery() {
@@ -62,7 +68,8 @@ function taskBaseQuery() {
     .from(tasks)
     .leftJoin(projects, eq(tasks.projectId, projects.id))
     .leftJoin(areas, eq(tasks.areaId, areas.id))
-    .leftJoin(subjects, eq(tasks.subjectId, subjects.id));
+    .leftJoin(subjects, eq(tasks.subjectId, subjects.id))
+    .leftJoin(people, eq(tasks.personId, people.id));
 }
 
 const openTask = eq(tasks.status, "open");
@@ -652,6 +659,7 @@ export type TransactionWithContext = Transaction & {
   areaColor: string | null;
   projectName: string | null;
   subjectName: string | null;
+  personName: string | null;
 };
 
 export async function getTransactions(
@@ -659,6 +667,7 @@ export async function getTransactions(
     month?: string;
     accountId?: string;
     categoryId?: string;
+    personId?: string;
     limit?: number;
   } = {},
 ): Promise<TransactionWithContext[]> {
@@ -668,6 +677,7 @@ export async function getTransactions(
   if (opts.month) conds.push(like(transactions.date, `${opts.month}-%`));
   if (opts.accountId) conds.push(eq(transactions.accountId, opts.accountId));
   if (opts.categoryId) conds.push(eq(transactions.categoryId, opts.categoryId));
+  if (opts.personId) conds.push(eq(transactions.personId, opts.personId));
 
   let q = db
     .select({
@@ -682,6 +692,7 @@ export async function getTransactions(
       areaColor: areas.color,
       projectName: projects.name,
       subjectName: subjects.name,
+      personName: people.name,
     })
     .from(transactions)
     .leftJoin(accounts, eq(transactions.accountId, accounts.id))
@@ -690,6 +701,7 @@ export async function getTransactions(
     .leftJoin(areas, eq(transactions.areaId, areas.id))
     .leftJoin(projects, eq(transactions.projectId, projects.id))
     .leftJoin(subjects, eq(transactions.subjectId, subjects.id))
+    .leftJoin(people, eq(transactions.personId, people.id))
     .$dynamic();
 
   if (conds.length) q = q.where(and(...conds));
@@ -748,4 +760,125 @@ export async function getCategoryOptions() {
     .from(categories)
     .where(isNull(categories.archivedAt))
     .orderBy(asc(categories.position), asc(categories.createdAt));
+}
+
+/* ─────────────────────  Люди и организации  ───────────────────── */
+
+export type PersonWithOrg = Person & {
+  orgName: string | null;
+  orgColor: string | null;
+};
+
+export async function getPeopleWithOrg(): Promise<PersonWithOrg[]> {
+  await schemaReady();
+  return db
+    .select({
+      ...getTableColumns(people),
+      orgName: organizations.name,
+      orgColor: organizations.color,
+    })
+    .from(people)
+    .leftJoin(organizations, eq(people.organizationId, organizations.id))
+    .where(isNull(people.archivedAt))
+    .orderBy(asc(people.position), asc(people.name));
+}
+
+export async function getPerson(id: string): Promise<PersonWithOrg | null> {
+  await schemaReady();
+  const [row] = await db
+    .select({
+      ...getTableColumns(people),
+      orgName: organizations.name,
+      orgColor: organizations.color,
+    })
+    .from(people)
+    .leftJoin(organizations, eq(people.organizationId, organizations.id))
+    .where(eq(people.id, id))
+    .limit(1);
+  return row ?? null;
+}
+
+export async function getPersonTasks(id: string): Promise<TaskWithContext[]> {
+  await schemaReady();
+  return taskBaseQuery()
+    .where(eq(tasks.personId, id))
+    .orderBy(
+      asc(sql`case when ${tasks.status} = 'open' then 0 else 1 end`),
+      asc(tasks.scheduledDate),
+      desc(tasks.priority),
+      asc(tasks.createdAt),
+    );
+}
+
+export function getPersonTransactions(
+  id: string,
+): Promise<TransactionWithContext[]> {
+  return getTransactions({ personId: id, limit: 50 });
+}
+
+export type OrgWithCount = Organization & { peopleCount: number };
+
+export async function getOrganizationsWithCounts(): Promise<OrgWithCount[]> {
+  await schemaReady();
+  const base = await db
+    .select()
+    .from(organizations)
+    .where(isNull(organizations.archivedAt))
+    .orderBy(asc(organizations.position), asc(organizations.name));
+  const counts = await db
+    .select({
+      organizationId: people.organizationId,
+      c: sql<number>`count(*)`,
+    })
+    .from(people)
+    .where(and(isNotNull(people.organizationId), isNull(people.archivedAt)))
+    .groupBy(people.organizationId);
+  const m = new Map(counts.map((r) => [r.organizationId, r.c]));
+  return base.map((o) => ({ ...o, peopleCount: m.get(o.id) ?? 0 }));
+}
+
+export async function getOrganization(
+  id: string,
+): Promise<Organization | null> {
+  await schemaReady();
+  const [row] = await db
+    .select()
+    .from(organizations)
+    .where(eq(organizations.id, id))
+    .limit(1);
+  return row ?? null;
+}
+
+export async function getOrganizationPeople(
+  id: string,
+): Promise<PersonWithOrg[]> {
+  await schemaReady();
+  return db
+    .select({
+      ...getTableColumns(people),
+      orgName: organizations.name,
+      orgColor: organizations.color,
+    })
+    .from(people)
+    .leftJoin(organizations, eq(people.organizationId, organizations.id))
+    .where(and(eq(people.organizationId, id), isNull(people.archivedAt)))
+    .orderBy(asc(people.position), asc(people.name));
+}
+
+export async function getPersonOptions() {
+  await schemaReady();
+  return db
+    .select({ id: people.id, name: people.name, color: people.color })
+    .from(people)
+    .where(isNull(people.archivedAt))
+    .orderBy(asc(people.position), asc(people.name));
+}
+
+export async function getOrganizationOptions() {
+  await schemaReady();
+  return db
+    .select({ id: organizations.id, name: organizations.name })
+    .from(organizations)
+    .where(isNull(organizations.archivedAt))
+    .orderBy(asc(organizations.position), asc(organizations.name));
 }

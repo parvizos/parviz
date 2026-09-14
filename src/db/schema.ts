@@ -183,6 +183,10 @@ export const tasks = sqliteTable(
     subjectId: text("subject_id").references(() => subjects.id, {
       onDelete: "set null",
     }),
+    /** Человек, с которым связана задача (встреча, звонок). */
+    personId: text("person_id").references(() => people.id, {
+      onDelete: "set null",
+    }),
     /** Когда сделать (попадает в «Сегодня»/«Предстоящее»): YYYY-MM-DD. */
     scheduledDate: text("scheduled_date"),
     /** Крайний срок: YYYY-MM-DD. */
@@ -198,6 +202,7 @@ export const tasks = sqliteTable(
     index("tasks_project_idx").on(t.projectId),
     index("tasks_area_idx").on(t.areaId),
     index("tasks_subject_idx").on(t.subjectId),
+    index("tasks_person_idx").on(t.personId),
     index("tasks_scheduled_idx").on(t.scheduledDate),
     index("tasks_due_idx").on(t.dueDate),
   ],
@@ -390,6 +395,10 @@ export const transactions = sqliteTable(
     subjectId: text("subject_id").references(() => subjects.id, {
       onDelete: "set null",
     }),
+    /** Человек, связанный с операцией (кому/от кого). */
+    personId: text("person_id").references(() => people.id, {
+      onDelete: "set null",
+    }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -399,6 +408,7 @@ export const transactions = sqliteTable(
     index("transactions_date_idx").on(t.date),
     index("transactions_kind_idx").on(t.kind),
     index("transactions_area_idx").on(t.areaId),
+    index("transactions_person_idx").on(t.personId),
   ],
 );
 
@@ -408,3 +418,64 @@ export type Category = typeof categories.$inferSelect;
 export type NewCategory = typeof categories.$inferInsert;
 export type Transaction = typeof transactions.$inferSelect;
 export type NewTransaction = typeof transactions.$inferInsert;
+
+/* ─────────────────────  Домен: Люди и организации  ───────────────────── */
+
+export const ORG_KINDS = [
+  "university",
+  "company",
+  "school",
+  "other",
+] as const;
+export type OrgKind = (typeof ORG_KINDS)[number];
+
+/** Организация: вуз, работа, любая структура, к которой относятся люди. */
+export const organizations = sqliteTable(
+  "organizations",
+  {
+    id: id(),
+    name: text("name").notNull(),
+    kind: text("kind").$type<OrgKind>().notNull().default("other"),
+    note: text("note"),
+    url: text("url"),
+    color: text("color"),
+    icon: text("icon"),
+    position: integer("position").notNull().default(0),
+    archivedAt: integer("archived_at", { mode: "timestamp_ms" }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("organizations_position_idx").on(t.position)],
+);
+
+/** Человек: контакт с ролью, организацией, днём рождения и заметкой. */
+export const people = sqliteTable(
+  "people",
+  {
+    id: id(),
+    name: text("name").notNull(),
+    /** Кто это: научрук, одногруппник, друг… */
+    role: text("role"),
+    organizationId: text("organization_id").references(
+      () => organizations.id,
+      { onDelete: "set null" },
+    ),
+    phone: text("phone"),
+    email: text("email"),
+    /** День рождения: YYYY-MM-DD (год может быть 0001, если неизвестен). */
+    birthday: text("birthday"),
+    note: text("note"),
+    color: text("color"),
+    icon: text("icon"),
+    position: integer("position").notNull().default(0),
+    archivedAt: integer("archived_at", { mode: "timestamp_ms" }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("people_org_idx").on(t.organizationId)],
+);
+
+export type Organization = typeof organizations.$inferSelect;
+export type NewOrganization = typeof organizations.$inferInsert;
+export type Person = typeof people.$inferSelect;
+export type NewPerson = typeof people.$inferInsert;

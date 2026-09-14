@@ -25,6 +25,12 @@ import {
   type CategoryForEdit,
   type TransactionForEdit,
 } from "./finance-dialogs";
+import {
+  PersonDialog,
+  OrganizationDialog,
+  type PersonForEdit,
+  type OrganizationForEdit,
+} from "./crm-dialogs";
 import { CommandPalette } from "./CommandPalette";
 import type {
   AreaOption,
@@ -32,6 +38,8 @@ import type {
   SubjectOption,
   AccountOption,
   CategoryOption,
+  PersonOption,
+  OrganizationOption,
   TaskPrefill,
   TransactionPrefill,
 } from "./types";
@@ -72,6 +80,10 @@ interface UiValue {
   openEditAccount: (a: AccountForEdit) => void;
   openNewCategory: (defaultKind?: CategoryKind) => void;
   openEditCategory: (c: CategoryForEdit) => void;
+  openNewPerson: (defaultOrganizationId?: string | null) => void;
+  openEditPerson: (p: PersonForEdit) => void;
+  openNewOrganization: () => void;
+  openEditOrganization: (o: OrganizationForEdit) => void;
   openCommand: () => void;
   toggleTheme: () => void;
   theme: "light" | "dark";
@@ -92,6 +104,8 @@ export function UiProvider({
   subjectOptions,
   accountOptions,
   categoryOptions,
+  personOptions,
+  organizationOptions,
 }: {
   children: ReactNode;
   areaOptions: AreaOption[];
@@ -99,6 +113,8 @@ export function UiProvider({
   subjectOptions: SubjectOption[];
   accountOptions: AccountOption[];
   categoryOptions: CategoryOption[];
+  personOptions: PersonOption[];
+  organizationOptions: OrganizationOption[];
 }) {
   const [task, setTask] = useState<{
     open: boolean;
@@ -143,6 +159,15 @@ export function UiProvider({
     category: CategoryForEdit | null;
     defaultKind?: CategoryKind;
   }>({ open: false, category: null });
+  const [person, setPerson] = useState<{
+    open: boolean;
+    person: PersonForEdit | null;
+    orgId?: string | null;
+  }>({ open: false, person: null });
+  const [organization, setOrganization] = useState<{
+    open: boolean;
+    organization: OrganizationForEdit | null;
+  }>({ open: false, organization: null });
   const [cmdOpen, setCmdOpen] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">("light");
 
@@ -244,6 +269,23 @@ export function UiProvider({
     (c: CategoryForEdit) => setCategory({ open: true, category: c }),
     [],
   );
+  const openNewPerson = useCallback(
+    (defaultOrganizationId?: string | null) =>
+      setPerson({ open: true, person: null, orgId: defaultOrganizationId ?? null }),
+    [],
+  );
+  const openEditPerson = useCallback(
+    (p: PersonForEdit) => setPerson({ open: true, person: p }),
+    [],
+  );
+  const openNewOrganization = useCallback(
+    () => setOrganization({ open: true, organization: null }),
+    [],
+  );
+  const openEditOrganization = useCallback(
+    (o: OrganizationForEdit) => setOrganization({ open: true, organization: o }),
+    [],
+  );
   const openCommand = useCallback(() => setCmdOpen(true), []);
 
   const anyOpen =
@@ -256,6 +298,8 @@ export function UiProvider({
     transaction.open ||
     account.open ||
     category.open ||
+    person.open ||
+    organization.open ||
     cmdOpen;
 
   useEffect(() => {
@@ -304,6 +348,10 @@ export function UiProvider({
         openEditAccount,
         openNewCategory,
         openEditCategory,
+        openNewPerson,
+        openEditPerson,
+        openNewOrganization,
+        openEditOrganization,
         openCommand,
         toggleTheme,
         theme,
@@ -319,6 +367,7 @@ export function UiProvider({
           areaOptions={areaOptions}
           projectOptions={projectOptions}
           subjectOptions={subjectOptions}
+          personOptions={personOptions}
         />
       )}
       {project.open && (
@@ -369,6 +418,7 @@ export function UiProvider({
           areaOptions={areaOptions}
           projectOptions={projectOptions}
           subjectOptions={subjectOptions}
+          personOptions={personOptions}
         />
       )}
       {account.open && (
@@ -384,6 +434,20 @@ export function UiProvider({
           defaultKind={category.defaultKind}
         />
       )}
+      {person.open && (
+        <PersonDialog
+          onClose={() => setPerson((s) => ({ ...s, open: false }))}
+          person={person.person}
+          defaultOrganizationId={person.orgId}
+          organizationOptions={organizationOptions}
+        />
+      )}
+      {organization.open && (
+        <OrganizationDialog
+          onClose={() => setOrganization((s) => ({ ...s, open: false }))}
+          organization={organization.organization}
+        />
+      )}
       {cmdOpen && (
         <CommandPalette
           open
@@ -397,6 +461,7 @@ export function UiProvider({
           onNewSubject={openNewSubject}
           onNewNote={() => openNewNote()}
           onNewTransaction={() => openNewTransaction()}
+          onNewPerson={() => openNewPerson()}
           onToggleTheme={toggleTheme}
         />
       )}

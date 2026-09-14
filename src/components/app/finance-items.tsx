@@ -6,6 +6,7 @@ import {
   Wallet,
   GraduationCap,
   Folder,
+  User,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { formatSigned, formatMoneyShort } from "@/lib/money";
@@ -58,6 +59,7 @@ export function TransactionRow({
           areaId: tx.areaId,
           projectId: tx.projectId,
           subjectId: tx.subjectId,
+          personId: tx.personId,
         })
       }
       className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition-colors hover:bg-surface-2"
@@ -90,6 +92,12 @@ export function TransactionRow({
               {tx.kind === "transfer" && tx.toAccountName
                 ? ` → ${tx.toAccountName}`
                 : ""}
+            </span>
+          )}
+          {tx.personName && (
+            <span className="inline-flex items-center gap-1">
+              <User size={12} />
+              {tx.personName}
             </span>
           )}
           {tx.subjectName && (
