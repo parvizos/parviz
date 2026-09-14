@@ -17,15 +17,26 @@ import {
   type LessonForEdit,
   type NoteForEdit,
 } from "./study-dialogs";
+import {
+  AccountDialog,
+  CategoryDialog,
+  TransactionDialog,
+  type AccountForEdit,
+  type CategoryForEdit,
+  type TransactionForEdit,
+} from "./finance-dialogs";
 import { CommandPalette } from "./CommandPalette";
 import type {
   AreaOption,
   ProjectOption,
   SubjectOption,
+  AccountOption,
+  CategoryOption,
   TaskPrefill,
+  TransactionPrefill,
 } from "./types";
 import type { TaskWithContext } from "@/lib/queries";
-import type { ProjectStatus } from "@/db/schema";
+import type { ProjectStatus, CategoryKind } from "@/db/schema";
 
 type ProjectForEdit = {
   id: string;
@@ -55,6 +66,12 @@ interface UiValue {
   openEditLesson: (l: LessonForEdit) => void;
   openNewNote: (opts?: { subjectId?: string | null }) => void;
   openEditNote: (n: NoteForEdit) => void;
+  openNewTransaction: (prefill?: TransactionPrefill) => void;
+  openTransaction: (tx: TransactionForEdit) => void;
+  openNewAccount: () => void;
+  openEditAccount: (a: AccountForEdit) => void;
+  openNewCategory: (defaultKind?: CategoryKind) => void;
+  openEditCategory: (c: CategoryForEdit) => void;
   openCommand: () => void;
   toggleTheme: () => void;
   theme: "light" | "dark";
@@ -73,11 +90,15 @@ export function UiProvider({
   areaOptions,
   projectOptions,
   subjectOptions,
+  accountOptions,
+  categoryOptions,
 }: {
   children: ReactNode;
   areaOptions: AreaOption[];
   projectOptions: ProjectOption[];
   subjectOptions: SubjectOption[];
+  accountOptions: AccountOption[];
+  categoryOptions: CategoryOption[];
 }) {
   const [task, setTask] = useState<{
     open: boolean;
@@ -108,6 +129,20 @@ export function UiProvider({
     note: NoteForEdit | null;
     subjectId?: string | null;
   }>({ open: false, note: null });
+  const [transaction, setTransaction] = useState<{
+    open: boolean;
+    tx: TransactionForEdit | null;
+    prefill?: TransactionPrefill;
+  }>({ open: false, tx: null });
+  const [account, setAccount] = useState<{
+    open: boolean;
+    account: AccountForEdit | null;
+  }>({ open: false, account: null });
+  const [category, setCategory] = useState<{
+    open: boolean;
+    category: CategoryForEdit | null;
+    defaultKind?: CategoryKind;
+  }>({ open: false, category: null });
   const [cmdOpen, setCmdOpen] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">("light");
 
@@ -183,6 +218,32 @@ export function UiProvider({
     (n: NoteForEdit) => setNote({ open: true, note: n }),
     [],
   );
+  const openNewTransaction = useCallback(
+    (prefill?: TransactionPrefill) =>
+      setTransaction({ open: true, tx: null, prefill }),
+    [],
+  );
+  const openTransaction = useCallback(
+    (tx: TransactionForEdit) => setTransaction({ open: true, tx }),
+    [],
+  );
+  const openNewAccount = useCallback(
+    () => setAccount({ open: true, account: null }),
+    [],
+  );
+  const openEditAccount = useCallback(
+    (a: AccountForEdit) => setAccount({ open: true, account: a }),
+    [],
+  );
+  const openNewCategory = useCallback(
+    (defaultKind?: CategoryKind) =>
+      setCategory({ open: true, category: null, defaultKind }),
+    [],
+  );
+  const openEditCategory = useCallback(
+    (c: CategoryForEdit) => setCategory({ open: true, category: c }),
+    [],
+  );
   const openCommand = useCallback(() => setCmdOpen(true), []);
 
   const anyOpen =
@@ -192,6 +253,9 @@ export function UiProvider({
     subject.open ||
     lesson.open ||
     note.open ||
+    transaction.open ||
+    account.open ||
+    category.open ||
     cmdOpen;
 
   useEffect(() => {
@@ -234,6 +298,12 @@ export function UiProvider({
         openEditLesson,
         openNewNote,
         openEditNote,
+        openNewTransaction,
+        openTransaction,
+        openNewAccount,
+        openEditAccount,
+        openNewCategory,
+        openEditCategory,
         openCommand,
         toggleTheme,
         theme,
@@ -289,6 +359,31 @@ export function UiProvider({
           defaultSubjectId={note.subjectId}
         />
       )}
+      {transaction.open && (
+        <TransactionDialog
+          onClose={() => setTransaction((s) => ({ ...s, open: false }))}
+          tx={transaction.tx}
+          prefill={transaction.prefill}
+          accountOptions={accountOptions}
+          categoryOptions={categoryOptions}
+          areaOptions={areaOptions}
+          projectOptions={projectOptions}
+          subjectOptions={subjectOptions}
+        />
+      )}
+      {account.open && (
+        <AccountDialog
+          onClose={() => setAccount((s) => ({ ...s, open: false }))}
+          account={account.account}
+        />
+      )}
+      {category.open && (
+        <CategoryDialog
+          onClose={() => setCategory((s) => ({ ...s, open: false }))}
+          category={category.category}
+          defaultKind={category.defaultKind}
+        />
+      )}
       {cmdOpen && (
         <CommandPalette
           open
@@ -301,6 +396,7 @@ export function UiProvider({
           onNewArea={openNewArea}
           onNewSubject={openNewSubject}
           onNewNote={() => openNewNote()}
+          onNewTransaction={() => openNewTransaction()}
           onToggleTheme={toggleTheme}
         />
       )}

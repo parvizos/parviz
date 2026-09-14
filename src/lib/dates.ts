@@ -95,6 +95,32 @@ export function relativeLabel(iso: string, today: string): string {
   return ruMonthDayShort(iso);
 }
 
+/* ── Месяцы (YYYY-MM) ── */
+
+export function currentMonth(): string {
+  return todayISO().slice(0, 7);
+}
+
+export function isValidMonth(m: string | null | undefined): m is string {
+  return !!m && /^\d{4}-\d{2}$/.test(m);
+}
+
+export function addMonths(month: string, n: number): string {
+  const [y, m] = month.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1 + n, 1)).toISOString().slice(0, 7);
+}
+
+export function monthLabel(month: string): string {
+  const [y, m] = month.split("-").map(Number);
+  return new Intl.DateTimeFormat("ru-RU", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  })
+    .format(new Date(Date.UTC(y, m - 1, 1)))
+    .replace(/\s*г\.$/, ""); // убираем суффикс «г.»
+}
+
 /** Насколько «горит» дата относительно сегодня. */
 export function dateTone(
   iso: string,

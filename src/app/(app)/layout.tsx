@@ -7,6 +7,8 @@ import {
   getAreaOptions,
   getProjectOptions,
   getSubjectOptions,
+  getAccountOptions,
+  getCategoryOptions,
 } from "@/lib/queries";
 
 // Данные читаются из БД на каждый запрос — не пытаемся пререндерить статически.
@@ -17,14 +19,23 @@ export default async function AppLayout({
 }: {
   children: ReactNode;
 }) {
-  const [counts, areas, areaOptions, projectOptions, subjectOptions] =
-    await Promise.all([
-      getSidebarCounts(),
-      getAreasWithCounts(),
-      getAreaOptions(),
-      getProjectOptions(),
-      getSubjectOptions(),
-    ]);
+  const [
+    counts,
+    areas,
+    areaOptions,
+    projectOptions,
+    subjectOptions,
+    accountOptions,
+    categoryOptions,
+  ] = await Promise.all([
+    getSidebarCounts(),
+    getAreasWithCounts(),
+    getAreaOptions(),
+    getProjectOptions(),
+    getSubjectOptions(),
+    getAccountOptions(),
+    getCategoryOptions(),
+  ]);
 
   const areaLinks = areas.map((a) => ({
     id: a.id,
@@ -39,6 +50,8 @@ export default async function AppLayout({
       areaOptions={areaOptions}
       projectOptions={projectOptions}
       subjectOptions={subjectOptions}
+      accountOptions={accountOptions}
+      categoryOptions={categoryOptions}
     >
       <AppShell counts={counts} areas={areaLinks}>
         {children}

@@ -10,6 +10,9 @@ import {
   Layers,
   CalendarRange,
   BookText,
+  Receipt,
+  CreditCard,
+  Tags,
   Plus,
   Wallet,
   Users,
@@ -58,8 +61,14 @@ const STUDY: NavItem[] = [
   { href: "/konspekty", label: "Конспекты", icon: BookText },
 ];
 
+const FINANCE: NavItem[] = [
+  { href: "/finansy", label: "Обзор", icon: Wallet },
+  { href: "/finansy/operacii", label: "Операции", icon: Receipt },
+  { href: "/finansy/scheta", label: "Счета", icon: CreditCard },
+  { href: "/finansy/kategorii", label: "Категории", icon: Tags },
+];
+
 const SOON: { label: string; icon: LucideIcon }[] = [
-  { label: "Финансы", icon: Wallet },
   { label: "Люди", icon: Users },
   { label: "Организации", icon: Building2 },
 ];
@@ -226,6 +235,37 @@ export function Sidebar({
         <ul className="mt-1 flex flex-col gap-0.5">
           {STUDY.map((item) => {
             const active = isActive(pathname, item.href);
+            return (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  onClick={onNavigate}
+                  className={cn(
+                    "flex h-9 items-center gap-3 rounded-xl px-3 text-[14px] transition-colors",
+                    active
+                      ? "bg-accent-soft font-medium text-accent-soft-text"
+                      : "text-muted hover:bg-surface-2 hover:text-text",
+                  )}
+                >
+                  <item.icon size={17} className="shrink-0" />
+                  <span className="flex-1">{item.label}</span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+
+        {/* Финансы */}
+        <div className="mt-6 px-3">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-faint">
+            Финансы
+          </span>
+        </div>
+        <ul className="mt-1 flex flex-col gap-0.5">
+          {FINANCE.map((item) => {
+            const active =
+              pathname === item.href ||
+              (item.href !== "/finansy" && isActive(pathname, item.href));
             return (
               <li key={item.href}>
                 <Link

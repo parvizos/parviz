@@ -302,3 +302,109 @@ export type Note = typeof notes.$inferSelect;
 export type NewNote = typeof notes.$inferInsert;
 export type Journal = typeof journal.$inferSelect;
 export type NewJournal = typeof journal.$inferInsert;
+
+/* ───────────────────────  Домен: Финансы  ─────────────────────── */
+
+export const ACCOUNT_KINDS = [
+  "cash",
+  "card",
+  "bank",
+  "savings",
+  "other",
+] as const;
+export type AccountKind = (typeof ACCOUNT_KINDS)[number];
+
+/** Счёт: наличные, карта, вклад… Баланс = openingBalance + операции. */
+export const accounts = sqliteTable(
+  "accounts",
+  {
+    id: id(),
+    name: text("name").notNull(),
+    kind: text("kind").$type<AccountKind>().notNull().default("card"),
+    currency: text("currency").notNull().default("RUB"),
+    /** Начальный баланс в минимальных единицах (копейках). */
+    openingBalance: integer("opening_balance").notNull().default(0),
+    color: text("color"),
+    icon: text("icon"),
+    position: integer("position").notNull().default(0),
+    archivedAt: integer("archived_at", { mode: "timestamp_ms" }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("accounts_position_idx").on(t.position)],
+);
+
+export const CATEGORY_KINDS = ["income", "expense"] as const;
+export type CategoryKind = (typeof CATEGORY_KINDS)[number];
+
+/** Категория дохода или расхода. Для расходов можно задать месячный бюджет. */
+export const categories = sqliteTable(
+  "categories",
+  {
+    id: id(),
+    name: text("name").notNull(),
+    kind: text("kind").$type<CategoryKind>().notNull().default("expense"),
+    color: text("color"),
+    icon: text("icon"),
+    /** Месячный лимит в копейках (null — без бюджета). */
+    monthlyBudget: integer("monthly_budget"),
+    position: integer("position").notNull().default(0),
+    archivedAt: integer("archived_at", { mode: "timestamp_ms" }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("categories_kind_idx").on(t.kind)],
+);
+
+export const TRANSACTION_KINDS = ["income", "expense", "transfer"] as const;
+export type TransactionKind = (typeof TRANSACTION_KINDS)[number];
+
+/**
+ * Операция: доход, расход или перевод между счетами.
+ * Сумма — положительная, в копейках; знак задаёт вид (kind).
+ * Кросс-доменные привязки (сфера/проект/предмет) — чтобы видеть,
+ * сколько ушло на учёбу или конкретный проект.
+ */
+export const transactions = sqliteTable(
+  "transactions",
+  {
+    id: id(),
+    accountId: text("account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    /** Счёт-получатель для перевода. */
+    toAccountId: text("to_account_id").references(() => accounts.id, {
+      onDelete: "set null",
+    }),
+    categoryId: text("category_id").references(() => categories.id, {
+      onDelete: "set null",
+    }),
+    kind: text("kind").$type<TransactionKind>().notNull().default("expense"),
+    amount: integer("amount").notNull(),
+    date: text("date").notNull(),
+    note: text("note"),
+    areaId: text("area_id").references(() => areas.id, { onDelete: "set null" }),
+    projectId: text("project_id").references(() => projects.id, {
+      onDelete: "set null",
+    }),
+    subjectId: text("subject_id").references(() => subjects.id, {
+      onDelete: "set null",
+    }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    index("transactions_account_idx").on(t.accountId),
+    index("transactions_category_idx").on(t.categoryId),
+    index("transactions_date_idx").on(t.date),
+    index("transactions_kind_idx").on(t.kind),
+    index("transactions_area_idx").on(t.areaId),
+  ],
+);
+
+export type Account = typeof accounts.$inferSelect;
+export type NewAccount = typeof accounts.$inferInsert;
+export type Category = typeof categories.$inferSelect;
+export type NewCategory = typeof categories.$inferInsert;
+export type Transaction = typeof transactions.$inferSelect;
+export type NewTransaction = typeof transactions.$inferInsert;

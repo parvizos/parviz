@@ -12,9 +12,15 @@ import {
   lessons,
   notes,
   journal,
+  accounts,
+  categories,
+  transactions,
   PROJECT_STATUSES,
   TASK_STATUSES,
   LESSON_KINDS,
+  ACCOUNT_KINDS,
+  CATEGORY_KINDS,
+  TRANSACTION_KINDS,
 } from "@/db/schema";
 
 function revalidateAll() {
@@ -455,5 +461,207 @@ export async function upsertJournal(date: string, input: UpsertJournalInput) {
         updatedAt: new Date(),
       },
     });
+  revalidateAll();
+}
+
+/* ───────────────────────  Счета  ─────────────────────── */
+
+const createAccountSchema = z.object({
+  name: z.string().trim().min(1, "Введите название").max(120),
+  kind: z.enum(ACCOUNT_KINDS).optional(),
+  currency: z.string().max(8).optional(),
+  openingBalance: z.coerce.number().int().optional(),
+  color: z.string().max(32).nullable().optional(),
+  icon: z.string().max(32).nullable().optional(),
+});
+
+export type CreateAccountInput = z.input<typeof createAccountSchema>;
+
+export async function createAccount(input: CreateAccountInput) {
+  await schemaReady();
+  const data = createAccountSchema.parse(input);
+  const [row] = await db
+    .insert(accounts)
+    .values({
+      name: data.name,
+      kind: data.kind ?? "card",
+      currency: data.currency ?? "RUB",
+      openingBalance: data.openingBalance ?? 0,
+      color: data.color ?? null,
+      icon: data.icon ?? null,
+    })
+    .returning({ id: accounts.id });
+  revalidateAll();
+  return row;
+}
+
+const updateAccountSchema = z.object({
+  name: z.string().trim().min(1).max(120).optional(),
+  kind: z.enum(ACCOUNT_KINDS).optional(),
+  openingBalance: z.coerce.number().int().optional(),
+  color: z.string().max(32).nullable().optional(),
+  icon: z.string().max(32).nullable().optional(),
+});
+
+export type UpdateAccountInput = z.input<typeof updateAccountSchema>;
+
+export async function updateAccount(id: string, input: UpdateAccountInput) {
+  await schemaReady();
+  const data = updateAccountSchema.parse(input);
+  await db.update(accounts).set(data).where(eq(accounts.id, id));
+  revalidateAll();
+}
+
+export async function deleteAccount(id: string) {
+  await schemaReady();
+  // Операции по счёту удалятся каскадом.
+  await db.delete(accounts).where(eq(accounts.id, id));
+  revalidateAll();
+}
+
+/* ───────────────────────  Категории  ─────────────────────── */
+
+const createCategorySchema = z.object({
+  name: z.string().trim().min(1, "Введите название").max(120),
+  kind: z.enum(CATEGORY_KINDS).optional(),
+  color: z.string().max(32).nullable().optional(),
+  icon: z.string().max(32).nullable().optional(),
+  monthlyBudget: z.coerce.number().int().min(0).nullable().optional(),
+});
+
+export type CreateCategoryInput = z.input<typeof createCategorySchema>;
+
+export async function createCategory(input: CreateCategoryInput) {
+  await schemaReady();
+  const data = createCategorySchema.parse(input);
+  const [row] = await db
+    .insert(categories)
+    .values({
+      name: data.name,
+      kind: data.kind ?? "expense",
+      color: data.color ?? null,
+      icon: data.icon ?? null,
+      monthlyBudget: data.monthlyBudget ?? null,
+    })
+    .returning({ id: categories.id });
+  revalidateAll();
+  return row;
+}
+
+const updateCategorySchema = z.object({
+  name: z.string().trim().min(1).max(120).optional(),
+  kind: z.enum(CATEGORY_KINDS).optional(),
+  color: z.string().max(32).nullable().optional(),
+  icon: z.string().max(32).nullable().optional(),
+  monthlyBudget: z.coerce.number().int().min(0).nullable().optional(),
+});
+
+export type UpdateCategoryInput = z.input<typeof updateCategorySchema>;
+
+export async function updateCategory(id: string, input: UpdateCategoryInput) {
+  await schemaReady();
+  const data = updateCategorySchema.parse(input);
+  await db.update(categories).set(data).where(eq(categories.id, id));
+  revalidateAll();
+}
+
+export async function deleteCategory(id: string) {
+  await schemaReady();
+  await db.delete(categories).where(eq(categories.id, id));
+  revalidateAll();
+}
+
+/* ───────────────────────  Операции  ─────────────────────── */
+
+const createTransactionSchema = z.object({
+  accountId: z.string().min(1, "Выберите счёт"),
+  toAccountId: nullableId,
+  categoryId: nullableId,
+  kind: z.enum(TRANSACTION_KINDS),
+  amount: z.coerce.number().int().positive("Введите сумму"),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  note: z.string().max(500).nullable().optional(),
+  areaId: nullableId,
+  projectId: nullableId,
+  subjectId: nullableId,
+});
+
+export type CreateTransactionInput = z.input<typeof createTransactionSchema>;
+
+function normalizeTx(data: {
+  kind: (typeof TRANSACTION_KINDS)[number];
+  toAccountId?: string | null;
+  categoryId?: string | null;
+}) {
+  if (data.kind === "transfer") {
+    return { toAccountId: data.toAccountId ?? null, categoryId: null };
+  }
+  return { toAccountId: null, categoryId: data.categoryId ?? null };
+}
+
+export async function createTransaction(input: CreateTransactionInput) {
+  await schemaReady();
+  const data = createTransactionSchema.parse(input);
+  const norm = normalizeTx(data);
+  if (data.kind === "transfer" && !norm.toAccountId) {
+    throw new Error("Для перевода нужен счёт-получатель");
+  }
+  const [row] = await db
+    .insert(transactions)
+    .values({
+      accountId: data.accountId,
+      toAccountId: norm.toAccountId,
+      categoryId: norm.categoryId,
+      kind: data.kind,
+      amount: data.amount,
+      date: data.date,
+      note: data.note ?? null,
+      areaId: data.areaId ?? null,
+      projectId: data.projectId ?? null,
+      subjectId: data.subjectId ?? null,
+    })
+    .returning({ id: transactions.id });
+  revalidateAll();
+  return row;
+}
+
+const updateTransactionSchema = z.object({
+  accountId: z.string().min(1).optional(),
+  toAccountId: nullableId,
+  categoryId: nullableId,
+  kind: z.enum(TRANSACTION_KINDS).optional(),
+  amount: z.coerce.number().int().positive().optional(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  note: z.string().max(500).nullable().optional(),
+  areaId: nullableId,
+  projectId: nullableId,
+  subjectId: nullableId,
+});
+
+export type UpdateTransactionInput = z.input<typeof updateTransactionSchema>;
+
+export async function updateTransaction(
+  id: string,
+  input: UpdateTransactionInput,
+) {
+  await schemaReady();
+  const data = updateTransactionSchema.parse(input);
+  const patch: Record<string, unknown> = { ...data };
+  if (data.kind) {
+    const norm = normalizeTx({
+      kind: data.kind,
+      toAccountId: data.toAccountId,
+      categoryId: data.categoryId,
+    });
+    patch.toAccountId = norm.toAccountId;
+    patch.categoryId = norm.categoryId;
+  }
+  await db.update(transactions).set(patch).where(eq(transactions.id, id));
+  revalidateAll();
+}
+
+export async function deleteTransaction(id: string) {
+  await schemaReady();
+  await db.delete(transactions).where(eq(transactions.id, id));
   revalidateAll();
 }

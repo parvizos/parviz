@@ -12,7 +12,12 @@ import {
   lessons,
   notes,
   journal,
+  accounts,
+  categories,
+  transactions,
 } from "./schema";
+
+const rub = (n: number) => n * 100; // рубли → копейки
 
 for (const f of [".env.local", ".env"]) {
   try {
@@ -175,8 +180,40 @@ async function main() {
     },
   ]);
 
+  // Финансы: счета, категории, операции.
+  const [card] = await db
+    .insert(accounts)
+    .values({ name: "Карта", kind: "card", color: "#5b5bd6", icon: "💳", openingBalance: rub(24500), position: 0 })
+    .returning();
+  const [cash] = await db
+    .insert(accounts)
+    .values({ name: "Наличные", kind: "cash", color: "#2f9e6f", icon: "💵", openingBalance: rub(3000), position: 1 })
+    .returning();
+  const [piggy] = await db
+    .insert(accounts)
+    .values({ name: "Накопления", kind: "savings", color: "#c9832a", icon: "🐷", openingBalance: rub(50000), position: 2 })
+    .returning();
+
+  const [cFood] = await db.insert(categories).values({ name: "Еда", kind: "expense", color: "#d9662b", icon: "🍔", monthlyBudget: rub(15000), position: 0 }).returning();
+  const [cTransport] = await db.insert(categories).values({ name: "Транспорт", kind: "expense", color: "#3b82c4", icon: "🚌", monthlyBudget: rub(3000), position: 1 }).returning();
+  const [cStudy] = await db.insert(categories).values({ name: "Учёба", kind: "expense", color: "#5b5bd6", icon: "🎓", monthlyBudget: rub(5000), position: 2 }).returning();
+  const [cFun] = await db.insert(categories).values({ name: "Развлечения", kind: "expense", color: "#c4488f", icon: "🎮", position: 3 }).returning();
+  const [cScholar] = await db.insert(categories).values({ name: "Стипендия", kind: "income", color: "#2f9e6f", icon: "🎓", position: 0 }).returning();
+  const [cSide] = await db.insert(categories).values({ name: "Подработка", kind: "income", color: "#0f9a8f", icon: "💼", position: 1 }).returning();
+
+  await db.insert(transactions).values([
+    { accountId: card.id, kind: "income", categoryId: cScholar.id, amount: rub(12000), date: today(-10), note: "Стипендия за сентябрь" },
+    { accountId: card.id, kind: "income", categoryId: cSide.id, amount: rub(3500), date: today(-4), note: "Репетиторство" },
+    { accountId: card.id, kind: "expense", categoryId: cFood.id, amount: rub(1250), date: today(-5), note: "Продукты", areaId: personal.id },
+    { accountId: cash.id, kind: "expense", categoryId: cTransport.id, amount: rub(60), date: today(-1), note: "Проездной" },
+    { accountId: card.id, kind: "expense", categoryId: cStudy.id, amount: rub(1200), date: today(-3), note: "Учебник по матанализу", subjectId: ma.id, areaId: study.id },
+    { accountId: card.id, kind: "expense", categoryId: cFun.id, amount: rub(700), date: today(-2), note: "Кино с друзьями" },
+    { accountId: card.id, kind: "expense", categoryId: cFood.id, amount: rub(890), date: today(0), note: "Обед в столовой" },
+    { accountId: card.id, kind: "transfer", toAccountId: piggy.id, amount: rub(5000), date: today(-7), note: "Отложил" },
+  ]);
+
   console.log(
-    "Готово: добавлены демо-данные (сферы, проект, задачи, учёба, ежедневник).",
+    "Готово: демо-данные (сферы, проект, задачи, учёба, ежедневник, финансы).",
   );
 }
 

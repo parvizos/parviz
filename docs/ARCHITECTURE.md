@@ -65,18 +65,22 @@ areas (Сферы)
 
 Ниже — эскиз таблиц (реализуются по одному домену, каждый доводится до живого).
 
-### Финансы
+### Финансы — реализовано
 
 ```
-accounts(id, name, kind, currency, openingBalance…)
-categories(id, name, kind[income|expense], parentId?)
-transactions(id, accountId, categoryId?, amount, date, note, kind…)
-budgets(id, categoryId?, areaId?, period, limit…)
+accounts(id, name, kind, currency, openingBalance…)         // баланс = opening + операции
+categories(id, name, kind[income|expense], monthlyBudget?)  // бюджет прямо в категории
+transactions(id, accountId, toAccountId?, categoryId?, kind, amount, date,
+             areaId?, projectId?, subjectId?…)
 ```
 
-Связи: `transaction ↔ person/organization` (кому/от кого),
-`transaction ↔ project/area` (на что) — через `links` или прямыми FK, если
-связь одна. Сфера траты позволяет считать «сколько ушло на Учёбу за месяц».
+Деньги — целые копейки (`amount` всегда положительный, знак задаёт `kind`).
+Баланс счёта не хранится, а **считается** из операций (`getAccountsWithBalances`).
+Бюджет живёт прямо в категории (отдельной таблицы `budgets` не понадобилось).
+Кросс-доменные привязки сделаны прямыми FK (`areaId`/`projectId`/`subjectId`) —
+как у задач: трата за учебник цепляется к предмету и сфере, и видно, сколько
+ушло на учёбу за месяц. Когда появятся Люди/Организации, к операции добавятся
+`personId`/`organizationId` тем же способом.
 
 ### Люди и организации (личный CRM)
 

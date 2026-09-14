@@ -11,11 +11,29 @@ export type SubjectOption = {
   areaId: string | null;
 };
 
+export type AccountOption = { id: string; name: string; color: string | null };
+export type CategoryOption = {
+  id: string;
+  name: string;
+  kind: "income" | "expense";
+  color: string | null;
+};
+
 export type TaskPrefill = {
   projectId?: string | null;
   areaId?: string | null;
   subjectId?: string | null;
   scheduledDate?: string | null;
+};
+
+export type TransactionPrefill = {
+  kind?: "income" | "expense" | "transfer";
+  accountId?: string | null;
+  categoryId?: string | null;
+  date?: string | null;
+  areaId?: string | null;
+  projectId?: string | null;
+  subjectId?: string | null;
 };
 
 /** Локальная «сегодня» в часовом поясе браузера — для быстрых кнопок дат. */

@@ -17,6 +17,8 @@ import {
   GraduationCap,
   NotebookPen,
   BookText,
+  Wallet,
+  Receipt,
   CornerDownLeft,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
@@ -41,6 +43,7 @@ export function CommandPalette({
   onNewArea,
   onNewSubject,
   onNewNote,
+  onNewTransaction,
   onToggleTheme,
 }: {
   open: boolean;
@@ -53,6 +56,7 @@ export function CommandPalette({
   onNewArea: () => void;
   onNewSubject: () => void;
   onNewNote: () => void;
+  onNewTransaction: () => void;
   onToggleTheme: () => void;
 }) {
   const router = useRouter();
@@ -76,6 +80,7 @@ export function CommandPalette({
       { id: "new-area", label: "Новая сфера", icon: <Plus size={16} />, run: act(onNewArea) },
       { id: "new-subject", label: "Новый предмет", icon: <Plus size={16} />, run: act(onNewSubject) },
       { id: "new-note", label: "Новый конспект", icon: <Plus size={16} />, run: act(onNewNote) },
+      { id: "new-tx", label: "Новая операция", icon: <Plus size={16} />, run: act(onNewTransaction) },
       { id: "nav-today", label: "Сегодня", icon: <CalendarDays size={16} />, run: go("/segodnya") },
       { id: "nav-inbox", label: "Входящие", icon: <Inbox size={16} />, run: go("/vhodyaschie") },
       { id: "nav-upcoming", label: "Предстоящее", icon: <CalendarClock size={16} />, run: go("/predstoyaschee") },
@@ -85,6 +90,8 @@ export function CommandPalette({
       { id: "nav-schedule", label: "Расписание", icon: <CalendarRange size={16} />, run: go("/raspisanie") },
       { id: "nav-subjects", label: "Предметы", icon: <GraduationCap size={16} />, run: go("/predmety") },
       { id: "nav-notes", label: "Конспекты", icon: <BookText size={16} />, run: go("/konspekty") },
+      { id: "nav-finansy", label: "Финансы", icon: <Wallet size={16} />, run: go("/finansy") },
+      { id: "nav-operacii", label: "Операции", icon: <Receipt size={16} />, run: go("/finansy/operacii") },
       { id: "theme", label: "Переключить тему", icon: <Sun size={16} />, run: act(onToggleTheme) },
       ...projects.map((p) => ({
         id: `p-${p.id}`,
@@ -113,7 +120,7 @@ export function CommandPalette({
         run: go(`/sfery/${a.id}`),
       })),
     ];
-  }, [router, onClose, onNewTask, onNewProject, onNewArea, onNewSubject, onNewNote, onToggleTheme, projects, subjects, areas]);
+  }, [router, onClose, onNewTask, onNewProject, onNewArea, onNewSubject, onNewNote, onNewTransaction, onToggleTheme, projects, subjects, areas]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();

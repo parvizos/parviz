@@ -22,6 +22,13 @@
       "when": 1789376592535,
       "tag": "0002_robust_johnny_blaze",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1789377301216,
+      "tag": "0003_broken_juggernaut",
+      "breakpoints": true
     }
   ]
 }
