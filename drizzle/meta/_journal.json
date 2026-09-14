@@ -50,6 +50,13 @@
       "when": 1789385670436,
       "tag": "0006_parallel_black_crow",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1789400118674,
+      "tag": "0007_next_nicolaos",
+      "breakpoints": true
     }
   ]
 }

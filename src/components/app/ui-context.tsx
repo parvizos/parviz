@@ -37,6 +37,12 @@ import {
   type PlannedForEdit,
   type GoalForEdit,
 } from "./finance2-dialogs";
+import {
+  GradeDialog,
+  ExamDialog,
+  type GradeForEdit,
+  type ExamForEdit,
+} from "./study2-dialogs";
 import { CommandPalette } from "./CommandPalette";
 import { useRouter } from "next/navigation";
 import { createNote } from "@/lib/actions";
@@ -104,6 +110,10 @@ interface UiValue {
   openEditPlanned: (p: PlannedForEdit) => void;
   openNewGoal: () => void;
   openEditGoal: (g: GoalForEdit) => void;
+  openNewGrade: (subjectId?: string | null) => void;
+  openEditGrade: (g: GradeForEdit) => void;
+  openNewExam: (subjectId?: string | null) => void;
+  openEditExam: (e: ExamForEdit) => void;
   openCommand: () => void;
   toggleTheme: () => void;
   theme: "light" | "dark";
@@ -201,6 +211,16 @@ export function UiProvider({
     open: false,
     goal: null,
   });
+  const [grade, setGrade] = useState<{
+    open: boolean;
+    grade: GradeForEdit | null;
+    subjectId?: string | null;
+  }>({ open: false, grade: null });
+  const [exam, setExam] = useState<{
+    open: boolean;
+    exam: ExamForEdit | null;
+    subjectId?: string | null;
+  }>({ open: false, exam: null });
   const [cmdOpen, setCmdOpen] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [focusMode, setFocusMode] = useState(false);
@@ -350,6 +370,23 @@ export function UiProvider({
     (g: GoalForEdit) => setGoal({ open: true, goal: g }),
     [],
   );
+  const openNewGrade = useCallback(
+    (subjectId?: string | null) =>
+      setGrade({ open: true, grade: null, subjectId }),
+    [],
+  );
+  const openEditGrade = useCallback(
+    (g: GradeForEdit) => setGrade({ open: true, grade: g }),
+    [],
+  );
+  const openNewExam = useCallback(
+    (subjectId?: string | null) => setExam({ open: true, exam: null, subjectId }),
+    [],
+  );
+  const openEditExam = useCallback(
+    (e: ExamForEdit) => setExam({ open: true, exam: e }),
+    [],
+  );
   const openCommand = useCallback(() => setCmdOpen(true), []);
 
   const anyOpen =
@@ -366,6 +403,8 @@ export function UiProvider({
     debt.open ||
     plan.open ||
     goal.open ||
+    grade.open ||
+    exam.open ||
     cmdOpen;
 
   useEffect(() => {
@@ -423,6 +462,10 @@ export function UiProvider({
         openEditPlanned,
         openNewGoal,
         openEditGoal,
+        openNewGrade,
+        openEditGrade,
+        openNewExam,
+        openEditExam,
         openCommand,
         toggleTheme,
         theme,
@@ -541,6 +584,22 @@ export function UiProvider({
           goal={goal.goal}
           accountOptions={accountOptions}
           defaultCurrency={baseCurrency}
+        />
+      )}
+      {grade.open && (
+        <GradeDialog
+          onClose={() => setGrade((s) => ({ ...s, open: false }))}
+          grade={grade.grade}
+          defaultSubjectId={grade.subjectId}
+          subjectOptions={subjectOptions}
+        />
+      )}
+      {exam.open && (
+        <ExamDialog
+          onClose={() => setExam((s) => ({ ...s, open: false }))}
+          exam={exam.exam}
+          defaultSubjectId={exam.subjectId}
+          subjectOptions={subjectOptions}
         />
       )}
       {cmdOpen && (

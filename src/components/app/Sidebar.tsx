@@ -23,6 +23,9 @@ import {
   Building2,
   GraduationCap,
   NotebookPen,
+  Award,
+  AlarmClock,
+  Timer,
   Sun,
   Moon,
   LogOut,
@@ -63,7 +66,10 @@ const MAIN: NavItem[] = [
 const STUDY: NavItem[] = [
   { href: "/raspisanie", label: "Расписание", icon: CalendarRange },
   { href: "/predmety", label: "Предметы", icon: GraduationCap },
+  { href: "/otsenki", label: "Оценки", icon: Award },
+  { href: "/sessiya", label: "Сессия", icon: AlarmClock },
   { href: "/konspekty", label: "Конспекты", icon: BookText },
+  { href: "/focus", label: "Фокус", icon: Timer },
 ];
 
 const FINANCE: NavItem[] = [

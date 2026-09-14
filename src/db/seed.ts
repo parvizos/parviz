@@ -23,6 +23,10 @@ import {
   planned,
   goals,
   goalContributions,
+  grades,
+  exams,
+  attendance,
+  studySessions,
 } from "./schema";
 
 const rub = (n: number) => n * 100; // рубли → копейки
@@ -121,6 +125,7 @@ async function main() {
       color: "#5b5bd6",
       icon: "📐",
       areaId: study.id,
+      credits: 6,
       position: 0,
     })
     .returning();
@@ -132,6 +137,7 @@ async function main() {
       color: "#3b82c4",
       icon: "💻",
       areaId: study.id,
+      credits: 5,
       position: 1,
     })
     .returning();
@@ -143,6 +149,7 @@ async function main() {
       color: "#c9832a",
       icon: "📜",
       areaId: study.id,
+      credits: 3,
       position: 2,
     })
     .returning();
@@ -167,6 +174,55 @@ async function main() {
       body: "<p>База и шаг рекурсии.</p><p>Примеры: факториал, Фибоначчи.</p><p>Мемоизация — кэшируем результаты повторных вызовов.</p>",
       subjectId: prog.id,
     },
+  ]);
+
+  // Оценки.
+  await db.insert(grades).values([
+    { subjectId: ma.id, value: 5, maxValue: 5, weight: 2, kind: "exam", title: "Коллоквиум", date: today(-20) },
+    { subjectId: ma.id, value: 4, maxValue: 5, weight: 1, kind: "homework", title: "ДЗ №3", date: today(-12) },
+    { subjectId: ma.id, value: 5, maxValue: 5, weight: 1, kind: "test", title: "Контрольная", date: today(-5) },
+    { subjectId: prog.id, value: 5, maxValue: 5, weight: 1, kind: "project", title: "Лаба №2", date: today(-8) },
+    { subjectId: prog.id, value: 4, maxValue: 5, weight: 1, kind: "homework", date: today(-3) },
+    { subjectId: hist.id, value: 4, maxValue: 5, weight: 1, kind: "test", title: "Семинар", date: today(-10) },
+    { subjectId: hist.id, value: 3, maxValue: 5, weight: 1, kind: "quiz", title: "Опрос", date: today(-2) },
+  ]);
+
+  // Сессия: предстоящие экзамены/зачёты и один сданный.
+  await db.insert(exams).values([
+    { subjectId: prog.id, kind: "credit", date: today(4), time: "10:00", location: "ауд. 401", readiness: 60 },
+    { subjectId: ma.id, kind: "exam", date: today(9), time: "09:00", location: "ауд. 312", readiness: 35, note: "Повторить ряды и пределы" },
+    { subjectId: hist.id, kind: "exam", date: today(18), readiness: 10 },
+  ]);
+  await db.insert(exams).values({
+    subjectId: hist.id,
+    kind: "credit",
+    date: today(-15),
+    passedAt: new Date(),
+    grade: 5,
+    autopass: true,
+    readiness: 100,
+  });
+
+  // Посещаемость (отметки за прошедшие пары).
+  await db.insert(attendance).values([
+    { subjectId: ma.id, date: today(-14), status: "present" },
+    { subjectId: ma.id, date: today(-12), status: "present" },
+    { subjectId: ma.id, date: today(-7), status: "absent" },
+    { subjectId: ma.id, date: today(-5), status: "late" },
+    { subjectId: prog.id, date: today(-14), status: "present" },
+    { subjectId: prog.id, date: today(-9), status: "present" },
+    { subjectId: prog.id, date: today(-2), status: "absent" },
+    { subjectId: hist.id, date: today(-10), status: "excused" },
+  ]);
+
+  // Учебные сессии (таймер фокуса).
+  await db.insert(studySessions).values([
+    { subjectId: ma.id, seconds: 50 * 60, date: today(0) },
+    { subjectId: prog.id, seconds: 25 * 60, date: today(0) },
+    { subjectId: ma.id, seconds: 50 * 60, date: today(-1) },
+    { subjectId: hist.id, seconds: 40 * 60, date: today(-2) },
+    { subjectId: prog.id, seconds: 90 * 60, date: today(-3) },
+    { subjectId: ma.id, seconds: 25 * 60, date: today(-5) },
   ]);
 
   await db.insert(tasks).values([
@@ -411,7 +467,7 @@ async function main() {
   });
 
   console.log(
-    "Готово: демо-данные (сферы, проект, задачи, учёба, ежедневник, финансы, долги, планы, цели, люди).",
+    "Готово: демо-данные (сферы, задачи, учёба, оценки, сессия, посещаемость, фокус, ежедневник, финансы, долги, планы, цели, люди).",
   );
 }
 

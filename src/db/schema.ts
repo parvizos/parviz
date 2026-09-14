@@ -225,6 +225,8 @@ export const subjects = sqliteTable(
     color: text("color"),
     icon: text("icon"),
     areaId: text("area_id").references(() => areas.id, { onDelete: "set null" }),
+    /** Кредиты/зач. единицы — для взвешенного среднего и недельной нагрузки. */
+    credits: integer("credits"),
     position: integer("position").notNull().default(0),
     archivedAt: integer("archived_at", { mode: "timestamp_ms" }),
     createdAt: createdAt(),
@@ -283,6 +285,148 @@ export const notes = sqliteTable(
   },
   (t) => [index("notes_subject_idx").on(t.subjectId)],
 );
+
+/* Тип работы, за которую поставлена оценка. */
+export const GRADE_KINDS = [
+  "exam",
+  "test",
+  "homework",
+  "quiz",
+  "project",
+  "other",
+] as const;
+export type GradeKind = (typeof GRADE_KINDS)[number];
+
+/** Оценка по предмету: значение из maxValue, с весом и типом. */
+export const grades = sqliteTable(
+  "grades",
+  {
+    id: id(),
+    subjectId: text("subject_id")
+      .notNull()
+      .references(() => subjects.id, { onDelete: "cascade" }),
+    /** Полученный балл и максимум шкалы (по умолчанию 5). */
+    value: real("value").notNull(),
+    maxValue: real("max_value").notNull().default(5),
+    /** Вес в среднем (экзамен весомее домашки). */
+    weight: real("weight").notNull().default(1),
+    kind: text("kind").$type<GradeKind>().notNull().default("other"),
+    title: text("title"),
+    date: text("date").notNull(),
+    note: text("note"),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    index("grades_subject_idx").on(t.subjectId),
+    index("grades_date_idx").on(t.date),
+  ],
+);
+
+export type Grade = typeof grades.$inferSelect;
+export type NewGrade = typeof grades.$inferInsert;
+
+/* Тип экзаменационного испытания. */
+export const EXAM_KINDS = [
+  "exam",
+  "credit",
+  "coursework",
+  "retake",
+  "other",
+] as const;
+export type ExamKind = (typeof EXAM_KINDS)[number];
+
+/** Экзамен/зачёт в сессии: дата, готовность, результат. */
+export const exams = sqliteTable(
+  "exams",
+  {
+    id: id(),
+    subjectId: text("subject_id")
+      .notNull()
+      .references(() => subjects.id, { onDelete: "cascade" }),
+    kind: text("kind").$type<ExamKind>().notNull().default("exam"),
+    date: text("date").notNull(),
+    time: text("time"),
+    location: text("location"),
+    /** Получен «автомат». */
+    autopass: integer("autopass", { mode: "boolean" }).notNull().default(false),
+    /** Когда сдан (null — ещё предстоит). */
+    passedAt: integer("passed_at", { mode: "timestamp_ms" }),
+    /** Итоговая оценка, когда сдан. */
+    grade: real("grade"),
+    /** Готовность 0–100 (для полосы прогресса). */
+    readiness: integer("readiness").notNull().default(0),
+    note: text("note"),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    index("exams_subject_idx").on(t.subjectId),
+    index("exams_date_idx").on(t.date),
+  ],
+);
+
+export type Exam = typeof exams.$inferSelect;
+export type NewExam = typeof exams.$inferInsert;
+
+/* Отметка посещения. */
+export const ATTENDANCE_STATUSES = [
+  "present",
+  "absent",
+  "late",
+  "excused",
+] as const;
+export type AttendanceStatus = (typeof ATTENDANCE_STATUSES)[number];
+
+/** Посещение конкретного занятия в конкретную дату. */
+export const attendance = sqliteTable(
+  "attendance",
+  {
+    id: id(),
+    subjectId: text("subject_id")
+      .notNull()
+      .references(() => subjects.id, { onDelete: "cascade" }),
+    /** Слот из расписания (может быть null для ручной отметки). */
+    lessonId: text("lesson_id").references(() => lessons.id, {
+      onDelete: "set null",
+    }),
+    date: text("date").notNull(),
+    status: text("status").$type<AttendanceStatus>().notNull().default("present"),
+    note: text("note"),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("attendance_subject_idx").on(t.subjectId),
+    // Один отмеченный слот на дату — чтобы не плодить дубли (NULL-слоты не ограничены).
+    uniqueIndex("attendance_slot_unq").on(t.lessonId, t.date),
+  ],
+);
+
+export type Attendance = typeof attendance.$inferSelect;
+export type NewAttendance = typeof attendance.$inferInsert;
+
+/** Учебная сессия (таймер фокуса): сколько времени вложено в предмет. */
+export const studySessions = sqliteTable(
+  "study_sessions",
+  {
+    id: id(),
+    subjectId: text("subject_id").references(() => subjects.id, {
+      onDelete: "set null",
+    }),
+    /** Длительность в секундах. */
+    seconds: integer("seconds").notNull(),
+    date: text("date").notNull(),
+    note: text("note"),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("study_sessions_subject_idx").on(t.subjectId),
+    index("study_sessions_date_idx").on(t.date),
+  ],
+);
+
+export type StudySession = typeof studySessions.$inferSelect;
+export type NewStudySession = typeof studySessions.$inferInsert;
 
 /* ───────────────────────  Домен: Ежедневник  ─────────────────────── */
 

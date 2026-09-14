@@ -1,12 +1,14 @@
 import Link from "next/link";
-import { Sun, Wallet } from "lucide-react";
+import { Sun, Wallet, CalendarClock } from "lucide-react";
 import { getTodayTasks, getTodayLessons, getAccountOptions } from "@/lib/queries";
 import { getDuePlanned, getDueDebts } from "@/lib/finance-queries";
+import { getUpcomingExams, getAttendanceForDate } from "@/lib/study-queries";
 import { todayISO, ruFull } from "@/lib/dates";
 import { areaColor } from "@/lib/task-format";
 import { TaskGroup } from "@/components/app/TaskGroup";
 import { QuickAdd } from "@/components/app/QuickAdd";
 import { PlannedRow, DebtCard } from "@/components/app/finance2-items";
+import { ExamCard, AttendanceControls } from "@/components/app/study2-items";
 import { PageHeader, EmptyState } from "@/components/ui/misc";
 
 export const metadata = { title: "Сегодня" };
@@ -18,17 +20,29 @@ function cap(s: string) {
 
 export default async function TodayPage() {
   const today = todayISO();
-  const [{ overdue, today: todayTasks }, lessons, duePlans, dueDebts, accountOptions] =
-    await Promise.all([
-      getTodayTasks(),
-      getTodayLessons(),
-      getDuePlanned(),
-      getDueDebts(),
-      getAccountOptions(),
-    ]);
+  const [
+    { overdue, today: todayTasks },
+    lessons,
+    duePlans,
+    dueDebts,
+    accountOptions,
+    upcomingExams,
+    attToday,
+  ] = await Promise.all([
+    getTodayTasks(),
+    getTodayLessons(),
+    getDuePlanned(),
+    getDueDebts(),
+    getAccountOptions(),
+    getUpcomingExams(10),
+    getAttendanceForDate(todayISO()),
+  ]);
   const hasMoney = duePlans.length > 0 || dueDebts.length > 0;
   const empty =
-    overdue.length === 0 && todayTasks.length === 0 && !hasMoney;
+    overdue.length === 0 &&
+    todayTasks.length === 0 &&
+    !hasMoney &&
+    upcomingExams.length === 0;
 
   return (
     <div>
@@ -39,28 +53,36 @@ export default async function TodayPage() {
           <div className="mb-2 px-1 text-[12px] font-semibold uppercase tracking-wide text-muted">
             Пары сегодня
           </div>
-          <div className="flex gap-2 overflow-x-auto pb-1">
+          <div className="flex flex-col gap-2">
             {lessons.map((l) => (
-              <Link
+              <div
                 key={l.id}
-                href={`/predmety/${l.subjectId}`}
-                className="flex shrink-0 items-center gap-2.5 rounded-xl border border-border bg-surface px-3 py-2 transition-colors hover:border-border-strong hover:bg-surface-2"
+                className="flex items-center gap-3 rounded-xl border border-border bg-surface px-3 py-2"
               >
                 <span
-                  className="h-8 w-1 shrink-0 rounded-full"
+                  className="h-9 w-1 shrink-0 rounded-full"
                   style={{ background: areaColor(l.subjectColor) }}
                 />
-                <div>
-                  <div className="text-[13px] font-semibold tabular text-text">
+                <Link
+                  href={`/predmety/${l.subjectId}`}
+                  className="flex min-w-0 flex-1 items-baseline gap-2.5 transition-opacity hover:opacity-80"
+                >
+                  <span className="shrink-0 text-[13px] font-semibold tabular text-text">
                     {l.startTime || "—"}
                     {l.endTime ? `–${l.endTime}` : ""}
-                  </div>
-                  <div className="max-w-[180px] truncate text-[12.5px] text-muted">
+                  </span>
+                  <span className="truncate text-[12.5px] text-muted">
                     {l.subjectName}
                     {l.location ? ` · ${l.location}` : ""}
-                  </div>
-                </div>
-              </Link>
+                  </span>
+                </Link>
+                <AttendanceControls
+                  subjectId={l.subjectId}
+                  lessonId={l.id}
+                  date={today}
+                  current={attToday.get(l.id) ?? null}
+                />
+              </div>
             ))}
           </div>
         </div>
@@ -91,6 +113,22 @@ export default async function TodayPage() {
           today={today}
           showDate={false}
         />
+      )}
+
+      {upcomingExams.length > 0 && (
+        <section className="mt-7">
+          <div className="mb-2.5 flex items-center gap-2 px-1">
+            <CalendarClock size={15} className="text-muted" />
+            <h2 className="text-[13px] font-semibold uppercase tracking-wide text-muted">
+              Скоро экзамены
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {upcomingExams.map((e) => (
+              <ExamCard key={e.id} exam={e} />
+            ))}
+          </div>
+        </section>
       )}
 
       {hasMoney && (

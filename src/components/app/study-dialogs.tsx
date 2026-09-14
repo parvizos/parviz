@@ -29,6 +29,7 @@ export type SubjectForEdit = {
   color: string | null;
   icon: string | null;
   areaId: string | null;
+  credits: number | null;
 };
 export type LessonForEdit = {
   id: string;
@@ -65,6 +66,9 @@ export function SubjectDialog({
   const [color, setColor] = useState(subject?.color ?? AREA_PALETTE[0].value);
   const [icon, setIcon] = useState(subject?.icon ?? "");
   const [areaId, setAreaId] = useState(subject?.areaId ?? "");
+  const [credits, setCredits] = useState(
+    subject?.credits != null ? String(subject.credits) : "",
+  );
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -82,6 +86,7 @@ export function SubjectDialog({
           color,
           icon: icon || null,
           areaId: areaId || null,
+          credits: credits.trim() ? Number(credits) : null,
         };
         if (editing && subject) await updateSubject(subject.id, payload);
         else await createSubject(payload);
@@ -148,13 +153,23 @@ export function SubjectDialog({
             </Field>
           </div>
         </div>
-        <Field label="Преподаватель">
-          <Input
-            placeholder="Фамилия И. О."
-            value={teacher}
-            onChange={(e) => setTeacher(e.target.value)}
-          />
-        </Field>
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Преподаватель">
+            <Input
+              placeholder="Фамилия И. О."
+              value={teacher}
+              onChange={(e) => setTeacher(e.target.value)}
+            />
+          </Field>
+          <Field label="Кредиты" hint="Зач. единицы — для GPA">
+            <Input
+              inputMode="numeric"
+              placeholder="напр. 5"
+              value={credits}
+              onChange={(e) => setCredits(e.target.value)}
+            />
+          </Field>
+        </div>
         <Field label="Сфера">
           <Select value={areaId} onChange={(e) => setAreaId(e.target.value)}>
             <option value="">Без сферы</option>

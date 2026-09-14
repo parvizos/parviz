@@ -7,12 +7,26 @@ import {
   getSubjectHomework,
   getSubjectNotes,
 } from "@/lib/queries";
-import { todayISO } from "@/lib/dates";
+import {
+  getGrades,
+  getSubjectAverages,
+  getSubjectExams,
+  getAttendanceStatsBySubject,
+  getSubjectAttendance,
+} from "@/lib/study-queries";
+import { todayISO, ruMonthDayShort } from "@/lib/dates";
 import { areaColor } from "@/lib/task-format";
-import { weekdayFull } from "@/lib/study-format";
+import { weekdayFull, ATTENDANCE_META } from "@/lib/study-format";
+import { cn } from "@/lib/cn";
 import { TaskGroup } from "@/components/app/TaskGroup";
 import { QuickAdd } from "@/components/app/QuickAdd";
 import { LessonRow, NoteCard } from "@/components/app/study-items";
+import {
+  GradeRow,
+  ExamCard,
+  NewGradeButton,
+  NewExamButton,
+} from "@/components/app/study2-items";
 import {
   EditSubjectButton,
   NewLessonButton,
@@ -40,12 +54,21 @@ export default async function SubjectDetailPage({
   const subject = await getSubject(id);
   if (!subject) notFound();
 
-  const [lessons, homework, notes] = await Promise.all([
-    getSubjectLessons(id),
-    getSubjectHomework(id),
-    getSubjectNotes(id),
-  ]);
+  const [lessons, homework, notes, grades, averages, exams, attStatsMap, attHistory] =
+    await Promise.all([
+      getSubjectLessons(id),
+      getSubjectHomework(id),
+      getSubjectNotes(id),
+      getGrades({ subjectId: id }),
+      getSubjectAverages(),
+      getSubjectExams(id),
+      getAttendanceStatsBySubject(),
+      getSubjectAttendance(id),
+    ]);
   const today = todayISO();
+  const avg = averages.find((a) => a.subjectId === id) ?? null;
+  const att = attStatsMap.get(id) ?? null;
+  const upcomingExams = exams.filter((e) => !e.done);
   const openHw = homework.filter((t) => t.status === "open");
   const doneHw = homework.filter((t) => t.status !== "open");
 
@@ -94,6 +117,7 @@ export default async function SubjectDetailPage({
             color: subject.color,
             icon: subject.icon,
             areaId: subject.areaId,
+            credits: subject.credits,
           }}
         />
       </div>
@@ -126,6 +150,144 @@ export default async function SubjectDetailPage({
         ) : (
           <p className="px-1 text-[13.5px] text-faint">
             Пар пока нет. Добавь занятие — оно появится в общем расписании.
+          </p>
+        )}
+      </section>
+
+      {/* Успеваемость */}
+      <section className="mb-8">
+        <div className="mb-2.5 flex items-center justify-between px-1">
+          <div className="flex items-baseline gap-2.5">
+            <h2 className="text-[13px] font-semibold uppercase tracking-wide text-muted">
+              Оценки
+            </h2>
+            {avg && avg.count > 0 && (
+              <span className="text-[13px] font-semibold tabular text-text">
+                {avg.avgOnScale != null
+                  ? `${avg.avgOnScale.toFixed(2)} / ${avg.commonMax}`
+                  : `${Math.round(avg.avgPct * 100)}%`}
+              </span>
+            )}
+          </div>
+          <NewGradeButton subjectId={id} variant="soft">
+            Оценка
+          </NewGradeButton>
+        </div>
+        {grades.length > 0 ? (
+          <>
+            <div className="flex flex-col">
+              {grades.map((g) => (
+                <GradeRow key={g.id} grade={g} showSubject={false} />
+              ))}
+            </div>
+            {avg?.need && (
+              <p className="mt-2 px-2 text-[12.5px] text-faint">
+                Чтобы средний дошёл до {avg.need.target}, нужно{" "}
+                <span className="font-medium text-muted">
+                  {(Math.ceil(avg.need.need * 10) / 10).toFixed(1)}
+                </span>{" "}
+                на следующей работе.
+              </p>
+            )}
+          </>
+        ) : (
+          <p className="px-1 text-[13.5px] text-faint">
+            Оценок пока нет. Добавь — посчитается средний балл.
+          </p>
+        )}
+      </section>
+
+      {/* Экзамены */}
+      {(upcomingExams.length > 0 || exams.length > 0) && (
+        <section className="mb-8">
+          <div className="mb-2.5 flex items-center justify-between px-1">
+            <h2 className="text-[13px] font-semibold uppercase tracking-wide text-muted">
+              Сессия
+            </h2>
+            <NewExamButton subjectId={id} variant="soft">
+              Экзамен
+            </NewExamButton>
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {exams.map((e) => (
+              <ExamCard key={e.id} exam={e} />
+            ))}
+          </div>
+        </section>
+      )}
+      {upcomingExams.length === 0 && exams.length === 0 && (
+        <section className="mb-8">
+          <div className="mb-2.5 flex items-center justify-between px-1">
+            <h2 className="text-[13px] font-semibold uppercase tracking-wide text-muted">
+              Сессия
+            </h2>
+            <NewExamButton subjectId={id} variant="soft">
+              Экзамен
+            </NewExamButton>
+          </div>
+          <p className="px-1 text-[13.5px] text-faint">
+            Экзаменов и зачётов нет. Добавь — увидишь обратный отсчёт.
+          </p>
+        </section>
+      )}
+
+      {/* Посещаемость */}
+      <section className="mb-8">
+        <div className="mb-2.5 flex items-center justify-between px-1">
+          <h2 className="text-[13px] font-semibold uppercase tracking-wide text-muted">
+            Посещаемость
+          </h2>
+          {att && att.total > 0 && (
+            <span
+              className={cn(
+                "text-[13px] font-semibold tabular",
+                att.pct < 0.75 ? "text-danger" : "text-text",
+              )}
+            >
+              {Math.round(att.pct * 100)}%
+            </span>
+          )}
+        </div>
+        {att && att.total > 0 ? (
+          <>
+            <div className="mb-3 flex flex-wrap gap-2">
+              {(["present", "late", "absent", "excused"] as const).map((s) =>
+                att[s] > 0 ? (
+                  <span
+                    key={s}
+                    className="rounded-lg bg-surface-2 px-2.5 py-1 text-[12.5px] text-muted"
+                  >
+                    {ATTENDANCE_META[s].label}: {att[s]}
+                  </span>
+                ) : null,
+              )}
+            </div>
+            <div className="flex flex-col divide-y divide-border">
+              {attHistory.slice(0, 8).map((r) => {
+                const meta = ATTENDANCE_META[r.status];
+                const toneCls =
+                  meta.tone === "success"
+                    ? "text-success"
+                    : meta.tone === "warning"
+                      ? "text-warning"
+                      : meta.tone === "danger"
+                        ? "text-danger"
+                        : "text-muted";
+                return (
+                  <div
+                    key={r.id}
+                    className="flex items-center justify-between py-2 text-[13px]"
+                  >
+                    <span className="text-muted">{ruMonthDayShort(r.date)}</span>
+                    <span className={cn("font-medium", toneCls)}>{meta.label}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        ) : (
+          <p className="px-1 text-[13.5px] text-faint">
+            Отмечай посещение пар в «Сегодня» — здесь будет статистика и процент.
           </p>
         )}
       </section>

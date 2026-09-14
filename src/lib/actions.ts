@@ -272,6 +272,7 @@ const createSubjectSchema = z.object({
   color: z.string().max(32).nullable().optional(),
   icon: z.string().max(32).nullable().optional(),
   areaId: nullableId,
+  credits: z.coerce.number().int().min(0).max(100).nullable().optional(),
 });
 
 export type CreateSubjectInput = z.input<typeof createSubjectSchema>;
@@ -287,6 +288,7 @@ export async function createSubject(input: CreateSubjectInput) {
       color: data.color ?? null,
       icon: data.icon ?? null,
       areaId: data.areaId ?? null,
+      credits: data.credits ?? null,
     })
     .returning({ id: subjects.id });
   revalidateAll();
@@ -299,6 +301,7 @@ const updateSubjectSchema = z.object({
   color: z.string().max(32).nullable().optional(),
   icon: z.string().max(32).nullable().optional(),
   areaId: nullableId,
+  credits: z.coerce.number().int().min(0).max(100).nullable().optional(),
 });
 
 export type UpdateSubjectInput = z.input<typeof updateSubjectSchema>;
