@@ -17,6 +17,12 @@ import {
   transactions,
   organizations,
   people,
+  exchangeRates,
+  debts,
+  debtPayments,
+  planned,
+  goals,
+  goalContributions,
 } from "./schema";
 
 const rub = (n: number) => n * 100; // рубли → копейки
@@ -195,6 +201,13 @@ async function main() {
     .insert(accounts)
     .values({ name: "Накопления", kind: "savings", color: "#c9832a", icon: "🐷", openingBalance: rub(50000), position: 2 })
     .returning();
+  const [usd] = await db
+    .insert(accounts)
+    .values({ name: "Долларовый вклад", kind: "savings", currency: "USD", color: "#2f9e6f", icon: "💵", openingBalance: rub(600), position: 3 })
+    .returning();
+
+  // Курс доллара к рублю (правится вручную в Настройках/на Счетах).
+  await db.insert(exchangeRates).values({ code: "USD", rateToBase: 92 });
 
   const [cFood] = await db.insert(categories).values({ name: "Еда", kind: "expense", color: "#d9662b", icon: "🍔", monthlyBudget: rub(15000), position: 0 }).returning();
   const [cTransport] = await db.insert(categories).values({ name: "Транспорт", kind: "expense", color: "#3b82c4", icon: "🚌", monthlyBudget: rub(3000), position: 1 }).returning();
@@ -212,6 +225,7 @@ async function main() {
     { accountId: card.id, kind: "expense", categoryId: cFun.id, amount: rub(700), date: today(-2), note: "Кино с друзьями" },
     { accountId: card.id, kind: "expense", categoryId: cFood.id, amount: rub(890), date: today(0), note: "Обед в столовой" },
     { accountId: card.id, kind: "transfer", toAccountId: piggy.id, amount: rub(5000), date: today(-7), note: "Отложил" },
+    { accountId: usd.id, kind: "expense", categoryId: cFun.id, amount: rub(15), date: today(-6), note: "Игра в Steam" },
   ]);
 
   // Люди и организации.
@@ -248,13 +262,16 @@ async function main() {
       birthday: today(9),
     })
     .returning();
-  await db.insert(people).values({
-    name: "Марк",
-    role: "Старший бариста",
-    organizationId: cafe.id,
-    icon: "☕",
-    color: "#c9832a",
-  });
+  const [mark] = await db
+    .insert(people)
+    .values({
+      name: "Марк",
+      role: "Старший бариста",
+      organizationId: cafe.id,
+      icon: "☕",
+      color: "#c9832a",
+    })
+    .returning();
 
   await db.insert(tasks).values([
     {
@@ -280,8 +297,121 @@ async function main() {
     },
   ]);
 
+  // Долги: мне должны и я должен, с частичным возвратом.
+  const [anyaDebt] = await db
+    .insert(debts)
+    .values({
+      direction: "owed_to_me",
+      personId: anya.id,
+      title: "за билеты на концерт",
+      currency: "RUB",
+      principal: rub(3000),
+      date: today(-14),
+      dueDate: today(7),
+    })
+    .returning();
+  await db.insert(debtPayments).values({
+    debtId: anyaDebt.id,
+    amount: rub(1000),
+    date: today(-3),
+    accountId: card.id,
+    note: "вернула часть",
+  });
+  await db.insert(debts).values([
+    {
+      direction: "i_owe",
+      personId: mark.id,
+      title: "подменил на смене, скинул на обед",
+      currency: "RUB",
+      principal: rub(1500),
+      date: today(-6),
+      dueDate: today(-1),
+    },
+    {
+      direction: "i_owe",
+      counterparty: "Брат",
+      title: "занял до стипендии",
+      currency: "RUB",
+      principal: rub(5000),
+      date: today(-9),
+      dueDate: today(5),
+    },
+  ]);
+
+  // Планы и подписки.
+  await db.insert(planned).values([
+    {
+      title: "Spotify",
+      kind: "expense",
+      amount: rub(299),
+      accountId: card.id,
+      categoryId: cFun.id,
+      recurrence: "month",
+      nextDate: today(6),
+      autopost: true,
+      note: "подписка",
+    },
+    {
+      title: "Интернет",
+      kind: "expense",
+      amount: rub(600),
+      accountId: card.id,
+      recurrence: "month",
+      nextDate: today(12),
+      autopost: true,
+    },
+    {
+      title: "Абонемент в зал",
+      kind: "expense",
+      amount: rub(1500),
+      accountId: card.id,
+      categoryId: cFun.id,
+      recurrence: "month",
+      nextDate: today(0),
+      autopost: false,
+    },
+    {
+      title: "Стипендия за октябрь",
+      kind: "income",
+      amount: rub(12000),
+      accountId: card.id,
+      categoryId: cScholar.id,
+      recurrence: "once",
+      nextDate: today(4),
+      autopost: false,
+    },
+  ]);
+
+  // Цели накопления.
+  const [laptopGoal] = await db
+    .insert(goals)
+    .values({
+      title: "Новый ноутбук",
+      targetAmount: rub(90000),
+      currency: "RUB",
+      accountId: piggy.id,
+      dueDate: today(150),
+      icon: "💻",
+      color: "#5b5bd6",
+      position: 0,
+    })
+    .returning();
+  await db.insert(goalContributions).values([
+    { goalId: laptopGoal.id, amount: rub(20000), date: today(-40), note: "стартовый" },
+    { goalId: laptopGoal.id, amount: rub(15000), date: today(-10) },
+  ]);
+  await db.insert(goals).values({
+    title: "Поездка летом",
+    targetAmount: rub(60000),
+    currency: "RUB",
+    icon: "✈️",
+    color: "#2f9e6f",
+    dueDate: today(240),
+    position: 1,
+  });
+
   console.log(
-    "Готово: демо-данные (сферы, проект, задачи, учёба, ежедневник, финансы, люди).",
+    "Готово: демо-данные (сферы, проект, задачи, учёба, ежедневник, финансы, долги, планы, цели, люди).",
   );
 }
 

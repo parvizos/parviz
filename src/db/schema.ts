@@ -1,5 +1,6 @@
 import {
   integer,
+  real,
   sqliteTable,
   text,
   blob,
@@ -49,6 +50,9 @@ export const ENTITY_TYPES = [
   "subject",
   "lesson",
   "journal",
+  "debt",
+  "goal",
+  "planned",
 ] as const;
 export type EntityType = (typeof ENTITY_TYPES)[number];
 
@@ -387,6 +391,11 @@ export const transactions = sqliteTable(
     }),
     kind: text("kind").$type<TransactionKind>().notNull().default("expense"),
     amount: integer("amount").notNull(),
+    /**
+     * Для кросс-валютного перевода: сколько зачислено на счёт-получатель
+     * (в валюте получателя). null — перевод внутри одной валюты (сумма та же).
+     */
+    amountTo: integer("amount_to"),
     date: text("date").notNull(),
     note: text("note"),
     areaId: text("area_id").references(() => areas.id, { onDelete: "set null" }),
@@ -419,6 +428,188 @@ export type Category = typeof categories.$inferSelect;
 export type NewCategory = typeof categories.$inferInsert;
 export type Transaction = typeof transactions.$inferSelect;
 export type NewTransaction = typeof transactions.$inferInsert;
+
+/**
+ * Курс валюты к базовой (rateToBase — сколько базовой валюты стоит 1 единица
+ * данной). Базовая валюта курса не требует. Правится вручную — офлайн, без
+ * зависимости от внешнего API.
+ */
+export const exchangeRates = sqliteTable("exchange_rates", {
+  code: text("code").primaryKey(),
+  rateToBase: real("rate_to_base").notNull(),
+  updatedAt: updatedAt(),
+});
+
+export type ExchangeRate = typeof exchangeRates.$inferSelect;
+
+/* ─────────────────────────  Домен: Долги  ───────────────────────── */
+
+export const DEBT_DIRECTIONS = ["owed_to_me", "i_owe"] as const;
+export type DebtDirection = (typeof DEBT_DIRECTIONS)[number];
+
+/** Долг: «мне должны» или «я должен». Тело долга + журнал возвратов. */
+export const debts = sqliteTable(
+  "debts",
+  {
+    id: id(),
+    direction: text("direction").$type<DebtDirection>().notNull(),
+    /** Человек из «Людей» (если заведён) — так долг виден в его карточке. */
+    personId: text("person_id").references(() => people.id, {
+      onDelete: "set null",
+    }),
+    /** Имя контрагента, если человек не заведён отдельно. */
+    counterparty: text("counterparty"),
+    title: text("title"),
+    currency: text("currency").notNull().default("RUB"),
+    /** Тело долга в минорных единицах, в валюте долга. */
+    principal: integer("principal").notNull(),
+    /** Когда возник: YYYY-MM-DD. */
+    date: text("date").notNull(),
+    /** Когда вернуть: YYYY-MM-DD. */
+    dueDate: text("due_date"),
+    note: text("note"),
+    /** Закрыт вручную (например, прощён), даже если остаток ≠ 0. */
+    settledAt: integer("settled_at", { mode: "timestamp_ms" }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    index("debts_person_idx").on(t.personId),
+    index("debts_direction_idx").on(t.direction),
+  ],
+);
+
+/** Возврат по долгу (частичный или полный). */
+export const debtPayments = sqliteTable(
+  "debt_payments",
+  {
+    id: id(),
+    debtId: text("debt_id")
+      .notNull()
+      .references(() => debts.id, { onDelete: "cascade" }),
+    /** Сумма возврата в валюте долга, минорные единицы. */
+    amount: integer("amount").notNull(),
+    date: text("date").notNull(),
+    /** Куда/откуда прошли деньги (справочно, без авто-операции). */
+    accountId: text("account_id").references(() => accounts.id, {
+      onDelete: "set null",
+    }),
+    note: text("note"),
+    createdAt: createdAt(),
+  },
+  (t) => [index("debt_payments_debt_idx").on(t.debtId)],
+);
+
+export type Debt = typeof debts.$inferSelect;
+export type NewDebt = typeof debts.$inferInsert;
+export type DebtPayment = typeof debtPayments.$inferSelect;
+
+/* ────────────────────  Домен: Планы и подписки  ──────────────────── */
+
+/** Периодичность плана: разовый или регулярный. */
+export const PLANNED_RECURRENCES = ["once", "week", "month", "year"] as const;
+export type PlannedRecurrence = (typeof PLANNED_RECURRENCES)[number];
+
+/**
+ * Запланированная операция. Разовая (recurrence = "once") — планировщик;
+ * регулярная (week/month/year) — подписка/повторяющийся платёж. По наступлении
+ * `nextDate` либо ждёт кнопки «Провести», либо проводится сама (autopost).
+ */
+export const planned = sqliteTable(
+  "planned",
+  {
+    id: id(),
+    title: text("title").notNull(),
+    kind: text("kind").$type<TransactionKind>().notNull().default("expense"),
+    amount: integer("amount").notNull(),
+    currency: text("currency").notNull().default("RUB"),
+    accountId: text("account_id").references(() => accounts.id, {
+      onDelete: "set null",
+    }),
+    toAccountId: text("to_account_id").references(() => accounts.id, {
+      onDelete: "set null",
+    }),
+    categoryId: text("category_id").references(() => categories.id, {
+      onDelete: "set null",
+    }),
+    areaId: text("area_id").references(() => areas.id, { onDelete: "set null" }),
+    projectId: text("project_id").references(() => projects.id, {
+      onDelete: "set null",
+    }),
+    subjectId: text("subject_id").references(() => subjects.id, {
+      onDelete: "set null",
+    }),
+    personId: text("person_id").references(() => people.id, {
+      onDelete: "set null",
+    }),
+    recurrence: text("recurrence")
+      .$type<PlannedRecurrence>()
+      .notNull()
+      .default("month"),
+    interval: integer("interval").notNull().default(1),
+    /** Ближайшая дата проведения: YYYY-MM-DD. */
+    nextDate: text("next_date").notNull(),
+    autopost: integer("autopost", { mode: "boolean" }).notNull().default(false),
+    active: integer("active", { mode: "boolean" }).notNull().default(true),
+    note: text("note"),
+    lastPostedDate: text("last_posted_date"),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    index("planned_next_idx").on(t.nextDate),
+    index("planned_active_idx").on(t.active),
+  ],
+);
+
+export type Planned = typeof planned.$inferSelect;
+export type NewPlanned = typeof planned.$inferInsert;
+
+/* ─────────────────────  Домен: Цели накопления  ───────────────────── */
+
+/** Финансовая цель: копим на что-то. Прогресс — из журнала взносов. */
+export const goals = sqliteTable(
+  "goals",
+  {
+    id: id(),
+    title: text("title").notNull(),
+    targetAmount: integer("target_amount").notNull(),
+    currency: text("currency").notNull().default("RUB"),
+    /** Счёт-копилка, где деньги (справочно). */
+    accountId: text("account_id").references(() => accounts.id, {
+      onDelete: "set null",
+    }),
+    dueDate: text("due_date"),
+    color: text("color"),
+    icon: text("icon"),
+    note: text("note"),
+    achievedAt: integer("achieved_at", { mode: "timestamp_ms" }),
+    position: integer("position").notNull().default(0),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("goals_position_idx").on(t.position)],
+);
+
+/** Взнос в цель. */
+export const goalContributions = sqliteTable(
+  "goal_contributions",
+  {
+    id: id(),
+    goalId: text("goal_id")
+      .notNull()
+      .references(() => goals.id, { onDelete: "cascade" }),
+    amount: integer("amount").notNull(),
+    date: text("date").notNull(),
+    note: text("note"),
+    createdAt: createdAt(),
+  },
+  (t) => [index("goal_contributions_goal_idx").on(t.goalId)],
+);
+
+export type Goal = typeof goals.$inferSelect;
+export type NewGoal = typeof goals.$inferInsert;
+export type GoalContribution = typeof goalContributions.$inferSelect;
 
 /* ─────────────────────  Домен: Люди и организации  ───────────────────── */
 

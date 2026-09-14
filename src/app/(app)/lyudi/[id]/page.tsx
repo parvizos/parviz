@@ -6,12 +6,15 @@ import {
   getPerson,
   getPersonTasks,
   getPersonTransactions,
+  getAccountOptions,
 } from "@/lib/queries";
+import { getDebts } from "@/lib/finance-queries";
 import { todayISO, ruMonthDay } from "@/lib/dates";
 import { areaColor } from "@/lib/task-format";
 import { turningAge } from "@/lib/person-format";
 import { TaskGroup } from "@/components/app/TaskGroup";
 import { TransactionRow } from "@/components/app/finance-items";
+import { DebtCard, NewDebtButton } from "@/components/app/finance2-items";
 import { EditPersonButton } from "@/components/app/crm-buttons";
 import { NewTaskButton } from "@/components/app/buttons";
 
@@ -40,9 +43,11 @@ export default async function PersonDetailPage({
   const person = await getPerson(id);
   if (!person) notFound();
 
-  const [tasks, txs] = await Promise.all([
+  const [tasks, txs, debts, accountOptions] = await Promise.all([
     getPersonTasks(id),
     getPersonTransactions(id),
+    getDebts({ personId: id }),
+    getAccountOptions(),
   ]);
   const today = todayISO();
   const open = tasks.filter((t) => t.status === "open");
@@ -156,6 +161,29 @@ export default async function PersonDetailPage({
         {tasks.length === 0 && (
           <p className="px-1 text-[13.5px] text-faint">
             Нет задач, связанных с этим человеком.
+          </p>
+        )}
+      </section>
+
+      {/* Долги */}
+      <section className="mb-8">
+        <div className="mb-2.5 flex items-center justify-between px-1">
+          <h2 className="text-[13px] font-semibold uppercase tracking-wide text-muted">
+            Долги
+          </h2>
+          <NewDebtButton personId={id} variant="soft">
+            Долг
+          </NewDebtButton>
+        </div>
+        {debts.length > 0 ? (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {debts.map((d) => (
+              <DebtCard key={d.id} debt={d} accountOptions={accountOptions} />
+            ))}
+          </div>
+        ) : (
+          <p className="px-1 text-[13.5px] text-faint">
+            Нет долгов с этим человеком.
           </p>
         )}
       </section>

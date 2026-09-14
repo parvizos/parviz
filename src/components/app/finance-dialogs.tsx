@@ -14,6 +14,7 @@ import {
   TX_KIND_META,
 } from "@/lib/finance-format";
 import { parseAmount, minorToInput } from "@/lib/money";
+import { CURRENCIES, currencySymbol } from "@/lib/currency";
 import {
   createAccount,
   updateAccount,
@@ -41,7 +42,7 @@ import {
   type TransactionPrefill,
 } from "./types";
 
-function ColorPicker({
+export function ColorPicker({
   value,
   onChange,
 }: {
@@ -71,6 +72,7 @@ export type AccountForEdit = {
   id: string;
   name: string;
   kind: AccountKind;
+  currency: string;
   openingBalance: number;
   color: string | null;
   icon: string | null;
@@ -86,6 +88,7 @@ export function AccountDialog({
   const editing = !!account;
   const [name, setName] = useState(account?.name ?? "");
   const [kind, setKind] = useState<AccountKind>(account?.kind ?? "card");
+  const [currency, setCurrency] = useState(account?.currency ?? "RUB");
   const [opening, setOpening] = useState(
     account ? minorToInput(account.openingBalance) : "",
   );
@@ -110,6 +113,7 @@ export function AccountDialog({
         const payload = {
           name: n,
           kind,
+          currency,
           openingBalance: openingMinor,
           color,
           icon: icon || null,
@@ -191,18 +195,30 @@ export function AccountDialog({
               ))}
             </Select>
           </Field>
-          <Field
-            label="Начальный баланс"
-            hint={editing ? undefined : "Сколько сейчас на счёте"}
-          >
-            <Input
-              inputMode="decimal"
-              placeholder="0"
-              value={opening}
-              onChange={(e) => setOpening(e.target.value)}
-            />
+          <Field label="Валюта">
+            <Select
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value)}
+            >
+              {CURRENCIES.map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.symbol} {c.code} — {c.name}
+                </option>
+              ))}
+            </Select>
           </Field>
         </div>
+        <Field
+          label={`Начальный баланс, ${currencySymbol(currency)}`}
+          hint={editing ? undefined : "Сколько сейчас на счёте"}
+        >
+          <Input
+            inputMode="decimal"
+            placeholder="0"
+            value={opening}
+            onChange={(e) => setOpening(e.target.value)}
+          />
+        </Field>
         <Field label="Цвет">
           <ColorPicker value={color} onChange={setColor} />
         </Field>
@@ -368,6 +384,7 @@ export type TransactionForEdit = {
   id: string;
   kind: TransactionKind;
   amount: number;
+  amountTo: number | null;
   date: string;
   accountId: string;
   toAccountId: string | null;
@@ -405,6 +422,9 @@ export function TransactionDialog({
     tx?.kind ?? prefill?.kind ?? "expense",
   );
   const [amount, setAmount] = useState(tx ? minorToInput(tx.amount) : "");
+  const [amountTo, setAmountTo] = useState(
+    tx?.amountTo != null ? minorToInput(tx.amountTo) : "",
+  );
   const [date, setDate] = useState(tx?.date ?? prefill?.date ?? clientToday());
   const [accountId, setAccountId] = useState(
     tx?.accountId ?? prefill?.accountId ?? accountOptions[0]?.id ?? "",
@@ -431,6 +451,12 @@ export function TransactionDialog({
     (c) => c.kind === (kind === "income" ? "income" : "expense"),
   );
 
+  const srcCur =
+    accountOptions.find((a) => a.id === accountId)?.currency ?? "RUB";
+  const dstCur =
+    accountOptions.find((a) => a.id === toAccountId)?.currency ?? srcCur;
+  const crossCurrency = kind === "transfer" && !!toAccountId && dstCur !== srcCur;
+
   function submit() {
     const minor = parseAmount(amount);
     if (!minor) {
@@ -445,12 +471,21 @@ export function TransactionDialog({
       setError("Выберите другой счёт-получатель");
       return;
     }
+    let amountToMinor: number | null = null;
+    if (crossCurrency) {
+      amountToMinor = parseAmount(amountTo);
+      if (!amountToMinor) {
+        setError(`Введите сумму в ${currencySymbol(dstCur)}`);
+        return;
+      }
+    }
     startTransition(async () => {
       try {
         const payload = {
           accountId,
           kind,
           amount: minor,
+          amountTo: kind === "transfer" ? amountToMinor : null,
           date,
           note: note.trim() || null,
           toAccountId: kind === "transfer" ? toAccountId : null,
@@ -532,7 +567,7 @@ export function TransactionDialog({
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Сумма, ₽" error={error ?? undefined}>
+          <Field label={`Сумма, ${currencySymbol(srcCur)}`} error={error ?? undefined}>
             <Input
               autoFocus
               inputMode="decimal"
@@ -557,6 +592,21 @@ export function TransactionDialog({
             />
           </Field>
         </div>
+
+        {crossCurrency && (
+          <Field
+            label={`Зачислится на счёт, ${currencySymbol(dstCur)}`}
+            hint={`Курс перевода ${currencySymbol(srcCur)} → ${currencySymbol(dstCur)} может отличаться от общего`}
+          >
+            <Input
+              inputMode="decimal"
+              placeholder="0"
+              value={amountTo}
+              onChange={(e) => setAmountTo(e.target.value)}
+              className="h-11 text-[16px] tabular"
+            />
+          </Field>
+        )}
 
         <div className="grid grid-cols-2 gap-4">
           <Field label={kind === "transfer" ? "Со счёта" : "Счёт"}>

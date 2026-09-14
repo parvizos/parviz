@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { formatSigned, formatMoneyShort } from "@/lib/money";
+import { currencySymbol } from "@/lib/currency";
 import { financeColor, ACCOUNT_KIND_META } from "@/lib/finance-format";
 import { ruMonthDayShort } from "@/lib/dates";
 import { areaColor } from "@/lib/task-format";
@@ -51,6 +52,7 @@ export function TransactionRow({
           id: tx.id,
           kind: tx.kind,
           amount: tx.amount,
+          amountTo: tx.amountTo,
           date: tx.date,
           accountId: tx.accountId,
           toAccountId: tx.toAccountId,
@@ -124,11 +126,21 @@ export function TransactionRow({
         </div>
       </div>
 
-      <span
-        className="shrink-0 text-[14.5px] font-semibold tabular"
-        style={{ color: AMOUNT_COLOR[tx.kind] }}
-      >
-        {formatSigned(tx.amount, tx.kind)}
+      <span className="shrink-0 text-right">
+        <span
+          className="block text-[14.5px] font-semibold tabular"
+          style={{ color: AMOUNT_COLOR[tx.kind] }}
+        >
+          {formatSigned(tx.amount, tx.kind, tx.accountCurrency ?? "RUB")}
+        </span>
+        {tx.kind === "transfer" &&
+          tx.amountTo != null &&
+          tx.toAccountCurrency &&
+          tx.toAccountCurrency !== tx.accountCurrency && (
+            <span className="block text-[11.5px] text-faint tabular">
+              →&nbsp;{formatMoneyShort(tx.amountTo, tx.toAccountCurrency)}
+            </span>
+          )}
       </span>
     </button>
   );
@@ -144,6 +156,7 @@ export function AccountCard({ account }: { account: AccountWithBalance }) {
           id: account.id,
           name: account.name,
           kind: account.kind,
+          currency: account.currency,
           openingBalance: account.openingBalance,
           color: account.color,
           icon: account.icon,
@@ -164,7 +177,9 @@ export function AccountCard({ account }: { account: AccountWithBalance }) {
         <div className="truncate text-[14px] font-medium text-text">
           {account.name}
         </div>
-        <div className="text-[12px] text-muted">{meta.label}</div>
+        <div className="text-[12px] text-muted">
+          {meta.label} · {currencySymbol(account.currency)} {account.currency}
+        </div>
       </div>
       <div
         className={cn(
@@ -172,13 +187,19 @@ export function AccountCard({ account }: { account: AccountWithBalance }) {
           account.balance < 0 ? "text-danger" : "text-text",
         )}
       >
-        {formatMoneyShort(account.balance)}
+        {formatMoneyShort(account.balance, account.currency)}
       </div>
     </button>
   );
 }
 
-export function CategoryCard({ category }: { category: CategoryWithSpend }) {
+export function CategoryCard({
+  category,
+  base = "RUB",
+}: {
+  category: CategoryWithSpend;
+  base?: string;
+}) {
   const { openEditCategory } = useUi();
   const isExpense = category.kind === "expense";
   const budget = category.monthlyBudget;
@@ -227,11 +248,11 @@ export function CategoryCard({ category }: { category: CategoryWithSpend }) {
               over ? "text-danger" : "text-text",
             )}
           >
-            {formatMoneyShort(category.spent)}
+            {formatMoneyShort(category.spent, base)}
           </div>
           {budget != null && (
             <div className="text-[11px] text-faint">
-              из {formatMoneyShort(budget)}
+              из {formatMoneyShort(budget, base)}
             </div>
           )}
         </div>

@@ -29,6 +29,14 @@ import {
   type PersonForEdit,
   type OrganizationForEdit,
 } from "./crm-dialogs";
+import {
+  DebtDialog,
+  PlannedDialog,
+  GoalDialog,
+  type DebtForEdit,
+  type PlannedForEdit,
+  type GoalForEdit,
+} from "./finance2-dialogs";
 import { CommandPalette } from "./CommandPalette";
 import { useRouter } from "next/navigation";
 import { createNote } from "@/lib/actions";
@@ -44,7 +52,11 @@ import type {
   TransactionPrefill,
 } from "./types";
 import type { TaskWithContext } from "@/lib/queries";
-import type { ProjectStatus, CategoryKind } from "@/db/schema";
+import type {
+  ProjectStatus,
+  CategoryKind,
+  DebtDirection,
+} from "@/db/schema";
 
 type ProjectForEdit = {
   id: string;
@@ -83,6 +95,15 @@ interface UiValue {
   openEditPerson: (p: PersonForEdit) => void;
   openNewOrganization: () => void;
   openEditOrganization: (o: OrganizationForEdit) => void;
+  openNewDebt: (opts?: {
+    direction?: DebtDirection;
+    personId?: string | null;
+  }) => void;
+  openEditDebt: (d: DebtForEdit) => void;
+  openNewPlanned: () => void;
+  openEditPlanned: (p: PlannedForEdit) => void;
+  openNewGoal: () => void;
+  openEditGoal: (g: GoalForEdit) => void;
   openCommand: () => void;
   toggleTheme: () => void;
   theme: "light" | "dark";
@@ -107,6 +128,7 @@ export function UiProvider({
   categoryOptions,
   personOptions,
   organizationOptions,
+  baseCurrency = "RUB",
 }: {
   children: ReactNode;
   areaOptions: AreaOption[];
@@ -116,6 +138,7 @@ export function UiProvider({
   categoryOptions: CategoryOption[];
   personOptions: PersonOption[];
   organizationOptions: OrganizationOption[];
+  baseCurrency?: string;
 }) {
   const [task, setTask] = useState<{
     open: boolean;
@@ -164,6 +187,20 @@ export function UiProvider({
     open: boolean;
     organization: OrganizationForEdit | null;
   }>({ open: false, organization: null });
+  const [debt, setDebt] = useState<{
+    open: boolean;
+    debt: DebtForEdit | null;
+    direction?: DebtDirection;
+    personId?: string | null;
+  }>({ open: false, debt: null });
+  const [plan, setPlan] = useState<{
+    open: boolean;
+    plan: PlannedForEdit | null;
+  }>({ open: false, plan: null });
+  const [goal, setGoal] = useState<{ open: boolean; goal: GoalForEdit | null }>({
+    open: false,
+    goal: null,
+  });
   const [cmdOpen, setCmdOpen] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [focusMode, setFocusMode] = useState(false);
@@ -286,6 +323,33 @@ export function UiProvider({
     (o: OrganizationForEdit) => setOrganization({ open: true, organization: o }),
     [],
   );
+  const openNewDebt = useCallback(
+    (opts?: { direction?: DebtDirection; personId?: string | null }) =>
+      setDebt({
+        open: true,
+        debt: null,
+        direction: opts?.direction,
+        personId: opts?.personId ?? null,
+      }),
+    [],
+  );
+  const openEditDebt = useCallback(
+    (d: DebtForEdit) => setDebt({ open: true, debt: d }),
+    [],
+  );
+  const openNewPlanned = useCallback(
+    () => setPlan({ open: true, plan: null }),
+    [],
+  );
+  const openEditPlanned = useCallback(
+    (p: PlannedForEdit) => setPlan({ open: true, plan: p }),
+    [],
+  );
+  const openNewGoal = useCallback(() => setGoal({ open: true, goal: null }), []);
+  const openEditGoal = useCallback(
+    (g: GoalForEdit) => setGoal({ open: true, goal: g }),
+    [],
+  );
   const openCommand = useCallback(() => setCmdOpen(true), []);
 
   const anyOpen =
@@ -299,6 +363,9 @@ export function UiProvider({
     category.open ||
     person.open ||
     organization.open ||
+    debt.open ||
+    plan.open ||
+    goal.open ||
     cmdOpen;
 
   useEffect(() => {
@@ -350,6 +417,12 @@ export function UiProvider({
         openEditPerson,
         openNewOrganization,
         openEditOrganization,
+        openNewDebt,
+        openEditDebt,
+        openNewPlanned,
+        openEditPlanned,
+        openNewGoal,
+        openEditGoal,
         openCommand,
         toggleTheme,
         theme,
@@ -438,6 +511,36 @@ export function UiProvider({
         <OrganizationDialog
           onClose={() => setOrganization((s) => ({ ...s, open: false }))}
           organization={organization.organization}
+        />
+      )}
+      {debt.open && (
+        <DebtDialog
+          onClose={() => setDebt((s) => ({ ...s, open: false }))}
+          debt={debt.debt}
+          defaultDirection={debt.direction}
+          defaultPersonId={debt.personId}
+          defaultCurrency={baseCurrency}
+          personOptions={personOptions}
+        />
+      )}
+      {plan.open && (
+        <PlannedDialog
+          onClose={() => setPlan((s) => ({ ...s, open: false }))}
+          plan={plan.plan}
+          accountOptions={accountOptions}
+          categoryOptions={categoryOptions}
+          areaOptions={areaOptions}
+          projectOptions={projectOptions}
+          subjectOptions={subjectOptions}
+          personOptions={personOptions}
+        />
+      )}
+      {goal.open && (
+        <GoalDialog
+          onClose={() => setGoal((s) => ({ ...s, open: false }))}
+          goal={goal.goal}
+          accountOptions={accountOptions}
+          defaultCurrency={baseCurrency}
         />
       )}
       {cmdOpen && (

@@ -15,6 +15,10 @@ import {
   Tags,
   Plus,
   Wallet,
+  HandCoins,
+  Repeat,
+  Target,
+  LineChart,
   Users,
   Building2,
   GraduationCap,
@@ -67,6 +71,10 @@ const FINANCE: NavItem[] = [
   { href: "/finansy/operacii", label: "Операции", icon: Receipt },
   { href: "/finansy/scheta", label: "Счета", icon: CreditCard },
   { href: "/finansy/kategorii", label: "Категории", icon: Tags },
+  { href: "/finansy/dolgi", label: "Долги", icon: HandCoins },
+  { href: "/finansy/plany", label: "Планы", icon: Repeat },
+  { href: "/finansy/tseli", label: "Цели", icon: Target },
+  { href: "/finansy/analitika", label: "Аналитика", icon: LineChart },
 ];
 
 const PEOPLE: NavItem[] = [

@@ -542,6 +542,7 @@ export async function createAccount(input: CreateAccountInput) {
 const updateAccountSchema = z.object({
   name: z.string().trim().min(1).max(120).optional(),
   kind: z.enum(ACCOUNT_KINDS).optional(),
+  currency: z.string().max(8).optional(),
   openingBalance: z.coerce.number().int().optional(),
   color: z.string().max(32).nullable().optional(),
   icon: z.string().max(32).nullable().optional(),
@@ -623,6 +624,8 @@ const createTransactionSchema = z.object({
   categoryId: nullableId,
   kind: z.enum(TRANSACTION_KINDS),
   amount: z.coerce.number().int().positive("Введите сумму"),
+  /** Кросс-валютный перевод: сумма зачисления в валюте счёта-получателя. */
+  amountTo: z.coerce.number().int().positive().nullable().optional(),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   note: z.string().max(500).nullable().optional(),
   areaId: nullableId,
@@ -659,6 +662,7 @@ export async function createTransaction(input: CreateTransactionInput) {
       categoryId: norm.categoryId,
       kind: data.kind,
       amount: data.amount,
+      amountTo: data.kind === "transfer" ? data.amountTo ?? null : null,
       date: data.date,
       note: data.note ?? null,
       areaId: data.areaId ?? null,
@@ -677,6 +681,7 @@ const updateTransactionSchema = z.object({
   categoryId: nullableId,
   kind: z.enum(TRANSACTION_KINDS).optional(),
   amount: z.coerce.number().int().positive().optional(),
+  amountTo: z.coerce.number().int().positive().nullable().optional(),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   note: z.string().max(500).nullable().optional(),
   areaId: nullableId,
@@ -703,6 +708,8 @@ export async function updateTransaction(
     patch.toAccountId = norm.toAccountId;
     patch.categoryId = norm.categoryId;
     if (data.kind === "transfer") patch.personId = null;
+    // amountTo имеет смысл только для перевода.
+    else patch.amountTo = null;
   }
   await db.update(transactions).set(patch).where(eq(transactions.id, id));
   revalidateAll();

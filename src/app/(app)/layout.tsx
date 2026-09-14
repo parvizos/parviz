@@ -2,6 +2,8 @@ import type { ReactNode } from "react";
 import { UiProvider } from "@/components/app/ui-context";
 import { AppShell } from "@/components/app/AppShell";
 import { backupIfDue } from "@/lib/backup";
+import { baseCurrency } from "@/lib/currency";
+import { postDuePlanned } from "@/lib/finance-actions";
 import {
   getSidebarCounts,
   getAreasWithCounts,
@@ -22,6 +24,10 @@ export default async function AppLayout({
 }: {
   children: ReactNode;
 }) {
+  // Автопроведение подписок/планов до чтения данных — свежие операции
+  // сразу попадают в этот рендер (без revalidate во время рендера).
+  await postDuePlanned().catch(() => {});
+
   const [
     counts,
     areas,
@@ -64,6 +70,7 @@ export default async function AppLayout({
       categoryOptions={categoryOptions}
       personOptions={personOptions}
       organizationOptions={organizationOptions}
+      baseCurrency={baseCurrency()}
     >
       <AppShell counts={counts} areas={areaLinks}>
         {children}

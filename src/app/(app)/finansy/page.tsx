@@ -1,12 +1,16 @@
 import Link from "next/link";
-import { Wallet, ArrowRight } from "lucide-react";
+import { Wallet, ArrowRight, Zap, LineChart } from "lucide-react";
 import {
-  getTotalBalance,
   getAccountsWithBalances,
   getMonthSummary,
   getSpendingByCategory,
   getTransactions,
 } from "@/lib/queries";
+import {
+  getNetWorth,
+  getDuePlannedCount,
+} from "@/lib/finance-queries";
+import { baseCurrency } from "@/lib/currency";
 import { currentMonth, isValidMonth } from "@/lib/dates";
 import { formatMoneyShort } from "@/lib/money";
 import { financeColor } from "@/lib/finance-format";
@@ -29,14 +33,17 @@ export default async function FinanceOverviewPage({
 }) {
   const { m } = await searchParams;
   const month = isValidMonth(m) ? m : currentMonth();
+  const base = baseCurrency();
 
-  const [total, accounts, summary, spending, recent] = await Promise.all([
-    getTotalBalance(),
-    getAccountsWithBalances(),
-    getMonthSummary(month),
-    getSpendingByCategory(month),
-    getTransactions({ limit: 8 }),
-  ]);
+  const [net, accounts, summary, spending, recent, dueCount] =
+    await Promise.all([
+      getNetWorth(),
+      getAccountsWithBalances(),
+      getMonthSummary(month),
+      getSpendingByCategory(month),
+      getTransactions({ limit: 8 }),
+      getDuePlannedCount(),
+    ]);
 
   if (accounts.length === 0) {
     return (
@@ -56,24 +63,56 @@ export default async function FinanceOverviewPage({
   }
 
   const maxSpent = spending[0]?.spent ?? 0;
+  const hasDebts = net.receivable > 0 || net.payable > 0;
 
   return (
     <div>
       <PageHeader title="Финансы" actions={<NewTransactionButton />} />
 
-      {/* Баланс + месяц */}
+      {/* Планы, ждущие проведения */}
+      {dueCount > 0 && (
+        <Link
+          href="/finansy/plany"
+          className="mb-4 flex items-center gap-2.5 rounded-xl bg-accent-soft px-4 py-3 text-[13.5px] text-accent-soft-text transition-opacity hover:opacity-90"
+        >
+          <Zap size={16} className="shrink-0" />
+          {dueCount === 1
+            ? "1 план ждёт проведения"
+            : `${dueCount} планов ждут проведения`}
+          <ArrowRight size={15} className="ml-auto" />
+        </Link>
+      )}
+
+      {/* Капитал + месяц */}
       <div className="mb-6 rounded-2xl border border-border bg-surface p-5">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <div className="text-[13px] text-muted">Всего на счетах</div>
+            <div className="text-[13px] text-muted">
+              {hasDebts ? "Чистый капитал" : "Всего на счетах"}
+            </div>
             <div
               className={cn(
                 "mt-1 text-[30px] font-semibold tracking-tight tabular",
-                total < 0 ? "text-danger" : "text-text",
+                net.net < 0 ? "text-danger" : "text-text",
               )}
             >
-              {formatMoneyShort(total)}
+              {formatMoneyShort(net.net, base)}
             </div>
+            {hasDebts && (
+              <div className="mt-1 flex flex-wrap gap-x-3 text-[12.5px] text-muted">
+                <span>на счетах {formatMoneyShort(net.onAccounts, base)}</span>
+                {net.receivable > 0 && (
+                  <span className="text-success">
+                    +{formatMoneyShort(net.receivable, base)}
+                  </span>
+                )}
+                {net.payable > 0 && (
+                  <span className="text-danger">
+                    −{formatMoneyShort(net.payable, base)}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
           <MonthNav month={month} />
         </div>
@@ -82,13 +121,13 @@ export default async function FinanceOverviewPage({
           <div className="rounded-xl bg-success-soft px-3.5 py-3">
             <div className="text-[12px] text-success">Доход за месяц</div>
             <div className="mt-0.5 text-[17px] font-semibold tabular text-success">
-              +{formatMoneyShort(summary.income)}
+              +{formatMoneyShort(summary.income, base)}
             </div>
           </div>
           <div className="rounded-xl bg-danger-soft px-3.5 py-3">
             <div className="text-[12px] text-danger">Расход за месяц</div>
             <div className="mt-0.5 text-[17px] font-semibold tabular text-danger">
-              −{formatMoneyShort(summary.expense)}
+              −{formatMoneyShort(summary.expense, base)}
             </div>
           </div>
         </div>
@@ -112,9 +151,17 @@ export default async function FinanceOverviewPage({
       {/* Расходы по категориям */}
       {spending.length > 0 && (
         <section className="mb-8">
-          <h2 className="mb-3 px-1 text-[13px] font-semibold uppercase tracking-wide text-muted">
-            Расходы по категориям
-          </h2>
+          <div className="mb-3 flex items-center justify-between px-1">
+            <h2 className="text-[13px] font-semibold uppercase tracking-wide text-muted">
+              Расходы по категориям
+            </h2>
+            <Link
+              href="/finansy/analitika"
+              className="inline-flex items-center gap-1 text-[13px] text-accent-soft-text transition-opacity hover:opacity-80"
+            >
+              <LineChart size={14} /> Аналитика
+            </Link>
+          </div>
           <div className="flex flex-col gap-2.5">
             {spending.map((c) => {
               const over = c.budget != null && c.spent > c.budget;
@@ -140,11 +187,11 @@ export default async function FinanceOverviewPage({
                   </div>
                   <div className="w-28 shrink-0 text-right text-[12.5px] tabular">
                     <span className={over ? "text-danger" : "text-muted"}>
-                      {formatMoneyShort(c.spent)}
+                      {formatMoneyShort(c.spent, base)}
                     </span>
                     {c.budget != null && (
                       <span className="block text-[11px] text-faint">
-                        из {formatMoneyShort(c.budget)}
+                        из {formatMoneyShort(c.budget, base)}
                       </span>
                     )}
                   </div>

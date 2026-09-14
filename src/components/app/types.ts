@@ -11,7 +11,12 @@ export type SubjectOption = {
   areaId: string | null;
 };
 
-export type AccountOption = { id: string; name: string; color: string | null };
+export type AccountOption = {
+  id: string;
+  name: string;
+  color: string | null;
+  currency: string;
+};
 export type CategoryOption = {
   id: string;
   name: string;

@@ -29,6 +29,7 @@ import {
   transactions,
   organizations,
   people,
+  exchangeRates,
   type Task,
   type Area,
   type Subject,
@@ -42,6 +43,13 @@ import {
   type Person,
 } from "@/db/schema";
 import { todayISO, isoWeekday } from "@/lib/dates";
+import { baseCurrency, toBase } from "@/lib/currency";
+
+/** Курсы к базовой валюте (rateToBase; базовая = 1). Внутренний помощник. */
+async function ratesMap(): Promise<Map<string, number>> {
+  const rows = await db.select().from(exchangeRates);
+  return new Map(rows.map((r) => [r.code, r.rateToBase]));
+}
 
 export type TaskWithContext = Task & {
   projectName: string | null;
@@ -553,7 +561,8 @@ export async function getAccountsWithBalances(): Promise<AccountWithBalance[]> {
   const transIn = await db
     .select({
       toAccountId: transactions.toAccountId,
-      total: sql<number>`sum(${transactions.amount})`,
+      // Для кросс-валютного перевода на счёт зачисляется amountTo (в его валюте).
+      total: sql<number>`sum(coalesce(${transactions.amountTo}, ${transactions.amount}))`,
     })
     .from(transactions)
     .where(
@@ -583,28 +592,40 @@ export async function getAccountsWithBalances(): Promise<AccountWithBalance[]> {
   }));
 }
 
+/** Сумма всех счетов, сведённая в базовую валюту. */
 export async function getTotalBalance(): Promise<number> {
-  const accs = await getAccountsWithBalances();
-  return accs.reduce((s, a) => s + a.balance, 0);
+  const base = baseCurrency();
+  const [accs, rates] = await Promise.all([
+    getAccountsWithBalances(),
+    ratesMap(),
+  ]);
+  return accs.reduce((s, a) => s + toBase(a.balance, a.currency, rates, base), 0);
 }
 
 export type MonthSummary = { income: number; expense: number; net: number };
 
 export async function getMonthSummary(month: string): Promise<MonthSummary> {
   await schemaReady();
-  const rows = await db
-    .select({
-      kind: transactions.kind,
-      total: sql<number>`sum(${transactions.amount})`,
-    })
-    .from(transactions)
-    .where(like(transactions.date, `${month}-%`))
-    .groupBy(transactions.kind);
+  const base = baseCurrency();
+  const [rows, rates] = await Promise.all([
+    db
+      .select({
+        kind: transactions.kind,
+        currency: accounts.currency,
+        total: sql<number>`sum(${transactions.amount})`,
+      })
+      .from(transactions)
+      .innerJoin(accounts, eq(transactions.accountId, accounts.id))
+      .where(like(transactions.date, `${month}-%`))
+      .groupBy(transactions.kind, accounts.currency),
+    ratesMap(),
+  ]);
   let income = 0;
   let expense = 0;
   for (const r of rows) {
-    if (r.kind === "income") income = r.total;
-    else if (r.kind === "expense") expense = r.total;
+    const inBase = toBase(r.total, r.currency, rates, base);
+    if (r.kind === "income") income += inBase;
+    else if (r.kind === "expense") expense += inBase;
   }
   return { income, expense, net: income - expense };
 }
@@ -622,36 +643,53 @@ export async function getSpendingByCategory(
   month: string,
 ): Promise<CategorySpend[]> {
   await schemaReady();
-  const rows = await db
-    .select({
-      categoryId: transactions.categoryId,
-      name: categories.name,
-      color: categories.color,
-      icon: categories.icon,
-      budget: categories.monthlyBudget,
-      spent: sql<number>`sum(${transactions.amount})`,
-    })
-    .from(transactions)
-    .leftJoin(categories, eq(transactions.categoryId, categories.id))
-    .where(
-      and(eq(transactions.kind, "expense"), like(transactions.date, `${month}-%`)),
-    )
-    .groupBy(transactions.categoryId)
-    .orderBy(desc(sql`sum(${transactions.amount})`));
-  return rows.map((r) => ({
-    categoryId: r.categoryId,
-    name: r.name ?? "Без категории",
-    color: r.color,
-    icon: r.icon,
-    budget: r.budget,
-    spent: r.spent,
-  }));
+  const base = baseCurrency();
+  const [rows, rates] = await Promise.all([
+    db
+      .select({
+        categoryId: transactions.categoryId,
+        name: categories.name,
+        color: categories.color,
+        icon: categories.icon,
+        budget: categories.monthlyBudget,
+        currency: accounts.currency,
+        spent: sql<number>`sum(${transactions.amount})`,
+      })
+      .from(transactions)
+      .innerJoin(accounts, eq(transactions.accountId, accounts.id))
+      .leftJoin(categories, eq(transactions.categoryId, categories.id))
+      .where(
+        and(eq(transactions.kind, "expense"), like(transactions.date, `${month}-%`)),
+      )
+      .groupBy(transactions.categoryId, accounts.currency),
+    ratesMap(),
+  ]);
+  // Сводим траты (в разных валютах) по категории в базовую валюту.
+  const acc = new Map<string, CategorySpend>();
+  for (const r of rows) {
+    const key = r.categoryId ?? "none";
+    const inBase = toBase(r.spent, r.currency, rates, base);
+    const cur = acc.get(key);
+    if (cur) cur.spent += inBase;
+    else
+      acc.set(key, {
+        categoryId: r.categoryId,
+        name: r.name ?? "Без категории",
+        color: r.color,
+        icon: r.icon,
+        budget: r.budget,
+        spent: inBase,
+      });
+  }
+  return [...acc.values()].sort((a, b) => b.spent - a.spent);
 }
 
 export type TransactionWithContext = Transaction & {
   accountName: string | null;
   accountColor: string | null;
+  accountCurrency: string | null;
   toAccountName: string | null;
+  toAccountCurrency: string | null;
   categoryName: string | null;
   categoryColor: string | null;
   categoryIcon: string | null;
@@ -684,7 +722,9 @@ export async function getTransactions(
       ...getTableColumns(transactions),
       accountName: accounts.name,
       accountColor: accounts.color,
+      accountCurrency: accounts.currency,
       toAccountName: toAcc.name,
+      toAccountCurrency: toAcc.currency,
       categoryName: categories.name,
       categoryColor: categories.color,
       categoryIcon: categories.icon,
@@ -721,28 +761,46 @@ export async function getCategoriesWithMonth(
     .from(categories)
     .where(isNull(categories.archivedAt))
     .orderBy(asc(categories.kind), asc(categories.position), asc(categories.createdAt));
-  const spend = await db
-    .select({
-      categoryId: transactions.categoryId,
-      total: sql<number>`sum(${transactions.amount})`,
-    })
-    .from(transactions)
-    .where(
-      and(
-        isNotNull(transactions.categoryId),
-        ne(transactions.kind, "transfer"),
-        like(transactions.date, `${month}-%`),
-      ),
-    )
-    .groupBy(transactions.categoryId);
-  const m = new Map(spend.map((r) => [r.categoryId, r.total]));
+  const base = baseCurrency();
+  const [spend, rates] = await Promise.all([
+    db
+      .select({
+        categoryId: transactions.categoryId,
+        currency: accounts.currency,
+        total: sql<number>`sum(${transactions.amount})`,
+      })
+      .from(transactions)
+      .innerJoin(accounts, eq(transactions.accountId, accounts.id))
+      .where(
+        and(
+          isNotNull(transactions.categoryId),
+          ne(transactions.kind, "transfer"),
+          like(transactions.date, `${month}-%`),
+        ),
+      )
+      .groupBy(transactions.categoryId, accounts.currency),
+    ratesMap(),
+  ]);
+  const m = new Map<string, number>();
+  for (const r of spend) {
+    if (!r.categoryId) continue;
+    m.set(
+      r.categoryId,
+      (m.get(r.categoryId) ?? 0) + toBase(r.total, r.currency, rates, base),
+    );
+  }
   return cats.map((c) => ({ ...c, spent: m.get(c.id) ?? 0 }));
 }
 
 export async function getAccountOptions() {
   await schemaReady();
   return db
-    .select({ id: accounts.id, name: accounts.name, color: accounts.color })
+    .select({
+      id: accounts.id,
+      name: accounts.name,
+      color: accounts.color,
+      currency: accounts.currency,
+    })
     .from(accounts)
     .where(isNull(accounts.archivedAt))
     .orderBy(asc(accounts.position), asc(accounts.createdAt));

@@ -1,5 +1,6 @@
 import { Tags } from "lucide-react";
 import { getCategoriesWithMonth } from "@/lib/queries";
+import { baseCurrency } from "@/lib/currency";
 import { currentMonth, isValidMonth } from "@/lib/dates";
 import { PageHeader, EmptyState } from "@/components/ui/misc";
 import { MonthNav } from "@/components/app/MonthNav";
@@ -16,6 +17,7 @@ export default async function CategoriesPage({
 }) {
   const { m } = await searchParams;
   const month = isValidMonth(m) ? m : currentMonth();
+  const base = baseCurrency();
   const categories = await getCategoriesWithMonth(month);
   const expense = categories.filter((c) => c.kind === "expense");
   const income = categories.filter((c) => c.kind === "income");
@@ -51,7 +53,7 @@ export default async function CategoriesPage({
             {expense.length > 0 ? (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {expense.map((c) => (
-                  <CategoryCard key={c.id} category={c} />
+                  <CategoryCard key={c.id} category={c} base={base} />
                 ))}
               </div>
             ) : (
@@ -71,7 +73,7 @@ export default async function CategoriesPage({
             {income.length > 0 ? (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {income.map((c) => (
-                  <CategoryCard key={c.id} category={c} />
+                  <CategoryCard key={c.id} category={c} base={base} />
                 ))}
               </div>
             ) : (
