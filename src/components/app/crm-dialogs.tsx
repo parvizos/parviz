@@ -10,6 +10,7 @@ import { ORG_KINDS_ORDER, ORG_KIND_META } from "@/lib/person-format";
 import { SOCIAL_META, SOCIAL_KINDS_ORDER, type Social } from "@/lib/socials";
 import { Avatar } from "./Avatar";
 import { SocialIcon } from "./SocialIcon";
+import { ImageCropper } from "./ImageCropper";
 import {
   createPerson,
   updatePerson,
@@ -203,16 +204,22 @@ export function PersonDialog({
   const [avatar, setAvatar] = useState<string | null>(person?.avatar ?? null);
   const [socials, setSocials] = useState<Social[]>(person?.socials ?? []);
   const [uploading, setUploading] = useState(false);
+  const [cropFile, setCropFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  async function onPickAvatar(e: ChangeEvent<HTMLInputElement>) {
+  function onPickAvatar(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file || !file.type.startsWith("image/")) return;
+    setCropFile(file); // сначала обрезаем под квадрат, потом грузим
+  }
+
+  async function onCropAvatar(cropped: File) {
+    setCropFile(null);
     setUploading(true);
     // Аватар показывается маленьким — 512px с запасом под ретину.
-    const url = await uploadImage(file, {
+    const url = await uploadImage(cropped, {
       compress: { maxDim: 512, quality: 0.9 },
     });
     setUploading(false);
@@ -298,6 +305,16 @@ export function PersonDialog({
             onClear={() => setAvatar(null)}
             uploading={uploading}
           />
+          {cropFile && (
+            <ImageCropper
+              file={cropFile}
+              aspect={1}
+              round
+              title="Фото профиля"
+              onCancel={() => setCropFile(null)}
+              onCrop={onCropAvatar}
+            />
+          )}
           <div className="flex-1">
             <Field error={error ?? undefined}>
               <Input

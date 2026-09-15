@@ -30,14 +30,23 @@ function supportsWebp(): boolean {
   return webpSupport;
 }
 
-type Decoded = {
+export type ImageSource = {
   width: number;
   height: number;
-  draw: (ctx: CanvasRenderingContext2D, w: number, h: number) => void;
+  /** Нарисовать картинку в контекст по прямоугольнику (dx,dy,dw,dh). */
+  draw: (
+    ctx: CanvasRenderingContext2D,
+    dx: number,
+    dy: number,
+    dw: number,
+    dh: number,
+  ) => void;
+  /** Освободить ресурсы (bitmap.close / revokeObjectURL). */
   done: () => void;
 };
 
-async function decode(file: Blob): Promise<Decoded> {
+/** Декодировать картинку с учётом EXIF-поворота. Только для браузера. */
+export async function loadImageSource(file: Blob): Promise<ImageSource> {
   if (typeof createImageBitmap === "function") {
     try {
       // imageOrientation учитывает EXIF-поворот фото с телефона.
@@ -47,7 +56,7 @@ async function decode(file: Blob): Promise<Decoded> {
       return {
         width: bmp.width,
         height: bmp.height,
-        draw: (ctx, w, h) => ctx.drawImage(bmp, 0, 0, w, h),
+        draw: (ctx, dx, dy, dw, dh) => ctx.drawImage(bmp, dx, dy, dw, dh),
         done: () => bmp.close(),
       };
     } catch {
@@ -65,7 +74,7 @@ async function decode(file: Blob): Promise<Decoded> {
   return {
     width: img.naturalWidth,
     height: img.naturalHeight,
-    draw: (ctx, w, h) => ctx.drawImage(img, 0, 0, w, h),
+    draw: (ctx, dx, dy, dw, dh) => ctx.drawImage(img, dx, dy, dw, dh),
     done: () => URL.revokeObjectURL(url),
   };
 }
@@ -86,9 +95,9 @@ export async function compressImage(
   const maxDim = opts.maxDim ?? 2400;
   const quality = opts.quality ?? 0.85;
 
-  let src: Decoded;
+  let src: ImageSource;
   try {
-    src = await decode(file);
+    src = await loadImageSource(file);
   } catch {
     return file; // не смогли декодировать (напр. HEIC) — грузим оригинал
   }
@@ -113,7 +122,7 @@ export async function compressImage(
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(0, 0, w, h);
     }
-    src.draw(ctx, w, h);
+    src.draw(ctx, 0, 0, w, h);
 
     const blob = await new Promise<Blob | null>((resolve) =>
       canvas.toBlob(resolve, type, quality),

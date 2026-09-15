@@ -34,6 +34,7 @@ import {
 import { cn } from "@/lib/cn";
 import { createSlashCommand, type SlashItem, type SlashState } from "./slash-command";
 import { SketchPad } from "./SketchPad";
+import { ImageCropper } from "./ImageCropper";
 import { uploadImage } from "@/lib/image-upload";
 
 function insertImage(editor: Editor, url: string, pos?: number) {
@@ -150,6 +151,7 @@ export function RichEditor({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const [sketchOpen, setSketchOpen] = useState(false);
+  const [cropQueue, setCropQueue] = useState<File[]>([]);
 
   // Состояние слэш-меню.
   const [slash, setSlash] = useState<SlashState | null>(null);
@@ -289,14 +291,18 @@ export function RichEditor({
     };
   }, [editor]);
 
-  async function onFilePick(e: ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? []);
+  function onFilePick(e: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []).filter((f) =>
+      f.type.startsWith("image/"),
+    );
     e.target.value = "";
-    for (const file of files) {
-      if (!file.type.startsWith("image/")) continue;
-      const url = await uploadImage(file);
-      if (url && editor) insertImage(editor, url);
-    }
+    // Выбранные фото сначала прогоняем через обрезку (по одному), потом грузим.
+    if (files.length) setCropQueue(files);
+  }
+
+  async function uploadAndInsert(file: File) {
+    const url = await uploadImage(file);
+    if (url && editorRef.current) insertImage(editorRef.current, url);
   }
 
   return (
@@ -338,6 +344,19 @@ export function RichEditor({
             // Рисунок — тонкие линии, перекодировать нельзя: грузим как есть.
             const url = await uploadImage(file, { compress: false });
             if (url && editorRef.current) insertImage(editorRef.current, url);
+          }}
+        />
+      )}
+
+      {cropQueue.length > 0 && (
+        <ImageCropper
+          key={`${cropQueue.length}:${cropQueue[0].name}`}
+          file={cropQueue[0]}
+          title="Обрезать фото"
+          onCancel={() => setCropQueue((q) => q.slice(1))}
+          onCrop={(cropped) => {
+            setCropQueue((q) => q.slice(1));
+            void uploadAndInsert(cropped);
           }}
         />
       )}
