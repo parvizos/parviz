@@ -5,6 +5,7 @@ import {
   Check,
   Flag,
   CalendarDays,
+  Clock,
   Folder,
   GraduationCap,
   User,
@@ -92,11 +93,28 @@ export function TaskItem({
         </span>
 
         <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px] text-muted">
-          {showDate && date && (
+          {showDate && date ? (
             <span className={cn("inline-flex items-center gap-1", TONE_CLASS[tone])}>
               <CalendarDays size={13} />
               {relativeLabel(date, today)}
+              {task.scheduledDate && task.scheduledTime && (
+                <span className="tabular">, {task.scheduledTime}</span>
+              )}
             </span>
+          ) : (
+            // Дату скрыли (например, на «Сегодня»), но время всё равно показываем.
+            task.scheduledDate &&
+            task.scheduledTime && (
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1 tabular",
+                  TONE_CLASS[tone],
+                )}
+              >
+                <Clock size={13} />
+                {task.scheduledTime}
+              </span>
+            )
           )}
           {showProject && task.projectName && (
             <span className="inline-flex items-center gap-1">

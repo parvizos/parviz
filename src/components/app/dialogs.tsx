@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Trash2, Flag } from "lucide-react";
+import { Trash2, Flag, Clock } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Field, Input, Textarea, Select } from "@/components/ui/Field";
@@ -152,6 +152,7 @@ export function TaskDialog({
   const [date, setDate] = useState(
     task?.scheduledDate ?? prefill?.scheduledDate ?? "",
   );
+  const [time, setTime] = useState(task?.scheduledTime ?? "");
   const [priority, setPriority] = useState<TaskPriority>(task?.priority ?? 0);
   const [projectId, setProjectId] = useState(
     task?.projectId ?? prefill?.projectId ?? "",
@@ -184,6 +185,7 @@ export function TaskDialog({
           title: t,
           notes: notes.trim() || null,
           scheduledDate: date || null,
+          scheduledTime: date && time ? time : null,
           priority,
           projectId: projectId || null,
           areaId: areaId || null,
@@ -209,6 +211,19 @@ export function TaskDialog({
   }
 
   const areaInherited = !!projectId;
+
+  // Спросим разрешение на уведомления в момент, когда пользователь ставит время
+  // (это жест) — иначе браузер напоминание не покажет.
+  function askNotify() {
+    try {
+      if (
+        typeof Notification !== "undefined" &&
+        Notification.permission === "default"
+      ) {
+        void Notification.requestPermission();
+      }
+    } catch {}
+  }
 
   return (
     <Modal
@@ -265,7 +280,39 @@ export function TaskDialog({
         </Field>
 
         <Field label="Дата">
-          <DateQuickPick value={date} onChange={setDate} />
+          <DateQuickPick
+            value={date}
+            onChange={(v) => {
+              setDate(v);
+              if (!v) setTime(""); // без даты время не нужно
+            }}
+          />
+          {date && (
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 text-[12.5px] text-muted">
+                <Clock size={14} className="text-faint" />
+                Напомнить в
+              </span>
+              <Input
+                type="time"
+                value={time}
+                onChange={(e) => {
+                  setTime(e.target.value);
+                  if (e.target.value) askNotify();
+                }}
+                className="max-w-[130px]"
+              />
+              {time && (
+                <button
+                  type="button"
+                  onClick={() => setTime("")}
+                  className="text-[12.5px] text-muted transition-colors hover:text-text"
+                >
+                  Убрать
+                </button>
+              )}
+            </div>
+          )}
         </Field>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

@@ -125,6 +125,17 @@ export async function getTodayTasks(): Promise<{
     if (eff < t) overdue.push(r);
     else today.push(r);
   }
+  // Задачи с временем — вперёд, по возрастанию времени; остальные по приоритету.
+  const timeOf = (r: TaskWithContext) =>
+    r.scheduledDate === t && r.scheduledTime ? r.scheduledTime : null;
+  today.sort((a, b) => {
+    const ta = timeOf(a);
+    const tb = timeOf(b);
+    if (ta && tb) return ta.localeCompare(tb);
+    if (ta) return -1;
+    if (tb) return 1;
+    return b.priority - a.priority;
+  });
   return { overdue, today };
 }
 

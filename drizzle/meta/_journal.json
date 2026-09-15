@@ -78,6 +78,13 @@
       "when": 1789472835686,
       "tag": "0010_spotty_bloodscream",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1789489158216,
+      "tag": "0011_odd_vampiro",
+      "breakpoints": true
     }
   ]
 }

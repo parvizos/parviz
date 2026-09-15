@@ -110,6 +110,7 @@ async function main() {
       title: "Записаться в спортзал",
       areaId: health.id,
       scheduledDate: today(0),
+      scheduledTime: "18:00", // напоминание в конкретное время
     },
     {
       title: "Купить продукты на неделю",

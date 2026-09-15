@@ -42,6 +42,12 @@ const isoDate = z
 
 const nullableId = z.string().min(1).nullable().optional();
 
+const isoTime = z
+  .string()
+  .regex(/^\d{2}:\d{2}$/)
+  .nullable()
+  .optional();
+
 /* ───────────────────────  Задачи  ─────────────────────── */
 
 const createTaskSchema = z.object({
@@ -52,6 +58,7 @@ const createTaskSchema = z.object({
   subjectId: nullableId,
   personId: nullableId,
   scheduledDate: isoDate,
+  scheduledTime: isoTime,
   dueDate: isoDate,
   priority: z.coerce.number().int().min(0).max(3).optional(),
 });
@@ -92,6 +99,8 @@ export async function createTask(input: CreateTaskInput) {
       subjectId: data.subjectId ?? null,
       personId: data.personId ?? null,
       scheduledDate: data.scheduledDate ?? null,
+      // Время без даты не имеет смысла.
+      scheduledTime: data.scheduledDate ? data.scheduledTime ?? null : null,
       dueDate: data.dueDate ?? null,
       priority: (data.priority ?? 0) as 0 | 1 | 2 | 3,
     })
@@ -121,6 +130,7 @@ const updateTaskSchema = z.object({
   subjectId: nullableId,
   personId: nullableId,
   scheduledDate: isoDate,
+  scheduledTime: isoTime,
   dueDate: isoDate,
   priority: z.coerce.number().int().min(0).max(3).optional(),
   status: z.enum(TASK_STATUSES).optional(),
@@ -134,6 +144,8 @@ export async function updateTask(id: string, input: UpdateTaskInput) {
 
   const patch: Record<string, unknown> = { ...data };
   if (data.priority !== undefined) patch.priority = data.priority;
+  // Убрали дату — время напоминания тоже снимаем.
+  if (data.scheduledDate === null) patch.scheduledTime = null;
   if (data.status) {
     patch.completedAt = data.status === "done" ? new Date() : null;
   }

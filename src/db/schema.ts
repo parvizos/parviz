@@ -194,6 +194,8 @@ export const tasks = sqliteTable(
     }),
     /** Когда сделать (попадает в «Сегодня»/«Предстоящее»): YYYY-MM-DD. */
     scheduledDate: text("scheduled_date"),
+    /** Время напоминания к дате: HH:MM (пусто — весь день, без напоминания). */
+    scheduledTime: text("scheduled_time"),
     /** Крайний срок: YYYY-MM-DD. */
     dueDate: text("due_date"),
     priority: integer("priority").$type<TaskPriority>().notNull().default(0),
