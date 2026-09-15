@@ -852,6 +852,24 @@ export const organizations = sqliteTable(
 );
 
 /** Человек: контакт с ролью, организацией, днём рождения и заметкой. */
+/** Соцсети/мессенджеры человека — храним списком, показываем только заполненное. */
+export const SOCIAL_KINDS = [
+  "instagram",
+  "telegram",
+  "whatsapp",
+  "facebook",
+  "vk",
+  "twitter",
+  "tiktok",
+  "linkedin",
+  "youtube",
+  "github",
+  "website",
+  "other",
+] as const;
+export type SocialKind = (typeof SOCIAL_KINDS)[number];
+export type Social = { kind: SocialKind; value: string };
+
 export const people = sqliteTable(
   "people",
   {
@@ -870,6 +888,10 @@ export const people = sqliteTable(
     note: text("note"),
     color: text("color"),
     icon: text("icon"),
+    /** Ссылка на аватар (картинка в базе): /api/images/<id>. */
+    avatar: text("avatar"),
+    /** Соцсети/мессенджеры: [{ kind, value }] — только заполненные. */
+    socials: text("socials", { mode: "json" }).$type<Social[]>(),
     position: integer("position").notNull().default(0),
     archivedAt: integer("archived_at", { mode: "timestamp_ms" }),
     createdAt: createdAt(),

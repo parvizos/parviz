@@ -10,8 +10,10 @@ import {
 } from "@/lib/queries";
 import { getDebts } from "@/lib/finance-queries";
 import { todayISO, ruMonthDay } from "@/lib/dates";
-import { areaColor } from "@/lib/task-format";
-import { turningAge } from "@/lib/person-format";
+import { currentAge, pluralYears } from "@/lib/person-format";
+import { SOCIAL_META, parseSocials } from "@/lib/socials";
+import { Avatar } from "@/components/app/Avatar";
+import { SocialIcon } from "@/components/app/SocialIcon";
 import { TaskGroup } from "@/components/app/TaskGroup";
 import { TransactionRow } from "@/components/app/finance-items";
 import { DebtCard, NewDebtButton } from "@/components/app/finance2-items";
@@ -30,9 +32,8 @@ export async function generateMetadata({
   return { title: p?.name ?? "Человек" };
 }
 
-function initials(name: string) {
-  return name.trim().charAt(0).toUpperCase() || "?";
-}
+const chip =
+  "inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-1.5 text-[13px] transition-colors hover:border-border-strong hover:bg-surface-2";
 
 export default async function PersonDetailPage({
   params,
@@ -52,16 +53,25 @@ export default async function PersonDetailPage({
   const today = todayISO();
   const open = tasks.filter((t) => t.status === "open");
   const done = tasks.filter((t) => t.status !== "open");
-  const age = turningAge(person.birthday, today);
+  const age = currentAge(person.birthday, today);
+  const socials = parseSocials(person.socials);
 
   const contacts = [
-    person.phone && { icon: <Phone size={14} />, text: person.phone },
-    person.email && { icon: <Mail size={14} />, text: person.email },
+    person.phone && {
+      icon: <Phone size={14} />,
+      text: person.phone,
+      href: `tel:${person.phone}`,
+    },
+    person.email && {
+      icon: <Mail size={14} />,
+      text: person.email,
+      href: `mailto:${person.email}`,
+    },
     person.birthday && {
       icon: <Cake size={14} />,
-      text: `${ruMonthDay(person.birthday)}${age ? ` · ${age}` : ""}`,
+      text: `${ruMonthDay(person.birthday)}${age != null ? ` · ${age} ${pluralYears(age)}` : ""}`,
     },
-  ].filter(Boolean) as { icon: ReactNode; text: string }[];
+  ].filter(Boolean) as { icon: ReactNode; text: string; href?: string }[];
 
   return (
     <div>
@@ -74,15 +84,13 @@ export default async function PersonDetailPage({
 
       <div className="mb-5 flex items-start justify-between gap-3">
         <div className="flex items-center gap-3.5">
-          <div
-            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-[20px] font-medium"
-            style={{
-              background: `color-mix(in oklab, ${areaColor(person.color)} 18%, transparent)`,
-              color: areaColor(person.color),
-            }}
-          >
-            {person.icon || initials(person.name)}
-          </div>
+          <Avatar
+            name={person.name}
+            avatar={person.avatar}
+            icon={person.icon}
+            color={person.color}
+            size={60}
+          />
           <div>
             <h1 className="text-[22px] font-semibold tracking-tight text-text">
               {person.name}
@@ -97,6 +105,11 @@ export default async function PersonDetailPage({
                   <Building2 size={13} />
                   {person.orgName}
                 </Link>
+              )}
+              {age != null && (
+                <span>
+                  {age} {pluralYears(age)}
+                </span>
               )}
             </div>
           </div>
@@ -113,21 +126,45 @@ export default async function PersonDetailPage({
             note: person.note,
             color: person.color,
             icon: person.icon,
+            avatar: person.avatar,
+            socials,
           }}
         />
       </div>
 
-      {contacts.length > 0 && (
+      {(contacts.length > 0 || socials.length > 0) && (
         <div className="mb-5 flex flex-wrap gap-2">
-          {contacts.map((c, i) => (
-            <span
-              key={i}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-1.5 text-[13px] text-muted"
-            >
-              {c.icon}
-              {c.text}
-            </span>
-          ))}
+          {contacts.map((c, i) =>
+            c.href ? (
+              <a key={i} href={c.href} className={`${chip} text-muted`}>
+                {c.icon}
+                {c.text}
+              </a>
+            ) : (
+              <span key={i} className={`${chip} text-muted`}>
+                {c.icon}
+                {c.text}
+              </span>
+            ),
+          )}
+          {socials.map((s, i) => {
+            const meta = SOCIAL_META[s.kind];
+            return (
+              <a
+                key={`s-${i}`}
+                href={meta.href(s.value)}
+                target="_blank"
+                rel="noreferrer"
+                title={meta.label}
+                className={`${chip} text-text`}
+              >
+                <span style={{ color: meta.color }}>
+                  <SocialIcon kind={s.kind} size={15} />
+                </span>
+                {meta.display(s.value)}
+              </a>
+            );
+          })}
         </div>
       )}
 
@@ -147,9 +184,7 @@ export default async function PersonDetailPage({
             Задача
           </NewTaskButton>
         </div>
-        {open.length > 0 && (
-          <TaskGroup tasks={open} today={today} />
-        )}
+        {open.length > 0 && <TaskGroup tasks={open} today={today} />}
         {done.length > 0 && (
           <TaskGroup
             title="Выполнено"

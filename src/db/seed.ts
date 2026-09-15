@@ -346,6 +346,7 @@ async function main() {
       icon: "👨‍🏫",
       color: "#5b5bd6",
       note: "Ведёт мою курсовую.",
+      socials: [{ kind: "telegram", value: "ivanov_prof" }],
     })
     .returning();
   const [anya] = await db
@@ -357,7 +358,11 @@ async function main() {
       phone: "+7 999 123-45-67",
       icon: "🙂",
       color: "#c4488f",
-      birthday: today(9),
+      birthday: today(9).replace(/^\d{4}/, "2003"),
+      socials: [
+        { kind: "instagram", value: "anya.msu" },
+        { kind: "telegram", value: "anya" },
+      ],
     })
     .returning();
   const [mark] = await db
@@ -368,6 +373,10 @@ async function main() {
       organizationId: cafe.id,
       icon: "☕",
       color: "#c9832a",
+      socials: [
+        { kind: "instagram", value: "mark.coffee" },
+        { kind: "tiktok", value: "markbarista" },
+      ],
     })
     .returning();
 

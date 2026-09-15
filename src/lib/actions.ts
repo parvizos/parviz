@@ -24,6 +24,7 @@ import {
   CATEGORY_KINDS,
   TRANSACTION_KINDS,
   ORG_KINDS,
+  SOCIAL_KINDS,
 } from "@/db/schema";
 
 function revalidateAll() {
@@ -791,6 +792,16 @@ const createPersonSchema = z.object({
   note: z.string().max(4000).nullable().optional(),
   color: z.string().max(32).nullable().optional(),
   icon: z.string().max(32).nullable().optional(),
+  avatar: z.string().max(512).nullable().optional(),
+  socials: z
+    .array(
+      z.object({
+        kind: z.enum(SOCIAL_KINDS),
+        value: z.string().trim().min(1).max(400),
+      }),
+    )
+    .nullable()
+    .optional(),
 });
 
 export type CreatePersonInput = z.input<typeof createPersonSchema>;
@@ -810,6 +821,8 @@ export async function createPerson(input: CreatePersonInput) {
       note: data.note ?? null,
       color: data.color ?? null,
       icon: data.icon ?? null,
+      avatar: data.avatar ?? null,
+      socials: data.socials?.length ? data.socials : null,
     })
     .returning({ id: people.id });
   revalidateAll();
@@ -822,6 +835,9 @@ export type UpdatePersonInput = z.input<typeof updatePersonSchema>;
 export async function updatePerson(id: string, input: UpdatePersonInput) {
   await schemaReady();
   const data = updatePersonSchema.parse(input);
+  if (Array.isArray(data.socials) && data.socials.length === 0) {
+    data.socials = null;
+  }
   await db.update(people).set(data).where(eq(people.id, id));
   revalidateAll();
 }

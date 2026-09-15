@@ -48,3 +48,21 @@ export function turningAge(
   const passed = tm > bm || (tm === bm && td > bd);
   return ty - by + (passed ? 1 : 0);
 }
+
+/** Текущий возраст (полных лет) или null, если год рождения неизвестен. */
+export function currentAge(
+  birthday: string | null,
+  todayISO: string,
+): number | null {
+  const t = turningAge(birthday, todayISO);
+  return t === null ? null : t - 1;
+}
+
+/** Русское склонение: 21 год, 22 года, 25 лет. */
+export function pluralYears(n: number): string {
+  const a = n % 10;
+  const b = n % 100;
+  if (a === 1 && b !== 11) return "год";
+  if (a >= 2 && a <= 4 && (b < 10 || b >= 20)) return "года";
+  return "лет";
+}

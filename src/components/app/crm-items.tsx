@@ -4,10 +4,7 @@ import { areaColor } from "@/lib/task-format";
 import { ORG_KIND_META, daysUntilBirthday } from "@/lib/person-format";
 import { ruMonthDayShort } from "@/lib/dates";
 import type { PersonWithOrg, OrgWithCount } from "@/lib/queries";
-
-function initials(name: string): string {
-  return name.trim().charAt(0).toUpperCase() || "?";
-}
+import { Avatar } from "./Avatar";
 
 export function PersonCard({
   person,
@@ -26,15 +23,13 @@ export function PersonCard({
       href={`/lyudi/${person.id}`}
       className="group flex items-center gap-3.5 rounded-2xl border border-border bg-surface p-4 transition-colors hover:border-border-strong hover:bg-surface-2"
     >
-      <div
-        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[16px] font-medium"
-        style={{
-          background: `color-mix(in oklab, ${areaColor(person.color)} 18%, transparent)`,
-          color: areaColor(person.color),
-        }}
-      >
-        {person.icon || initials(person.name)}
-      </div>
+      <Avatar
+        name={person.name}
+        avatar={person.avatar}
+        icon={person.icon}
+        color={person.color}
+        size={44}
+      />
       <div className="min-w-0 flex-1">
         <div className="truncate text-[15px] font-medium text-text">
           {person.name}

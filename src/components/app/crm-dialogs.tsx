@@ -1,12 +1,15 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { Trash2 } from "lucide-react";
+import { useState, useTransition, useRef, type ChangeEvent } from "react";
+import { Trash2, Camera, Loader2, Plus, X } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Field, Input, Textarea, Select } from "@/components/ui/Field";
 import { AREA_PALETTE } from "@/lib/task-format";
 import { ORG_KINDS_ORDER, ORG_KIND_META } from "@/lib/person-format";
+import { SOCIAL_META, SOCIAL_KINDS_ORDER, type Social } from "@/lib/socials";
+import { Avatar } from "./Avatar";
+import { SocialIcon } from "./SocialIcon";
 import {
   createPerson,
   updatePerson,
@@ -15,8 +18,21 @@ import {
   updateOrganization,
   deleteOrganization,
 } from "@/lib/actions";
-import type { OrgKind } from "@/db/schema";
+import type { OrgKind, SocialKind } from "@/db/schema";
 import type { OrganizationOption } from "./types";
+
+async function uploadImage(file: File): Promise<string | null> {
+  const fd = new FormData();
+  fd.append("file", file);
+  try {
+    const res = await fetch("/api/images", { method: "POST", body: fd });
+    if (!res.ok) return null;
+    const json = (await res.json()) as { url?: string };
+    return json.url ?? null;
+  } catch {
+    return null;
+  }
+}
 
 function ColorPicker({
   value,
@@ -44,6 +60,120 @@ function ColorPicker({
   );
 }
 
+function AvatarPicker({
+  name,
+  avatar,
+  icon,
+  color,
+  onPick,
+  onClear,
+  uploading,
+}: {
+  name: string;
+  avatar: string | null;
+  icon: string;
+  color: string;
+  onPick: (e: ChangeEvent<HTMLInputElement>) => void;
+  onClear: () => void;
+  uploading: boolean;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+  return (
+    <div className="relative shrink-0">
+      <button
+        type="button"
+        onClick={() => ref.current?.click()}
+        title="Загрузить фото"
+        className="block rounded-full outline-none ring-accent transition-[box-shadow] focus-visible:ring-2"
+      >
+        <Avatar name={name || "?"} avatar={avatar} icon={icon} color={color} size={60} />
+        <span className="absolute -bottom-0.5 -right-0.5 flex h-6 w-6 items-center justify-center rounded-full border-2 border-surface bg-accent text-accent-fg">
+          {uploading ? (
+            <Loader2 size={12} className="animate-spin" />
+          ) : (
+            <Camera size={12} />
+          )}
+        </span>
+      </button>
+      {avatar && (
+        <button
+          type="button"
+          onClick={onClear}
+          title="Убрать фото"
+          className="absolute -right-0.5 -top-0.5 flex h-5 w-5 items-center justify-center rounded-full border-2 border-surface bg-danger text-white"
+        >
+          <X size={11} />
+        </button>
+      )}
+      <input ref={ref} type="file" accept="image/*" hidden onChange={onPick} />
+    </div>
+  );
+}
+
+function SocialsEditor({
+  socials,
+  setSocials,
+}: {
+  socials: Social[];
+  setSocials: (v: Social[]) => void;
+}) {
+  const add = () =>
+    setSocials([
+      ...socials,
+      { kind: socials.length ? "other" : "instagram", value: "" },
+    ]);
+  const update = (i: number, patch: Partial<Social>) =>
+    setSocials(socials.map((s, j) => (j === i ? { ...s, ...patch } : s)));
+  const remove = (i: number) => setSocials(socials.filter((_, j) => j !== i));
+
+  return (
+    <div className="flex flex-col gap-2">
+      {socials.map((s, i) => (
+        <div key={i} className="flex items-center gap-2">
+          <span
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface-2"
+            style={{ color: SOCIAL_META[s.kind].color }}
+          >
+            <SocialIcon kind={s.kind} size={17} />
+          </span>
+          <Select
+            value={s.kind}
+            onChange={(e) => update(i, { kind: e.target.value as SocialKind })}
+            className="w-[132px] shrink-0"
+          >
+            {SOCIAL_KINDS_ORDER.map((k) => (
+              <option key={k} value={k}>
+                {SOCIAL_META[k].label}
+              </option>
+            ))}
+          </Select>
+          <Input
+            value={s.value}
+            onChange={(e) => update(i, { value: e.target.value })}
+            placeholder={SOCIAL_META[s.kind].placeholder}
+            className="flex-1"
+          />
+          <button
+            type="button"
+            onClick={() => remove(i)}
+            title="Убрать"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-danger-soft hover:text-danger"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={add}
+        className="inline-flex w-fit items-center gap-1.5 rounded-lg px-2 py-1 text-[13px] font-medium text-accent transition-colors hover:bg-accent-soft"
+      >
+        <Plus size={15} /> Соцсеть
+      </button>
+    </div>
+  );
+}
+
 export type PersonForEdit = {
   id: string;
   name: string;
@@ -55,6 +185,8 @@ export type PersonForEdit = {
   note: string | null;
   color: string | null;
   icon: string | null;
+  avatar: string | null;
+  socials: Social[] | null;
 };
 
 export function PersonDialog({
@@ -80,8 +212,21 @@ export function PersonDialog({
   const [note, setNote] = useState(person?.note ?? "");
   const [color, setColor] = useState(person?.color ?? AREA_PALETTE[0].value);
   const [icon, setIcon] = useState(person?.icon ?? "");
+  const [avatar, setAvatar] = useState<string | null>(person?.avatar ?? null);
+  const [socials, setSocials] = useState<Social[]>(person?.socials ?? []);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+
+  async function onPickAvatar(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !file.type.startsWith("image/")) return;
+    setUploading(true);
+    const url = await uploadImage(file);
+    setUploading(false);
+    if (url) setAvatar(url);
+  }
 
   function submit() {
     const n = name.trim();
@@ -91,6 +236,9 @@ export function PersonDialog({
     }
     startTransition(async () => {
       try {
+        const cleanSocials = socials
+          .map((s) => ({ kind: s.kind, value: s.value.trim() }))
+          .filter((s) => s.value.length > 0);
         const payload = {
           name: n,
           role: role.trim() || null,
@@ -101,6 +249,8 @@ export function PersonDialog({
           note: note.trim() || null,
           color,
           icon: icon || null,
+          avatar,
+          socials: cleanSocials.length ? cleanSocials : null,
         };
         if (editing && person) await updatePerson(person.id, payload);
         else await createPerson(payload);
@@ -147,13 +297,15 @@ export function PersonDialog({
       }
     >
       <div className="flex flex-col gap-4">
-        <div className="flex gap-2">
-          <Input
-            value={icon}
-            onChange={(e) => setIcon(e.target.value.slice(0, 2))}
-            placeholder="🙂"
-            className="w-14 text-center text-lg"
-            aria-label="Эмодзи"
+        <div className="flex items-center gap-3">
+          <AvatarPicker
+            name={name}
+            avatar={avatar}
+            icon={icon}
+            color={color}
+            onPick={onPickAvatar}
+            onClear={() => setAvatar(null)}
+            uploading={uploading}
           />
           <div className="flex-1">
             <Field error={error ?? undefined}>
@@ -213,6 +365,9 @@ export function PersonDialog({
             className="max-w-[200px]"
           />
         </Field>
+        <Field label="Соцсети и мессенджеры">
+          <SocialsEditor socials={socials} setSocials={setSocials} />
+        </Field>
         <Field label="Заметка">
           <Textarea
             placeholder="Где познакомились, что важно…"
@@ -220,8 +375,17 @@ export function PersonDialog({
             onChange={(e) => setNote(e.target.value)}
           />
         </Field>
-        <Field label="Цвет">
-          <ColorPicker value={color} onChange={setColor} />
+        <Field label="Оформление" hint="Эмодзи и цвет — если не загружено фото">
+          <div className="flex items-center gap-3">
+            <Input
+              value={icon}
+              onChange={(e) => setIcon(e.target.value.slice(0, 2))}
+              placeholder="🙂"
+              className="w-14 text-center text-lg"
+              aria-label="Эмодзи"
+            />
+            <ColorPicker value={color} onChange={setColor} />
+          </div>
         </Field>
       </div>
     </Modal>
