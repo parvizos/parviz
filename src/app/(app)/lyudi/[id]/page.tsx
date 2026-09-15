@@ -6,6 +6,7 @@ import {
   getPerson,
   getPersonTasks,
   getPersonTransactions,
+  getPersonMeetings,
   getAccountOptions,
 } from "@/lib/queries";
 import { getDebts } from "@/lib/finance-queries";
@@ -17,6 +18,7 @@ import { SocialIcon } from "@/components/app/SocialIcon";
 import { TaskGroup } from "@/components/app/TaskGroup";
 import { TransactionRow } from "@/components/app/finance-items";
 import { DebtCard, NewDebtButton } from "@/components/app/finance2-items";
+import { MeetingCard, NewMeetingButton } from "@/components/app/meeting-items";
 import { EditPersonButton } from "@/components/app/crm-buttons";
 import { NewTaskButton } from "@/components/app/buttons";
 
@@ -44,10 +46,11 @@ export default async function PersonDetailPage({
   const person = await getPerson(id);
   if (!person) notFound();
 
-  const [tasks, txs, debts, accountOptions] = await Promise.all([
+  const [tasks, txs, debts, meetings, accountOptions] = await Promise.all([
     getPersonTasks(id),
     getPersonTransactions(id),
     getDebts({ personId: id }),
+    getPersonMeetings(id),
     getAccountOptions(),
   ]);
   const today = todayISO();
@@ -173,6 +176,29 @@ export default async function PersonDetailPage({
           {person.note}
         </p>
       )}
+
+      {/* Встречи */}
+      <section className="mb-8">
+        <div className="mb-2.5 flex items-center justify-between px-1">
+          <h2 className="text-[13px] font-semibold uppercase tracking-wide text-muted">
+            Встречи
+          </h2>
+          <NewMeetingButton personId={id} variant="soft">
+            Встреча
+          </NewMeetingButton>
+        </div>
+        {meetings.length > 0 ? (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {meetings.map((m) => (
+              <MeetingCard key={m.id} meeting={m} />
+            ))}
+          </div>
+        ) : (
+          <p className="px-1 text-[13.5px] text-faint">
+            Пока нет встреч с этим человеком.
+          </p>
+        )}
+      </section>
 
       {/* Задачи */}
       <section className="mb-8">

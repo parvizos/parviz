@@ -71,6 +71,13 @@
       "when": 1789470388844,
       "tag": "0009_careful_tombstone",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1789472835686,
+      "tag": "0010_spotty_bloodscream",
+      "breakpoints": true
     }
   ]
 }

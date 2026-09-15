@@ -29,6 +29,7 @@ import {
   transactions,
   organizations,
   people,
+  meetings,
   exchangeRates,
   type Task,
   type Area,
@@ -41,6 +42,7 @@ import {
   type Transaction,
   type Organization,
   type Person,
+  type Meeting,
 } from "@/db/schema";
 import { todayISO, isoWeekday } from "@/lib/dates";
 import { baseCurrency, toBase } from "@/lib/currency";
@@ -921,6 +923,52 @@ export async function getOrganizationPeople(
     .leftJoin(organizations, eq(people.organizationId, organizations.id))
     .where(and(eq(people.organizationId, id), isNull(people.archivedAt)))
     .orderBy(asc(people.position), asc(people.name));
+}
+
+export type MeetingWithPerson = Meeting & {
+  personName: string | null;
+  personColor: string | null;
+  personIcon: string | null;
+  personAvatar: string | null;
+};
+
+const meetingPersonCols = {
+  personName: people.name,
+  personColor: people.color,
+  personIcon: people.icon,
+  personAvatar: people.avatar,
+};
+
+export async function getMeetings(): Promise<MeetingWithPerson[]> {
+  await schemaReady();
+  return db
+    .select({ ...getTableColumns(meetings), ...meetingPersonCols })
+    .from(meetings)
+    .leftJoin(people, eq(meetings.personId, people.id))
+    .orderBy(desc(meetings.date), desc(meetings.updatedAt));
+}
+
+export async function getMeeting(id: string): Promise<MeetingWithPerson | null> {
+  await schemaReady();
+  const [row] = await db
+    .select({ ...getTableColumns(meetings), ...meetingPersonCols })
+    .from(meetings)
+    .leftJoin(people, eq(meetings.personId, people.id))
+    .where(eq(meetings.id, id))
+    .limit(1);
+  return row ?? null;
+}
+
+export async function getPersonMeetings(
+  personId: string,
+): Promise<MeetingWithPerson[]> {
+  await schemaReady();
+  return db
+    .select({ ...getTableColumns(meetings), ...meetingPersonCols })
+    .from(meetings)
+    .leftJoin(people, eq(meetings.personId, people.id))
+    .where(eq(meetings.personId, personId))
+    .orderBy(desc(meetings.date), desc(meetings.updatedAt));
 }
 
 export async function getPersonOptions() {

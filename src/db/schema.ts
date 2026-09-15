@@ -905,6 +905,32 @@ export type NewOrganization = typeof organizations.$inferInsert;
 export type Person = typeof people.$inferSelect;
 export type NewPerson = typeof people.$inferInsert;
 
+/** Встреча: большой свободный конспект о разговоре, привязанный к человеку. */
+export const meetings = sqliteTable(
+  "meetings",
+  {
+    id: id(),
+    title: text("title").notNull().default(""),
+    /** Когда была встреча: YYYY-MM-DD. */
+    date: text("date").notNull(),
+    personId: text("person_id").references(() => people.id, {
+      onDelete: "set null",
+    }),
+    location: text("location"),
+    /** Тело — HTML из того же редактора, что и конспекты. */
+    body: text("body"),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    index("meetings_person_idx").on(t.personId),
+    index("meetings_date_idx").on(t.date),
+  ],
+);
+
+export type Meeting = typeof meetings.$inferSelect;
+export type NewMeeting = typeof meetings.$inferInsert;
+
 /* ─────────────────────  Вложения (картинки)  ───────────────────── */
 
 /** Картинки конспектов — хранятся прямо в базе, чтобы бэкап был одним файлом. */

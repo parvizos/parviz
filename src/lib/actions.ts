@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db, schemaReady } from "@/db";
+import { todayISO } from "@/lib/dates";
 import {
   areas,
   projects,
@@ -17,6 +18,7 @@ import {
   transactions,
   organizations,
   people,
+  meetings,
   PROJECT_STATUSES,
   TASK_STATUSES,
   LESSON_KINDS,
@@ -839,6 +841,76 @@ export async function updatePerson(id: string, input: UpdatePersonInput) {
     data.socials = null;
   }
   await db.update(people).set(data).where(eq(people.id, id));
+  revalidateAll();
+}
+
+/* ── Встречи ── */
+
+const createMeetingSchema = z.object({
+  title: z.string().trim().max(300).optional(),
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+  personId: nullableId,
+  location: z.string().max(200).nullable().optional(),
+  body: z.string().max(200_000).nullable().optional(),
+});
+export type CreateMeetingInput = z.input<typeof createMeetingSchema>;
+
+export async function createMeeting(input: CreateMeetingInput = {}) {
+  await schemaReady();
+  const data = createMeetingSchema.parse(input);
+  const [row] = await db
+    .insert(meetings)
+    .values({
+      title: data.title ?? "",
+      date: data.date ?? todayISO(),
+      personId: data.personId ?? null,
+      location: data.location ?? null,
+      body: data.body ?? null,
+    })
+    .returning({ id: meetings.id });
+  revalidateAll();
+  return row;
+}
+
+/** Тихое авто-сохранение встречи из редактора (без ревалидации). */
+export async function autosaveMeeting(
+  id: string,
+  input: { title?: string; body?: string | null },
+) {
+  await schemaReady();
+  const patch: Record<string, unknown> = {};
+  if (input.title !== undefined) patch.title = input.title.slice(0, 300);
+  if (input.body !== undefined) patch.body = input.body ?? null;
+  if (Object.keys(patch).length === 0) return;
+  patch.updatedAt = new Date();
+  await db.update(meetings).set(patch).where(eq(meetings.id, id));
+}
+
+const updateMeetingSchema = z.object({
+  title: z.string().trim().max(300).optional(),
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+  personId: nullableId,
+  location: z.string().max(200).nullable().optional(),
+  body: z.string().max(200_000).nullable().optional(),
+});
+export type UpdateMeetingInput = z.input<typeof updateMeetingSchema>;
+
+export async function updateMeeting(id: string, input: UpdateMeetingInput) {
+  await schemaReady();
+  const data = updateMeetingSchema.parse(input);
+  await db.update(meetings).set(data).where(eq(meetings.id, id));
+  revalidateAll();
+}
+
+export async function deleteMeeting(id: string) {
+  await schemaReady();
+  await db.delete(meetings).where(eq(meetings.id, id));
   revalidateAll();
 }
 

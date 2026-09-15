@@ -45,7 +45,7 @@ import {
 } from "./study2-dialogs";
 import { CommandPalette } from "./CommandPalette";
 import { useRouter } from "next/navigation";
-import { createNote } from "@/lib/actions";
+import { createNote, createMeeting } from "@/lib/actions";
 import type {
   AreaOption,
   ProjectOption,
@@ -91,6 +91,7 @@ interface UiValue {
   openNewLesson: (opts?: { subjectId?: string | null; day?: number }) => void;
   openEditLesson: (l: LessonForEdit) => void;
   openNewNote: (opts?: { subjectId?: string | null }) => void;
+  openNewMeeting: (opts?: { personId?: string | null }) => void;
   openNewTransaction: (prefill?: TransactionPrefill) => void;
   openTransaction: (tx: TransactionForEdit) => void;
   openNewAccount: () => void;
@@ -300,6 +301,17 @@ export function UiProvider({
     },
     [router],
   );
+  const openNewMeeting = useCallback(
+    (opts?: { personId?: string | null }) => {
+      void (async () => {
+        try {
+          const row = await createMeeting({ personId: opts?.personId ?? null });
+          if (row?.id) router.push(`/vstrechi/${row.id}`);
+        } catch {}
+      })();
+    },
+    [router],
+  );
   const openNewTransaction = useCallback(
     (prefill?: TransactionPrefill) =>
       setTransaction({ open: true, tx: null, prefill }),
@@ -446,6 +458,7 @@ export function UiProvider({
         openNewLesson,
         openEditLesson,
         openNewNote,
+        openNewMeeting,
         openNewTransaction,
         openTransaction,
         openNewAccount,
@@ -614,6 +627,7 @@ export function UiProvider({
           onNewArea={openNewArea}
           onNewSubject={openNewSubject}
           onNewNote={() => openNewNote()}
+          onNewMeeting={() => openNewMeeting()}
           onNewTransaction={() => openNewTransaction()}
           onNewPerson={() => openNewPerson()}
           onToggleTheme={toggleTheme}

@@ -21,6 +21,7 @@ import {
   LineChart,
   Users,
   Building2,
+  Handshake,
   GraduationCap,
   NotebookPen,
   Award,
@@ -88,6 +89,7 @@ const FINANCE: NavItem[] = [
 const PEOPLE: NavItem[] = [
   { href: "/lyudi", label: "Люди", icon: Users },
   { href: "/organizacii", label: "Организации", icon: Building2 },
+  { href: "/vstrechi", label: "Встречи", icon: Handshake },
 ];
 
 function isActive(pathname: string, href: string): boolean {
