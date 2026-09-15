@@ -34,19 +34,7 @@ import {
 import { cn } from "@/lib/cn";
 import { createSlashCommand, type SlashItem, type SlashState } from "./slash-command";
 import { SketchPad } from "./SketchPad";
-
-async function uploadImage(file: File): Promise<string | null> {
-  const fd = new FormData();
-  fd.append("file", file);
-  try {
-    const res = await fetch("/api/images", { method: "POST", body: fd });
-    if (!res.ok) return null;
-    const json = (await res.json()) as { url?: string };
-    return json.url ?? null;
-  } catch {
-    return null;
-  }
-}
+import { uploadImage } from "@/lib/image-upload";
 
 function insertImage(editor: Editor, url: string, pos?: number) {
   if (pos != null) {
@@ -347,7 +335,8 @@ export function RichEditor({
         <SketchPad
           onClose={() => setSketchOpen(false)}
           onSave={async (file) => {
-            const url = await uploadImage(file);
+            // Рисунок — тонкие линии, перекодировать нельзя: грузим как есть.
+            const url = await uploadImage(file, { compress: false });
             if (url && editorRef.current) insertImage(editorRef.current, url);
           }}
         />

@@ -20,19 +20,7 @@ import {
 } from "@/lib/actions";
 import type { OrgKind, SocialKind } from "@/db/schema";
 import type { OrganizationOption } from "./types";
-
-async function uploadImage(file: File): Promise<string | null> {
-  const fd = new FormData();
-  fd.append("file", file);
-  try {
-    const res = await fetch("/api/images", { method: "POST", body: fd });
-    if (!res.ok) return null;
-    const json = (await res.json()) as { url?: string };
-    return json.url ?? null;
-  } catch {
-    return null;
-  }
-}
+import { uploadImage } from "@/lib/image-upload";
 
 function ColorPicker({
   value,
@@ -223,7 +211,10 @@ export function PersonDialog({
     e.target.value = "";
     if (!file || !file.type.startsWith("image/")) return;
     setUploading(true);
-    const url = await uploadImage(file);
+    // Аватар показывается маленьким — 512px с запасом под ретину.
+    const url = await uploadImage(file, {
+      compress: { maxDim: 512, quality: 0.9 },
+    });
     setUploading(false);
     if (url) setAvatar(url);
   }
