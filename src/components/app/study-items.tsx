@@ -9,6 +9,7 @@ import { LESSON_KIND_META } from "@/lib/study-format";
 import { areaColor } from "@/lib/task-format";
 import { excerpt } from "@/lib/text";
 import { useUi } from "./ui-context";
+import { NoteFromLessonButton } from "./study-buttons";
 import type {
   LessonWithSubject,
   NoteWithSubject,
@@ -26,44 +27,47 @@ export function LessonRow({
   const kind = LESSON_KIND_META[lesson.kind];
 
   return (
-    <button
-      onClick={() =>
-        openEditLesson({
-          id: lesson.id,
-          subjectId: lesson.subjectId,
-          dayOfWeek: lesson.dayOfWeek,
-          startTime: lesson.startTime,
-          endTime: lesson.endTime,
-          location: lesson.location,
-          kind: lesson.kind,
-          note: lesson.note,
-        })
-      }
-      className="flex w-full items-center gap-3 rounded-xl border border-border bg-surface px-3 py-2.5 text-left transition-colors hover:border-border-strong hover:bg-surface-2"
-    >
-      <div className="w-12 shrink-0 text-[12.5px] leading-tight tabular">
-        <div className="font-semibold text-text">{lesson.startTime || "—"}</div>
-        {lesson.endTime && <div className="text-faint">{lesson.endTime}</div>}
-      </div>
-      <span
-        className="h-8 w-1 shrink-0 rounded-full"
-        style={{ background: areaColor(lesson.subjectColor) }}
-      />
-      <div className="min-w-0 flex-1">
-        <div className="truncate text-[14px] text-text">
-          {showSubject ? lesson.subjectName : kind.label}
+    <div className="flex w-full items-center gap-1 rounded-xl border border-border bg-surface pr-2 transition-colors hover:border-border-strong hover:bg-surface-2">
+      <button
+        onClick={() =>
+          openEditLesson({
+            id: lesson.id,
+            subjectId: lesson.subjectId,
+            dayOfWeek: lesson.dayOfWeek,
+            startTime: lesson.startTime,
+            endTime: lesson.endTime,
+            location: lesson.location,
+            kind: lesson.kind,
+            note: lesson.note,
+          })
+        }
+        className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2.5 text-left"
+      >
+        <div className="w-12 shrink-0 text-[12.5px] leading-tight tabular">
+          <div className="font-semibold text-text">{lesson.startTime || "—"}</div>
+          {lesson.endTime && <div className="text-faint">{lesson.endTime}</div>}
         </div>
-        <div className="mt-0.5 flex items-center gap-2 text-[12.5px] text-muted">
-          {showSubject && <span>{kind.label}</span>}
-          {lesson.location && (
-            <span className="inline-flex items-center gap-1 truncate">
-              <MapPin size={12} className="shrink-0" />
-              {lesson.location}
-            </span>
-          )}
+        <span
+          className="h-8 w-1 shrink-0 rounded-full"
+          style={{ background: areaColor(lesson.subjectColor) }}
+        />
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-[14px] text-text">
+            {showSubject ? lesson.subjectName : kind.label}
+          </div>
+          <div className="mt-0.5 flex items-center gap-2 text-[12.5px] text-muted">
+            {showSubject && <span>{kind.label}</span>}
+            {lesson.location && (
+              <span className="inline-flex items-center gap-1 truncate">
+                <MapPin size={12} className="shrink-0" />
+                {lesson.location}
+              </span>
+            )}
+          </div>
         </div>
-      </div>
-    </button>
+      </button>
+      <NoteFromLessonButton subjectId={lesson.subjectId} />
+    </div>
   );
 }
 

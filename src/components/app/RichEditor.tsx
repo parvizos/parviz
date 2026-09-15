@@ -25,12 +25,15 @@ import {
   Quote,
   Code2,
   ImagePlus,
+  Camera,
+  Pen,
   Type,
   Minus,
   CornerDownLeft,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { createSlashCommand, type SlashItem, type SlashState } from "./slash-command";
+import { SketchPad } from "./SketchPad";
 
 async function uploadImage(file: File): Promise<string | null> {
   const fd = new FormData();
@@ -86,9 +89,13 @@ function Btn({
 function Toolbar({
   editor,
   onImage,
+  onCamera,
+  onSketch,
 }: {
   editor: Editor;
   onImage: () => void;
+  onCamera: () => void;
+  onSketch: () => void;
 }) {
   const sep = <span className="mx-0.5 h-5 w-px bg-border" />;
   return (
@@ -123,8 +130,15 @@ function Toolbar({
       <Btn label="Код" active={editor.isActive("codeBlock")} onClick={() => editor.chain().focus().toggleCodeBlock().run()}>
         <Code2 size={16} />
       </Btn>
+      {sep}
       <Btn label="Картинка" onClick={onImage}>
         <ImagePlus size={16} />
+      </Btn>
+      <Btn label="Сфоткать доску" onClick={onCamera}>
+        <Camera size={16} />
+      </Btn>
+      <Btn label="Нарисовать" onClick={onSketch}>
+        <Pen size={16} />
       </Btn>
     </div>
   );
@@ -146,6 +160,8 @@ export function RichEditor({
   const [, force] = useReducer((x: number) => x + 1, 0);
   const editorRef = useRef<Editor | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const cameraInputRef = useRef<HTMLInputElement | null>(null);
+  const [sketchOpen, setSketchOpen] = useState(false);
 
   // Состояние слэш-меню.
   const [slash, setSlash] = useState<SlashState | null>(null);
@@ -163,7 +179,9 @@ export function RichEditor({
     { title: "Цитата", icon: <Quote size={16} />, keywords: ["quote"], run: (e, r) => e.chain().focus().deleteRange(r).toggleBlockquote().run() },
     { title: "Код", icon: <Code2 size={16} />, keywords: ["code", "код"], run: (e, r) => e.chain().focus().deleteRange(r).toggleCodeBlock().run() },
     { title: "Разделитель", icon: <Minus size={16} />, keywords: ["hr", "линия"], run: (e, r) => e.chain().focus().deleteRange(r).setHorizontalRule().run() },
-    { title: "Картинка", icon: <ImagePlus size={16} />, keywords: ["image", "фото", "картинка"], run: (e, r) => { e.chain().focus().deleteRange(r).run(); fileInputRef.current?.click(); } },
+    { title: "Картинка", icon: <ImagePlus size={16} />, keywords: ["image", "картинка"], run: (e, r) => { e.chain().focus().deleteRange(r).run(); fileInputRef.current?.click(); } },
+    { title: "Камера", icon: <Camera size={16} />, keywords: ["camera", "фото", "доска", "снимок"], run: (e, r) => { e.chain().focus().deleteRange(r).run(); cameraInputRef.current?.click(); } },
+    { title: "Рисунок", icon: <Pen size={16} />, keywords: ["draw", "рисовать", "формула", "схема", "sketch"], run: (e, r) => { e.chain().focus().deleteRange(r).run(); setSketchOpen(true); } },
   ];
 
   function getItems(query: string): SlashItem[] {
@@ -297,7 +315,12 @@ export function RichEditor({
     <div>
       {toolbar && editor && (
         <div className="sticky top-14 z-10 -mx-1 mb-3 flex items-center rounded-xl border border-border bg-surface/90 px-1.5 py-1 backdrop-blur lg:top-2">
-          <Toolbar editor={editor} onImage={() => fileInputRef.current?.click()} />
+          <Toolbar
+            editor={editor}
+            onImage={() => fileInputRef.current?.click()}
+            onCamera={() => cameraInputRef.current?.click()}
+            onSketch={() => setSketchOpen(true)}
+          />
         </div>
       )}
 
@@ -311,6 +334,24 @@ export function RichEditor({
         hidden
         onChange={onFilePick}
       />
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        hidden
+        onChange={onFilePick}
+      />
+
+      {sketchOpen && editor && (
+        <SketchPad
+          onClose={() => setSketchOpen(false)}
+          onSave={async (file) => {
+            const url = await uploadImage(file);
+            if (url && editorRef.current) insertImage(editorRef.current, url);
+          }}
+        />
+      )}
 
       {slash && slash.rect && slash.items.length > 0 && (
         <div

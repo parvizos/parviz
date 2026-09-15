@@ -1,7 +1,8 @@
 "use client";
 
-import { Plus, Pencil } from "lucide-react";
+import { Plus, Pencil, NotebookPen } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { cn } from "@/lib/cn";
 import { useUi } from "./ui-context";
 import type { SubjectForEdit } from "./study-dialogs";
 import type { ReactNode } from "react";
@@ -67,5 +68,32 @@ export function NewNoteButton({
       <Plus size={16} />
       {children}
     </Button>
+  );
+}
+
+// Компактная кнопка «завести конспект по этой паре» — прямо в списке пар,
+// чтобы на уроке за один тап открыть чистый лист, привязанный к предмету.
+export function NoteFromLessonButton({
+  subjectId,
+  className,
+}: {
+  subjectId: string;
+  className?: string;
+}) {
+  const { openNewNote } = useUi();
+  return (
+    <button
+      type="button"
+      onClick={() => openNewNote({ subjectId })}
+      title="Конспект по этой паре"
+      aria-label="Конспект по этой паре"
+      className={cn(
+        "inline-flex h-7 shrink-0 items-center gap-1.5 rounded-lg px-2 text-[12px] font-medium text-muted transition-colors hover:bg-surface-2 hover:text-text",
+        className,
+      )}
+    >
+      <NotebookPen size={15} />
+      <span className="hidden md:inline">Конспект</span>
+    </button>
   );
 }

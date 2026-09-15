@@ -9,6 +9,7 @@ import { TaskGroup } from "@/components/app/TaskGroup";
 import { QuickAdd } from "@/components/app/QuickAdd";
 import { PlannedRow, DebtCard } from "@/components/app/finance2-items";
 import { ExamCard, AttendanceControls } from "@/components/app/study2-items";
+import { NoteFromLessonButton } from "@/components/app/study-buttons";
 import { PageHeader, EmptyState } from "@/components/ui/misc";
 
 export const metadata = { title: "Сегодня" };
@@ -76,6 +77,7 @@ export default async function TodayPage() {
                     {l.location ? ` · ${l.location}` : ""}
                   </span>
                 </Link>
+                <NoteFromLessonButton subjectId={l.subjectId} />
                 <AttendanceControls
                   subjectId={l.subjectId}
                   lessonId={l.id}
