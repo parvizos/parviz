@@ -1,0 +1,45 @@
+# ── ParvizOS · продакшн-стек ─────────────────────────────────────
+# Caddy смотрит наружу (80/443) и терминирует HTTPS, приложение — только
+# внутри сети. Запуск:
+#
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# Значения берутся из файла .env рядом с этим файлом (см. .env.example).
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: parviz-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp" # HTTP/3
+    environment:
+      # DOMAIN обязателен — без него Caddy не поймёт, на какой домен брать сертификат.
+      - DOMAIN=${DOMAIN:?Задай DOMAIN в .env — например parvizos.example.com}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data # сертификаты живут здесь и переживают пересоздание
+      - caddy_config:/config
+    depends_on:
+      - parviz
+
+  parviz:
+    build: .
+    container_name: parviz
+    restart: unless-stopped
+    environment:
+      - APP_PASSWORD=${APP_PASSWORD:?Задай APP_PASSWORD в .env}
+      - AUTH_SECRET=${AUTH_SECRET:?Задай AUTH_SECRET в .env (openssl rand -hex 32)}
+      - DATABASE_URL=file:./data/parviz.db
+      - APP_TIMEZONE=${APP_TIMEZONE:-Europe/Moscow}
+      - APP_BASE_CURRENCY=${APP_BASE_CURRENCY:-RUB}
+    volumes:
+      - ./data:/app/data # вся база — один файл здесь, на хосте
+    expose:
+      - "3000" # только внутри compose-сети, наружу не публикуется
+
+volumes:
+  caddy_data:
+  caddy_config:
