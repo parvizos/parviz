@@ -1,0 +1,16 @@
+# ── ParvizOS · keep-alive (systemd) ──────────────────────────────
+# Держит память занятой, чтобы Oracle не забрал простаивающий Always Free
+# инстанс. Автозапуск при загрузке, авто-перезапуск при падении.
+[Unit]
+Description=ParvizOS keep-alive (hold RAM so Oracle keeps the Always Free instance)
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 /usr/local/bin/parviz-keepalive.py
+Restart=always
+RestartSec=10
+Nice=19
+MemoryMax=4G
+
+[Install]
+WantedBy=multi-user.target
