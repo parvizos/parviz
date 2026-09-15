@@ -1,6 +1,8 @@
 import { Download, Database, Clock, ShieldCheck, Table2 } from "lucide-react";
 import { listBackups } from "@/lib/backup";
+import { getServerHealth } from "@/lib/health";
 import { appTimeZone } from "@/lib/dates";
+import { ServerHealth } from "@/components/app/ServerHealth";
 import { PageHeader } from "@/components/ui/misc";
 
 export const metadata = { title: "Настройки" };
@@ -23,10 +25,19 @@ function fmtDate(iso: string): string {
 export default async function SettingsPage() {
   const backups = listBackups();
   const tz = appTimeZone();
+  const health = await getServerHealth();
 
   return (
     <div>
-      <PageHeader title="Настройки" subtitle="Данные, бэкапы и окружение." />
+      <PageHeader title="Настройки" subtitle="Здоровье сервера, данные, бэкапы." />
+
+      {/* Здоровье сервера */}
+      <section className="mb-8">
+        <h2 className="mb-2.5 px-1 text-[13px] font-semibold uppercase tracking-wide text-muted">
+          Здоровье сервера
+        </h2>
+        <ServerHealth initial={health} />
+      </section>
 
       {/* Данные */}
       <section className="mb-8">
