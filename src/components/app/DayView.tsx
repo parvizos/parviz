@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, BarChart3 } from "lucide-react";
 import {
   getJournalEntry,
   getDayTasks,
@@ -92,6 +92,13 @@ export async function DayView({ date }: { date: string }) {
             className="flex h-9 items-center gap-1.5 rounded-xl border border-border px-3 text-[13px] text-muted transition-colors hover:bg-surface-2 hover:text-text"
           >
             <Search size={15} /> Поиск
+          </Link>
+          <Link
+            href="/dnevnik/itogi"
+            aria-label="Итоги дневника"
+            className="flex h-9 items-center gap-1.5 rounded-xl border border-border px-3 text-[13px] text-muted transition-colors hover:bg-surface-2 hover:text-text"
+          >
+            <BarChart3 size={15} /> Итоги
           </Link>
         </div>
       </div>

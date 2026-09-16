@@ -5,6 +5,7 @@ import {
   eq,
   getTableColumns,
   gt,
+  gte,
   isNotNull,
   isNull,
   like,
@@ -605,6 +606,36 @@ export async function getAllJournalTags(): Promise<
   return [...counts.values()].sort(
     (a, b) => b.count - a.count || a.tag.localeCompare(b.tag),
   );
+}
+
+/** Записи дневника за период [from..to] (включительно). */
+export async function getJournalBetween(
+  fromISO: string,
+  toISO: string,
+): Promise<Journal[]> {
+  await schemaReady();
+  return db
+    .select()
+    .from(journal)
+    .where(and(gte(journal.date, fromISO), lte(journal.date, toISO)))
+    .orderBy(desc(journal.date));
+}
+
+/** Сколько задач закрыто за период (по дню завершения в часовом поясе приложения). */
+export async function getClosedTaskCountBetween(
+  fromISO: string,
+  toISO: string,
+): Promise<number> {
+  await schemaReady();
+  const rows = await db
+    .select({ completedAt: tasks.completedAt })
+    .from(tasks)
+    .where(isNotNull(tasks.completedAt));
+  return rows.filter((r) => {
+    if (!r.completedAt) return false;
+    const iso = todayISO(r.completedAt);
+    return iso >= fromISO && iso <= toISO;
+  }).length;
 }
 
 /* ───────────────────────  Финансы  ─────────────────────── */
