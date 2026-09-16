@@ -942,6 +942,42 @@ export async function getPeopleWithOrg(): Promise<PersonWithOrg[]> {
     .orderBy(asc(people.position), asc(people.name));
 }
 
+export type PersonWithStats = PersonWithOrg & {
+  meetingCount: number;
+  lastMeetingDate: string | null;
+  openTaskCount: number;
+};
+
+/** Люди + статистика: число встреч, дата последней встречи, открытые задачи. */
+export async function getPeopleWithStats(): Promise<PersonWithStats[]> {
+  await schemaReady();
+  const [base, mrows, trows] = await Promise.all([
+    getPeopleWithOrg(),
+    db
+      .select({
+        personId: meetings.personId,
+        count: sql<number>`count(*)`,
+        last: sql<string>`max(${meetings.date})`,
+      })
+      .from(meetings)
+      .where(isNotNull(meetings.personId))
+      .groupBy(meetings.personId),
+    db
+      .select({ personId: tasks.personId, count: sql<number>`count(*)` })
+      .from(tasks)
+      .where(and(isNotNull(tasks.personId), eq(tasks.status, "open")))
+      .groupBy(tasks.personId),
+  ]);
+  const mMap = new Map(mrows.map((r) => [r.personId, r]));
+  const tMap = new Map(trows.map((r) => [r.personId, r.count]));
+  return base.map((p) => ({
+    ...p,
+    meetingCount: mMap.get(p.id)?.count ?? 0,
+    lastMeetingDate: mMap.get(p.id)?.last ?? null,
+    openTaskCount: tMap.get(p.id) ?? 0,
+  }));
+}
+
 export async function getPerson(id: string): Promise<PersonWithOrg | null> {
   await schemaReady();
   const [row] = await db

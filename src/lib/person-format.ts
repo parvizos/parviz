@@ -66,3 +66,22 @@ export function pluralYears(n: number): string {
   if (a >= 2 && a <= 4 && (b < 10 || b >= 20)) return "года";
   return "лет";
 }
+
+/** Русское склонение: 1 день, 2 дня, 5 дней. */
+export function pluralDays(n: number): string {
+  const a = n % 10;
+  const b = n % 100;
+  if (a === 1 && b !== 11) return "день";
+  if (a >= 2 && a <= 4 && (b < 10 || b >= 20)) return "дня";
+  return "дней";
+}
+
+/** «Когда виделись», по-человечески: сегодня / вчера / 3 дня назад / 2 нед. назад / 4 мес. назад. */
+export function agoLabel(days: number): string {
+  if (days <= 0) return "сегодня";
+  if (days === 1) return "вчера";
+  if (days < 7) return `${days} ${pluralDays(days)} назад`;
+  if (days < 45) return `${Math.round(days / 7)} нед. назад`;
+  if (days < 365) return `${Math.round(days / 30)} мес. назад`;
+  return "больше года назад";
+}

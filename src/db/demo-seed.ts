@@ -474,6 +474,11 @@ export async function seedDemo(db: DrizzleDb): Promise<void> {
       body: `<p>${t}. Договорились продолжить на следующей неделе.</p>`,
     });
   });
+  // Давние встречи — чтобы сработала подсказка «Давно не виделись».
+  meetingVals.push(
+    { title: "Погоняли в приставку", date: iso(-58), personId: at(ppl, 3), location: "У Димы", body: "<p>Засиделись до ночи. Надо повторить.</p>" },
+    { title: "Гуляли с Леной", date: iso(-84), personId: at(ppl, 4), location: "Парк", body: "<p>Давно не виделись — договорились чаще.</p>" },
+  );
   await db.insert(meetings).values(meetingVals);
 
   /* ── Долги / планы / цели ── */

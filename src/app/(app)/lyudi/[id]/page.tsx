@@ -26,6 +26,7 @@ import {
   pluralYears,
   daysUntilBirthday,
   turningAge,
+  agoLabel,
 } from "@/lib/person-format";
 import { SOCIAL_META, parseSocials } from "@/lib/socials";
 import { cn } from "@/lib/cn";
@@ -60,16 +61,6 @@ function pl3(n: number, one: string, few: string, many: string): string {
   if (a === 1 && b !== 11) return one;
   if (a >= 2 && a <= 4 && (b < 10 || b >= 20)) return few;
   return many;
-}
-
-/** Сколько прошло с последней встречи, по-человечески. */
-function agoLabel(days: number): string {
-  if (days <= 0) return "сегодня";
-  if (days === 1) return "вчера";
-  if (days < 7) return `${days} ${pl3(days, "день", "дня", "дней")} назад`;
-  if (days < 45) return `${Math.round(days / 7)} нед. назад`;
-  if (days < 365) return `${Math.round(days / 30)} мес. назад`;
-  return "больше года назад";
 }
 
 function FactTile({
