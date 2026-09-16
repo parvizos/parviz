@@ -1,7 +1,17 @@
 import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, Phone, Mail, Cake, Building2 } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Phone,
+  Mail,
+  Cake,
+  Building2,
+  Handshake,
+  ListTodo,
+  Clock,
+} from "lucide-react";
 import {
   getPerson,
   getPersonTasks,
@@ -10,9 +20,15 @@ import {
   getAccountOptions,
 } from "@/lib/queries";
 import { getDebts } from "@/lib/finance-queries";
-import { todayISO, ruMonthDay } from "@/lib/dates";
-import { currentAge, pluralYears } from "@/lib/person-format";
+import { todayISO, ruMonthDay, diffDays } from "@/lib/dates";
+import {
+  currentAge,
+  pluralYears,
+  daysUntilBirthday,
+  turningAge,
+} from "@/lib/person-format";
 import { SOCIAL_META, parseSocials } from "@/lib/socials";
+import { cn } from "@/lib/cn";
 import { Avatar } from "@/components/app/Avatar";
 import { SocialIcon } from "@/components/app/SocialIcon";
 import { TaskGroup } from "@/components/app/TaskGroup";
@@ -38,6 +54,55 @@ export async function generateMetadata({
 const chip =
   "inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-1.5 text-[13px] transition-colors hover:border-border-strong hover:bg-surface-2";
 
+function pl3(n: number, one: string, few: string, many: string): string {
+  const a = n % 10;
+  const b = n % 100;
+  if (a === 1 && b !== 11) return one;
+  if (a >= 2 && a <= 4 && (b < 10 || b >= 20)) return few;
+  return many;
+}
+
+/** Сколько прошло с последней встречи, по-человечески. */
+function agoLabel(days: number): string {
+  if (days <= 0) return "сегодня";
+  if (days === 1) return "вчера";
+  if (days < 7) return `${days} ${pl3(days, "день", "дня", "дней")} назад`;
+  if (days < 45) return `${Math.round(days / 7)} нед. назад`;
+  if (days < 365) return `${Math.round(days / 30)} мес. назад`;
+  return "больше года назад";
+}
+
+function FactTile({
+  icon,
+  value,
+  label,
+  tone = "accent",
+}: {
+  icon: ReactNode;
+  value: ReactNode;
+  label: string;
+  tone?: "accent" | "warning";
+}) {
+  return (
+    <div className="rounded-2xl border border-border bg-surface p-3.5">
+      <div
+        className={cn(
+          "mb-2 flex h-8 w-8 items-center justify-center rounded-lg",
+          tone === "warning"
+            ? "bg-warning-soft text-warning"
+            : "bg-accent-soft text-accent-soft-text",
+        )}
+      >
+        {icon}
+      </div>
+      <div className="text-[16px] font-semibold leading-tight text-text">
+        {value}
+      </div>
+      <div className="mt-0.5 text-[12px] text-muted">{label}</div>
+    </div>
+  );
+}
+
 export default async function PersonDetailPage({
   params,
 }: {
@@ -59,6 +124,45 @@ export default async function PersonDetailPage({
   const done = tasks.filter((t) => t.status !== "open");
   const age = currentAge(person.birthday, today);
   const socials = parseSocials(person.socials);
+
+  // Быстрые факты о человеке.
+  const lastMeeting = meetings[0] ?? null;
+  const daysSince = lastMeeting ? diffDays(lastMeeting.date, today) : null;
+  const longNoContact = daysSince == null || daysSince > 30;
+  const bdays = daysUntilBirthday(person.birthday, today);
+  const turning = turningAge(person.birthday, today);
+
+  const tiles: {
+    icon: ReactNode;
+    value: ReactNode;
+    label: string;
+    tone?: "accent" | "warning";
+  }[] = [
+    {
+      icon: <Clock size={16} />,
+      value: daysSince == null ? "—" : agoLabel(daysSince),
+      label: daysSince == null ? "не виделись" : longNoContact ? "давно не виделись" : "виделись",
+      tone: longNoContact ? "warning" : "accent",
+    },
+    {
+      icon: <Handshake size={16} />,
+      value: meetings.length,
+      label: pl3(meetings.length, "встреча", "встречи", "встреч"),
+    },
+    {
+      icon: <ListTodo size={16} />,
+      value: open.length,
+      label: pl3(open.length, "открытая задача", "открытые задачи", "открытых задач"),
+    },
+  ];
+  if (bdays != null) {
+    tiles.push({
+      icon: <Cake size={16} />,
+      value: bdays === 0 ? "сегодня!" : `через ${bdays} ${pl3(bdays, "день", "дня", "дней")}`,
+      label: turning != null ? `исполнится ${turning}` : "день рождения",
+      tone: bdays <= 14 ? "warning" : "accent",
+    });
+  }
 
   const contacts = [
     person.phone && {
@@ -134,6 +238,18 @@ export default async function PersonDetailPage({
             socials,
           }}
         />
+      </div>
+
+      {/* Быстрые факты */}
+      <div
+        className={cn(
+          "mb-5 grid grid-cols-2 gap-3",
+          tiles.length === 4 ? "sm:grid-cols-4" : "sm:grid-cols-3",
+        )}
+      >
+        {tiles.map((t, i) => (
+          <FactTile key={i} {...t} />
+        ))}
       </div>
 
       {(contacts.length > 0 || socials.length > 0) && (
@@ -253,45 +369,37 @@ export default async function PersonDetailPage({
       </section>
 
       {/* Долги */}
-      <section className="mb-8">
-        <div className="mb-2.5 flex items-center justify-between px-1">
-          <h2 className="text-[13px] font-semibold uppercase tracking-wide text-muted">
-            Долги
-          </h2>
-          <NewDebtButton personId={id} variant="soft">
-            Долг
-          </NewDebtButton>
-        </div>
-        {debts.length > 0 ? (
+      {debts.length > 0 && (
+        <section className="mb-8">
+          <div className="mb-2.5 flex items-center justify-between px-1">
+            <h2 className="text-[13px] font-semibold uppercase tracking-wide text-muted">
+              Долги
+            </h2>
+            <NewDebtButton personId={id} variant="soft">
+              Долг
+            </NewDebtButton>
+          </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {debts.map((d) => (
               <DebtCard key={d.id} debt={d} accountOptions={accountOptions} />
             ))}
           </div>
-        ) : (
-          <p className="px-1 text-[13.5px] text-faint">
-            Нет долгов с этим человеком.
-          </p>
-        )}
-      </section>
+        </section>
+      )}
 
       {/* Операции */}
-      <section>
-        <h2 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-wide text-muted">
-          Операции
-        </h2>
-        {txs.length > 0 ? (
+      {txs.length > 0 && (
+        <section>
+          <h2 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-wide text-muted">
+            Операции
+          </h2>
           <div className="flex flex-col">
             {txs.map((t) => (
               <TransactionRow key={t.id} tx={t} />
             ))}
           </div>
-        ) : (
-          <p className="px-1 text-[13.5px] text-faint">
-            Нет операций с этим человеком.
-          </p>
-        )}
-      </section>
+        </section>
+      )}
     </div>
   );
 }
