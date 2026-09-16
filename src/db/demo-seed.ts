@@ -451,14 +451,30 @@ export async function seedDemo(db: DrizzleDb): Promise<void> {
   await db.insert(transactions).values(txVals);
 
   /* ── Встречи ── */
-  await db.insert(meetings).values([
+  const meetingVals: (typeof meetings.$inferInsert)[] = [
     { title: "Обсудили тему курсовой", date: iso(-3), personId: at(ppl, 0), location: "Кафедра, ауд. 512", body: "<p>Научрук одобрил направление — <strong>ряды Фурье</strong>.</p><h2>Что решили</h2><ul><li>Собрать 5 источников</li><li>План из трёх глав</li></ul>" },
     { title: "Кофе с Аней перед сессией", date: iso(-2), personId: at(ppl, 1), location: "Кофейня «Бариста»", body: "<p>Договорились готовиться вместе в субботу. Аня скинет конспекты.</p>" },
     { title: "Онбординг в стартапе", date: iso(-5), personId: at(ppl, 5), location: "Zoom", body: "<p>Познакомили с командой, дали доступы, первая задача — поправить баг в форме.</p>" },
     { title: "Тренировка с Ринатом", date: iso(-1), personId: at(ppl, 9), location: "Спортзал «Титан»", body: "<p>Разобрали технику приседа. План на месяц готов.</p>" },
     { title: "Звонок с мамой", date: iso(-4), personId: at(ppl, 10), body: "<p>Рассказал про универ, договорились приехать на выходные.</p>" },
     { title: "Смена с Марком", date: iso(-6), personId: at(ppl, 2), location: "Кофейня «Бариста»", body: "<p>Показал, как держать темп в час пик.</p>" },
-  ]);
+  ];
+  // Много встреч с Аней (ppl[1]) на разные месяцы — показать группировку и «Все встречи».
+  const anyaTopics = [
+    "Готовились к матану", "Разбор задач по программированию", "Кофе и планы на семестр",
+    "Подготовка к зачёту по истории", "Повторяли английский вместе", "Библиотека, конспекты",
+    "Прогулка после пар", "Обсудили курсовые",
+  ];
+  anyaTopics.forEach((t, i) => {
+    meetingVals.push({
+      title: t,
+      date: iso(-(8 + i * 9)),
+      personId: at(ppl, 1),
+      location: at(["Кофейня «Бариста»", "Библиотека", "ауд. 305", "Парк у корпуса"], i),
+      body: `<p>${t}. Договорились продолжить на следующей неделе.</p>`,
+    });
+  });
+  await db.insert(meetings).values(meetingVals);
 
   /* ── Долги / планы / цели ── */
   await db.insert(debts).values([

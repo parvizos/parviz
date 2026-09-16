@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Phone, Mail, Cake, Building2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Phone, Mail, Cake, Building2 } from "lucide-react";
 import {
   getPerson,
   getPersonTasks,
@@ -194,17 +194,31 @@ export default async function PersonDetailPage({
         <div className="mb-2.5 flex items-center justify-between px-1">
           <h2 className="text-[13px] font-semibold uppercase tracking-wide text-muted">
             Встречи
+            {meetings.length > 0 && (
+              <span className="ml-2 text-faint tabular">{meetings.length}</span>
+            )}
           </h2>
           <NewMeetingButton personId={id} variant="soft">
             Встреча
           </NewMeetingButton>
         </div>
         {meetings.length > 0 ? (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {meetings.map((m) => (
-              <MeetingCard key={m.id} meeting={m} />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {meetings.slice(0, 4).map((m) => (
+                <MeetingCard key={m.id} meeting={m} />
+              ))}
+            </div>
+            {meetings.length > 4 && (
+              <Link
+                href={`/vstrechi?person=${id}`}
+                className="mt-3 inline-flex items-center gap-1.5 text-[13px] font-medium text-accent transition-colors hover:text-accent-hover"
+              >
+                Все встречи ({meetings.length})
+                <ArrowRight size={15} />
+              </Link>
+            )}
+          </>
         ) : (
           <p className="px-1 text-[13.5px] text-faint">
             Пока нет встреч с этим человеком.

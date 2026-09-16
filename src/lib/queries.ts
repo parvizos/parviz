@@ -1070,6 +1070,30 @@ export async function getPersonMeetings(
     .orderBy(desc(meetings.date), desc(meetings.updatedAt));
 }
 
+/** Встречи с фильтром: по человеку (SQL) и по тексту заголовка/тела/места (JS). */
+export async function getMeetingsFiltered(opts: {
+  q?: string;
+  personId?: string;
+}): Promise<MeetingWithPerson[]> {
+  await schemaReady();
+  const base = db
+    .select({ ...getTableColumns(meetings), ...meetingPersonCols })
+    .from(meetings)
+    .leftJoin(people, eq(meetings.personId, people.id));
+  const rows = opts.personId
+    ? await base
+        .where(eq(meetings.personId, opts.personId))
+        .orderBy(desc(meetings.date), desc(meetings.updatedAt))
+    : await base.orderBy(desc(meetings.date), desc(meetings.updatedAt));
+  const q = opts.q?.trim().toLowerCase();
+  if (!q) return rows;
+  return rows.filter((m) =>
+    `${m.title} ${stripHtml(m.body)} ${m.location ?? ""}`
+      .toLowerCase()
+      .includes(q),
+  );
+}
+
 export async function getPersonOptions() {
   await schemaReady();
   return db
