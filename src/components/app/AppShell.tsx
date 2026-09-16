@@ -6,8 +6,6 @@ import { IconButton } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
 import { Sidebar } from "./Sidebar";
 import { useUi } from "./ui-context";
-import { ToastProvider } from "./toast";
-import { ReminderEngine } from "./ReminderEngine";
 
 type AreaLink = {
   id: string;
@@ -30,9 +28,7 @@ export function AppShell({
   const { openNewTask, openCommand, focusMode } = useUi();
 
   return (
-    <ToastProvider>
-      <ReminderEngine />
-      <div className="min-h-full">
+    <div className="min-h-full">
       {/* Меню на десктопе */}
       <aside
         className={cn(
@@ -85,7 +81,6 @@ export function AppShell({
           {children}
         </main>
       </div>
-      </div>
-    </ToastProvider>
+    </div>
   );
 }

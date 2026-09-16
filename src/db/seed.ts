@@ -4,6 +4,7 @@
  * Сброс:   удали файл базы (data/parviz.db) и запусти снова.
  */
 import { db, schemaReady } from "./index";
+import { encryptSecret } from "../lib/crypto";
 import {
   areas,
   projects,
@@ -18,6 +19,7 @@ import {
   organizations,
   people,
   meetings,
+  credentials,
   exchangeRates,
   debts,
   debtPayments,
@@ -543,6 +545,33 @@ async function main() {
     dueDate: today(240),
     position: 1,
   });
+
+  // Пароли (шифруются ключом сервера).
+  await db.insert(credentials).values([
+    {
+      title: "Gmail",
+      username: "parviz@gmail.com",
+      url: "mail.google.com",
+      category: "Почта",
+      passwordCipher: encryptSecret("demo-Gmail-pass-42"),
+      favorite: true,
+    },
+    {
+      title: "Steam",
+      username: "parviz_game",
+      url: "steampowered.com",
+      category: "Игры",
+      passwordCipher: encryptSecret("st3am!Demo"),
+    },
+    {
+      title: "Личный кабинет МГУ",
+      username: "s.parviz",
+      url: "lk.msu.ru",
+      category: "Учёба",
+      passwordCipher: encryptSecret("uniPass2026#"),
+      note: "Вход по номеру студенческого",
+    },
+  ]);
 
   console.log(
     "Готово: демо-данные (сферы, задачи, учёба, оценки, сессия, посещаемость, фокус, темы, материалы, ежедневник, финансы, долги, планы, цели, люди).",

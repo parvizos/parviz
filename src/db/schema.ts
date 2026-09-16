@@ -933,6 +933,34 @@ export const meetings = sqliteTable(
 export type Meeting = typeof meetings.$inferSelect;
 export type NewMeeting = typeof meetings.$inferInsert;
 
+/**
+ * Менеджер паролей. Секрет (пароль) хранится зашифрованным (AES-256-GCM,
+ * см. lib/crypto) в passwordCipher; остальное — открытым текстом для списка
+ * и поиска.
+ */
+export const credentials = sqliteTable(
+  "credentials",
+  {
+    id: id(),
+    title: text("title").notNull().default(""),
+    username: text("username"),
+    url: text("url"),
+    category: text("category"),
+    /** Незасекреченная подсказка (НЕ для секретов — они в пароле). */
+    note: text("note"),
+    /** Зашифрованный пароль: base64(iv|tag|ciphertext). null — пароль не задан. */
+    passwordCipher: text("password_cipher"),
+    favorite: integer("favorite", { mode: "boolean" }).notNull().default(false),
+    position: integer("position").notNull().default(0),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("credentials_category_idx").on(t.category)],
+);
+
+export type Credential = typeof credentials.$inferSelect;
+export type NewCredential = typeof credentials.$inferInsert;
+
 /* ─────────────────────  Вложения (картинки)  ───────────────────── */
 
 /** Картинки конспектов — хранятся прямо в базе, чтобы бэкап был одним файлом. */

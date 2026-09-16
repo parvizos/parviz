@@ -22,6 +22,7 @@ import {
   Users,
   Building2,
   Handshake,
+  KeyRound,
   GraduationCap,
   NotebookPen,
   Award,
@@ -90,6 +91,10 @@ const PEOPLE: NavItem[] = [
   { href: "/lyudi", label: "Люди", icon: Users },
   { href: "/organizacii", label: "Организации", icon: Building2 },
   { href: "/vstrechi", label: "Встречи", icon: Handshake },
+];
+
+const VAULT: NavItem[] = [
+  { href: "/paroli", label: "Пароли", icon: KeyRound },
 ];
 
 function isActive(pathname: string, href: string): boolean {
@@ -313,6 +318,35 @@ export function Sidebar({
         </div>
         <ul className="mt-1 flex flex-col gap-0.5">
           {PEOPLE.map((item) => {
+            const active = isActive(pathname, item.href);
+            return (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  onClick={onNavigate}
+                  className={cn(
+                    "flex h-9 items-center gap-3 rounded-xl px-3 text-[14px] transition-colors",
+                    active
+                      ? "bg-accent-soft font-medium text-accent-soft-text"
+                      : "text-muted hover:bg-surface-2 hover:text-text",
+                  )}
+                >
+                  <item.icon size={17} className="shrink-0" />
+                  <span className="flex-1">{item.label}</span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+
+        {/* Сейф */}
+        <div className="mt-6 px-3">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-faint">
+            Сейф
+          </span>
+        </div>
+        <ul className="mt-1 flex flex-col gap-0.5">
+          {VAULT.map((item) => {
             const active = isActive(pathname, item.href);
             return (
               <li key={item.href}>

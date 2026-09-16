@@ -29,6 +29,7 @@ import {
   type PersonForEdit,
   type OrganizationForEdit,
 } from "./crm-dialogs";
+import { CredentialDialog, type CredentialForEdit } from "./vault-dialogs";
 import {
   DebtDialog,
   PlannedDialog,
@@ -44,6 +45,8 @@ import {
   type ExamForEdit,
 } from "./study2-dialogs";
 import { CommandPalette } from "./CommandPalette";
+import { ToastProvider } from "./toast";
+import { ReminderEngine } from "./ReminderEngine";
 import { useRouter } from "next/navigation";
 import { createNote, createMeeting } from "@/lib/actions";
 import type {
@@ -102,6 +105,8 @@ interface UiValue {
   openEditPerson: (p: PersonForEdit) => void;
   openNewOrganization: () => void;
   openEditOrganization: (o: OrganizationForEdit) => void;
+  openNewCredential: () => void;
+  openEditCredential: (c: CredentialForEdit) => void;
   openNewDebt: (opts?: {
     direction?: DebtDirection;
     personId?: string | null;
@@ -198,6 +203,10 @@ export function UiProvider({
     open: boolean;
     organization: OrganizationForEdit | null;
   }>({ open: false, organization: null });
+  const [credential, setCredential] = useState<{
+    open: boolean;
+    credential: CredentialForEdit | null;
+  }>({ open: false, credential: null });
   const [debt, setDebt] = useState<{
     open: boolean;
     debt: DebtForEdit | null;
@@ -355,6 +364,14 @@ export function UiProvider({
     (o: OrganizationForEdit) => setOrganization({ open: true, organization: o }),
     [],
   );
+  const openNewCredential = useCallback(
+    () => setCredential({ open: true, credential: null }),
+    [],
+  );
+  const openEditCredential = useCallback(
+    (c: CredentialForEdit) => setCredential({ open: true, credential: c }),
+    [],
+  );
   const openNewDebt = useCallback(
     (opts?: { direction?: DebtDirection; personId?: string | null }) =>
       setDebt({
@@ -412,6 +429,7 @@ export function UiProvider({
     category.open ||
     person.open ||
     organization.open ||
+    credential.open ||
     debt.open ||
     plan.open ||
     goal.open ||
@@ -469,6 +487,8 @@ export function UiProvider({
         openEditPerson,
         openNewOrganization,
         openEditOrganization,
+        openNewCredential,
+        openEditCredential,
         openNewDebt,
         openEditDebt,
         openNewPlanned,
@@ -486,6 +506,8 @@ export function UiProvider({
         setFocusMode,
       }}
     >
+      <ToastProvider>
+      <ReminderEngine />
       {children}
 
       {task.open && (
@@ -569,6 +591,12 @@ export function UiProvider({
           organization={organization.organization}
         />
       )}
+      {credential.open && (
+        <CredentialDialog
+          onClose={() => setCredential((s) => ({ ...s, open: false }))}
+          credential={credential.credential}
+        />
+      )}
       {debt.open && (
         <DebtDialog
           onClose={() => setDebt((s) => ({ ...s, open: false }))}
@@ -628,11 +656,13 @@ export function UiProvider({
           onNewSubject={openNewSubject}
           onNewNote={() => openNewNote()}
           onNewMeeting={() => openNewMeeting()}
+          onNewCredential={() => openNewCredential()}
           onNewTransaction={() => openNewTransaction()}
           onNewPerson={() => openNewPerson()}
           onToggleTheme={toggleTheme}
         />
       )}
+      </ToastProvider>
     </Ctx.Provider>
   );
 }
