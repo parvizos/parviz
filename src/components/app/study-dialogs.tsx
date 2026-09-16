@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Trash2, Pin } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Trash2, Pin, ExternalLink } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Field, Input, Textarea, Select } from "@/components/ui/Field";
@@ -220,6 +221,7 @@ export function LessonDialog({
   defaultSubjectId?: string | null;
   defaultDay?: number;
 }) {
+  const router = useRouter();
   const editing = !!lesson;
   const [subjectId, setSubjectId] = useState(
     lesson?.subjectId ?? defaultSubjectId ?? subjectOptions[0]?.id ?? "",
@@ -283,9 +285,21 @@ export function LessonDialog({
       footer={
         <div className="flex w-full items-center justify-between">
           {editing ? (
-            <Button variant="ghost" size="sm" onClick={remove} disabled={pending}>
-              <Trash2 size={15} /> Удалить
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" size="sm" onClick={remove} disabled={pending}>
+                <Trash2 size={15} /> Удалить
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  onClose();
+                  if (lesson) router.push(`/urok/${lesson.id}`);
+                }}
+              >
+                <ExternalLink size={15} /> Открыть
+              </Button>
+            </div>
           ) : (
             <span />
           )}

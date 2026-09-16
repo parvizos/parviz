@@ -123,6 +123,9 @@ export async function seedDemo(db: DrizzleDb): Promise<void> {
       li++;
     }
   }
+  // У первой пары — подробные заметки (база знаний с фото).
+  lessonVals[0].body =
+    "<h2>Особенности пары</h2><p>Лекцию ведёт сам профессор, отмечает посещаемость в начале.</p><ul><li>Приносить ноутбук</li><li>Слайды выкладывает после лекции</li><li>Иногда мини-опрос в конце</li></ul><blockquote>Сидеть ближе — плохо слышно в конце аудитории.</blockquote>";
   await db.insert(lessons).values(lessonVals);
 
   /* ── Организации и люди ── */

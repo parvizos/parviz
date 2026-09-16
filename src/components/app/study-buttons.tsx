@@ -4,7 +4,7 @@ import { Plus, Pencil, NotebookPen } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
 import { useUi } from "./ui-context";
-import type { SubjectForEdit } from "./study-dialogs";
+import type { SubjectForEdit, LessonForEdit } from "./study-dialogs";
 import type { ReactNode } from "react";
 
 export function NewSubjectButton({
@@ -25,6 +25,16 @@ export function EditSubjectButton({ subject }: { subject: SubjectForEdit }) {
   const { openEditSubject } = useUi();
   return (
     <Button variant="secondary" size="sm" onClick={() => openEditSubject(subject)}>
+      <Pencil size={15} />
+      Изменить
+    </Button>
+  );
+}
+
+export function EditLessonButton({ lesson }: { lesson: LessonForEdit }) {
+  const { openEditLesson } = useUi();
+  return (
+    <Button variant="secondary" size="sm" onClick={() => openEditLesson(lesson)}>
       <Pencil size={15} />
       Изменить
     </Button>

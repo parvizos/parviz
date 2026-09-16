@@ -381,6 +381,13 @@ function lessonBaseQuery() {
     .innerJoin(subjects, eq(lessons.subjectId, subjects.id));
 }
 
+/** Одно занятие с предметом (для страницы занятия). */
+export async function getLesson(id: string): Promise<LessonWithSubject | null> {
+  await schemaReady();
+  const [row] = await lessonBaseQuery().where(eq(lessons.id, id)).limit(1);
+  return row ?? null;
+}
+
 export async function getSubjectsWithCounts(): Promise<SubjectWithCounts[]> {
   await schemaReady();
   const base = await db
