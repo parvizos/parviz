@@ -12,6 +12,7 @@ import { ProjectCard } from "@/components/app/cards";
 import { TaskGroup } from "@/components/app/TaskGroup";
 import { QuickAdd } from "@/components/app/QuickAdd";
 import { EditAreaButton, NewProjectButton } from "@/components/app/buttons";
+import { EntityNotes } from "@/components/app/EntityNotes";
 import { EmptyState } from "@/components/ui/misc";
 
 export const dynamic = "force-dynamic";
@@ -75,6 +76,17 @@ export default async function AreaDetailPage({
             color: area.color,
             icon: area.icon,
           }}
+        />
+      </div>
+
+      {/* О сфере — свободное описание с фото */}
+      <div className="mb-8">
+        <EntityNotes
+          kind="area"
+          id={id}
+          initialHTML={area.body ?? ""}
+          title="О сфере"
+          placeholder="Что это за часть жизни, цели, принципы, заметки и фото… Жми «/» или перетащи фото."
         />
       </div>
 

@@ -8,6 +8,7 @@ import { areaColor, PROJECT_STATUS_META } from "@/lib/task-format";
 import { TaskGroup } from "@/components/app/TaskGroup";
 import { QuickAdd } from "@/components/app/QuickAdd";
 import { EditProjectButton } from "@/components/app/buttons";
+import { EntityNotes } from "@/components/app/EntityNotes";
 import { EmptyState } from "@/components/ui/misc";
 
 export const dynamic = "force-dynamic";
@@ -115,6 +116,17 @@ export default async function ProjectDetailPage({
           {project.notes}
         </p>
       )}
+
+      {/* О проекте — свободное описание с фото */}
+      <div className="mb-6">
+        <EntityNotes
+          kind="project"
+          id={id}
+          initialHTML={project.body ?? ""}
+          title="О проекте"
+          placeholder="Цель, план, ссылки, важные детали и фото… Перетащи фото или жми «/»."
+        />
+      </div>
 
       {total > 0 && (
         <div className="mb-6 flex items-center gap-3">

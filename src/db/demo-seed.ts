@@ -69,8 +69,14 @@ export async function seedDemo(db: DrizzleDb): Promise<void> {
   const areaRows = await db
     .insert(areas)
     .values([
-      { name: "Универ", color: "#5b5bd6", icon: "🎓", position: 0 },
-      { name: "Здоровье", color: "#d64545", icon: "💪", position: 1 },
+      {
+        name: "Универ",
+        color: "#5b5bd6",
+        icon: "🎓",
+        position: 0,
+        body: "<h2>Цель на семестр</h2><p>Закрыть сессию без хвостов, средний балл <strong>≥ 4.5</strong>.</p><ul><li>Не пропускать пары без причины</li><li>Курсовую сдать за неделю до дедлайна</li></ul>",
+      },
+      { name: "Здоровье", color: "#d64545", icon: "💪", position: 1, body: "<h2>Режим</h2><p>Зал 3 раза в неделю, сон 7–8 часов, вода.</p><blockquote>Тело — это тоже проект.</blockquote>" },
       { name: "Личное", color: "#2f9e6f", icon: "🏠", position: 2 },
       { name: "Работа", color: "#c9832a", icon: "💼", position: 3 },
       { name: "Хобби", color: "#c4488f", icon: "🎧", position: 4 },
@@ -83,8 +89,8 @@ export async function seedDemo(db: DrizzleDb): Promise<void> {
   const subjRows = await db
     .insert(subjects)
     .values([
-      { name: "Матанализ", teacher: "Иванов И. И.", color: "#5b5bd6", icon: "📐", areaId: aUni, credits: 6, position: 0 },
-      { name: "Программирование", teacher: "Петров П. П.", color: "#0f9a8f", icon: "💻", areaId: aUni, credits: 5, position: 1 },
+      { name: "Матанализ", teacher: "Иванов И. И.", color: "#5b5bd6", icon: "📐", areaId: aUni, credits: 6, position: 0, body: "<h2>Формат экзамена</h2><p>Устно, два теоретических вопроса + задача.</p><ul><li>Разрешён один рукописный лист</li><li>Главные темы: пределы, ряды, интегралы</li></ul><blockquote>Иванов любит строгие определения.</blockquote>" },
+      { name: "Программирование", teacher: "Петров П. П.", color: "#0f9a8f", icon: "💻", areaId: aUni, credits: 5, position: 1, body: "<h2>Зачёт</h2><p>Защита проекта + мини-собеседование по алгоритмам.</p><ul><li>Курс на Stepik — обязателен</li><li>Сдавать через GitHub</li></ul>" },
       { name: "История", teacher: "Сидорова А. В.", color: "#c9832a", icon: "📜", areaId: aUni, credits: 3, position: 2 },
       { name: "Физика", teacher: "Кузнецов Д. С.", color: "#3b82c4", icon: "⚛️", areaId: aUni, credits: 5, position: 3 },
       { name: "Английский", teacher: "Смирнова Е. Н.", color: "#c4488f", icon: "🇬🇧", areaId: aUni, credits: 3, position: 4 },
@@ -187,11 +193,11 @@ export async function seedDemo(db: DrizzleDb): Promise<void> {
   const projRows = await db
     .insert(projects)
     .values([
-      { name: "Курсовая работа", notes: "Тема, план, глава 1–3, защита.", areaId: aUni, dueDate: iso(24) },
+      { name: "Курсовая работа", notes: "Тема, план, глава 1–3, защита.", areaId: aUni, dueDate: iso(24), body: "<h2>Тема</h2><p>Ряды Фурье и их применение.</p><h2>План</h2><ul><li>Введение и обзор литературы</li><li>Глава 1 — теория</li><li>Глава 2 — расчёты</li><li>Глава 3 — примеры</li><li>Защита</li></ul><blockquote>Дедлайн у научрука — за неделю до сдачи.</blockquote>" },
       { name: "Подготовка к сессии", notes: "Закрыть все хвосты и экзамены.", areaId: aUni, dueDate: iso(20) },
       { name: "Марафон 10 км", notes: "Пробежать первый забег к весне.", areaId: aHealth, dueDate: iso(60) },
       { name: "Ремонт в комнате", notes: "Покраска, полка, лампа.", areaId: aPersonal, dueDate: iso(15) },
-      { name: "Пет-проект: трекер привычек", notes: "MVP на выходные.", areaId: aHobby, dueDate: iso(30) },
+      { name: "Пет-проект: трекер привычек", notes: "MVP на выходные.", areaId: aHobby, dueDate: iso(30), body: "<h2>Идея</h2><p>Простой трекер привычек с напоминаниями и стриками.</p><h2>Стек</h2><ul><li>Next.js + SQLite</li><li>Графики прогресса</li><li>PWA, чтобы работало с телефона</li></ul>" },
       { name: "Стажировка в стартапе", notes: "Онбординг и первые задачи.", areaId: aWork, dueDate: iso(10) },
       { name: "Накопить на ноутбук", areaId: aPersonal, dueDate: iso(120) },
     ])

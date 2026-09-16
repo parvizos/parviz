@@ -35,6 +35,7 @@ import {
   NewLessonButton,
   NewNoteButton,
 } from "@/components/app/study-buttons";
+import { EntityNotes } from "@/components/app/EntityNotes";
 
 export const dynamic = "force-dynamic";
 
@@ -136,6 +137,17 @@ export default async function SubjectDetailPage({
           }}
         />
       </div>
+
+      {/* О предмете — свободное описание с фото */}
+      <section className="mb-8">
+        <EntityNotes
+          kind="subject"
+          id={id}
+          initialHTML={subject.body ?? ""}
+          title="О предмете"
+          placeholder="Требования преподавателя, формат экзамена, полезные ссылки и фото… Жми «/» или перетащи фото."
+        />
+      </section>
 
       {/* Расписание */}
       <section className="mb-8">
