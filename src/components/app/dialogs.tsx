@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Trash2, Flag, Clock } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Trash2, Flag, Clock, ExternalLink } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Field, Input, Textarea, Select } from "@/components/ui/Field";
@@ -146,6 +147,7 @@ export function TaskDialog({
   subjectOptions: SubjectOption[];
   personOptions: PersonOption[];
 }) {
+  const router = useRouter();
   const editing = !!task;
   const [title, setTitle] = useState(task?.title ?? "");
   const [notes, setNotes] = useState(task?.notes ?? "");
@@ -233,9 +235,21 @@ export function TaskDialog({
       footer={
         <div className="flex w-full items-center justify-between">
           {editing ? (
-            <Button variant="ghost" size="sm" onClick={remove} disabled={pending}>
-              <Trash2 size={15} /> Удалить
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" size="sm" onClick={remove} disabled={pending}>
+                <Trash2 size={15} /> Удалить
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  onClose();
+                  if (task) router.push(`/zadachi/${task.id}`);
+                }}
+              >
+                <ExternalLink size={15} /> Открыть
+              </Button>
+            </div>
           ) : (
             <span />
           )}

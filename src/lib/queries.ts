@@ -84,6 +84,13 @@ function taskBaseQuery() {
 
 const openTask = eq(tasks.status, "open");
 
+/** Одна задача со всем контекстом (для страницы задачи). */
+export async function getTask(id: string): Promise<TaskWithContext | null> {
+  await schemaReady();
+  const [row] = await taskBaseQuery().where(eq(tasks.id, id)).limit(1);
+  return row ?? null;
+}
+
 /** Входящие: открытые задачи без проекта, сферы и даты — то, что нужно разобрать. */
 export async function getInboxTasks(): Promise<TaskWithContext[]> {
   await schemaReady();

@@ -235,6 +235,11 @@ export async function seedDemo(db: DrizzleDb): Promise<void> {
       personId: i % 5 === 2 ? at(ppl, i) : null,
     };
   });
+  // Пара задач с подробным описанием (база знаний с фото).
+  taskVals[2].body =
+    "<h2>Введение курсовой</h2><p>Обосновать актуальность, поставить цель и задачи.</p><ul><li>Актуальность — 1 абзац</li><li>Цель + 3–4 задачи</li><li>Объект и предмет исследования</li></ul><blockquote>Согласовать формулировки с научруком до написания глав.</blockquote>";
+  taskVals[17].body =
+    "<h2>CI для пет-проекта</h2><p>Настроить автосборку и тесты на каждый пуш.</p><ul><li>GitHub Actions: lint + build + test</li><li>Кэш зависимостей</li><li>Бейдж статуса в README</li></ul>";
   // Несколько гарантированно просроченных и «на сегодня».
   taskVals.push(
     { title: "Сдать лабу по матанализу", areaId: aUni, subjectId: ma, scheduledDate: iso(-1), priority: 3 },
