@@ -122,6 +122,8 @@ export const areas = sqliteTable(
     name: text("name").notNull(),
     color: text("color"),
     icon: text("icon"),
+    /** База знаний: свободное описание с фото (HTML из RichEditor). */
+    body: text("body"),
     position: integer("position").notNull().default(0),
     archivedAt: integer("archived_at", { mode: "timestamp_ms" }),
     createdAt: createdAt(),
@@ -146,6 +148,8 @@ export const projects = sqliteTable(
     id: id(),
     name: text("name").notNull(),
     notes: text("notes"),
+    /** База знаний: свободное описание с фото (HTML из RichEditor). */
+    body: text("body"),
     areaId: text("area_id").references(() => areas.id, {
       onDelete: "set null",
     }),
@@ -177,6 +181,8 @@ export const tasks = sqliteTable(
     id: id(),
     title: text("title").notNull(),
     notes: text("notes"),
+    /** База знаний: свободное описание с фото (HTML из RichEditor). */
+    body: text("body"),
     status: text("status").$type<TaskStatus>().notNull().default("open"),
     projectId: text("project_id").references(() => projects.id, {
       onDelete: "set null",
@@ -226,6 +232,8 @@ export const subjects = sqliteTable(
     teacher: text("teacher"),
     color: text("color"),
     icon: text("icon"),
+    /** База знаний: свободное описание с фото (HTML из RichEditor). */
+    body: text("body"),
     areaId: text("area_id").references(() => areas.id, { onDelete: "set null" }),
     /** Кредиты/зач. единицы — для взвешенного среднего и недельной нагрузки. */
     credits: integer("credits"),
@@ -261,6 +269,8 @@ export const lessons = sqliteTable(
     location: text("location"),
     kind: text("kind").$type<LessonKind>().notNull().default("lecture"),
     note: text("note"),
+    /** База знаний: свободное описание с фото (HTML из RichEditor). */
+    body: text("body"),
     position: integer("position").notNull().default(0),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
@@ -888,6 +898,8 @@ export const people = sqliteTable(
     /** День рождения: YYYY-MM-DD (год может быть 0001, если неизвестен). */
     birthday: text("birthday"),
     note: text("note"),
+    /** База знаний: свободное досье с фото (HTML из RichEditor). */
+    body: text("body"),
     color: text("color"),
     icon: text("icon"),
     /** Ссылка на аватар (картинка в базе): /api/images/<id>. */

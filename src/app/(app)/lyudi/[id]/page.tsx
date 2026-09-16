@@ -21,6 +21,7 @@ import { DebtCard, NewDebtButton } from "@/components/app/finance2-items";
 import { MeetingCard, NewMeetingButton } from "@/components/app/meeting-items";
 import { EditPersonButton } from "@/components/app/crm-buttons";
 import { NewTaskButton } from "@/components/app/buttons";
+import { EntityNotes } from "@/components/app/EntityNotes";
 
 export const dynamic = "force-dynamic";
 
@@ -176,6 +177,17 @@ export default async function PersonDetailPage({
           {person.note}
         </p>
       )}
+
+      {/* Досье — свободное описание с фото */}
+      <div className="mb-8">
+        <EntityNotes
+          kind="person"
+          id={id}
+          initialHTML={person.body ?? ""}
+          title="Досье"
+          placeholder="Всё об этом человеке: как познакомились, что важно помнить, фото… Перетащи фото или жми «/»."
+        />
+      </div>
 
       {/* Встречи */}
       <section className="mb-8">

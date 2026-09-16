@@ -901,6 +901,50 @@ export async function autosaveMeeting(
   await db.update(meetings).set(patch).where(eq(meetings.id, id));
 }
 
+/* ──────────  База знаний: свободное описание с фото у сущностей  ────────── */
+
+export type NotableKind =
+  | "person"
+  | "project"
+  | "area"
+  | "subject"
+  | "lesson"
+  | "task";
+
+/**
+ * Автосохранение «базы знаний» (HTML из того же редактора, что и конспекты)
+ * для любой сущности. Без revalidate — чтобы не дёргать рендер при наборе.
+ */
+export async function autosaveEntityBody(
+  kind: NotableKind,
+  id: string,
+  html: string,
+) {
+  await schemaReady();
+  const body = html.length > 200_000 ? html.slice(0, 200_000) : html;
+  const patch = { body: body || null, updatedAt: new Date() };
+  switch (kind) {
+    case "person":
+      await db.update(people).set(patch).where(eq(people.id, id));
+      break;
+    case "project":
+      await db.update(projects).set(patch).where(eq(projects.id, id));
+      break;
+    case "area":
+      await db.update(areas).set(patch).where(eq(areas.id, id));
+      break;
+    case "subject":
+      await db.update(subjects).set(patch).where(eq(subjects.id, id));
+      break;
+    case "lesson":
+      await db.update(lessons).set(patch).where(eq(lessons.id, id));
+      break;
+    case "task":
+      await db.update(tasks).set(patch).where(eq(tasks.id, id));
+      break;
+  }
+}
+
 const updateMeetingSchema = z.object({
   title: z.string().trim().max(300).optional(),
   date: z
