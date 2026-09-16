@@ -3,13 +3,14 @@
 /*
  * Двигатель напоминаний: пока приложение открыто, следит за задачами на сегодня
  * с заданным временем и в нужную минуту показывает тост (и системное уведомление,
- * если разрешено). Фоновые пуши при закрытом приложении — отдельная задача (web push).
+ * если разрешено). В тосте можно отложить напоминание («+1 час» / «Завтра»).
+ * Фоновые пуши при закрытом приложении — отдельная задача (web push).
  */
 
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "./toast";
-import { toggleTask } from "@/lib/actions";
+import { toggleTask, updateTask } from "@/lib/actions";
 
 type Rem = { id: string; title: string; time: string };
 const STORE = "parviz-reminded";
@@ -26,10 +27,11 @@ function saveFired(m: Record<string, true>) {
     localStorage.setItem(STORE, JSON.stringify(m));
   } catch {}
 }
+const pad = (n: number) => String(n).padStart(2, "0");
+const ymd = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const hm = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 function nowHM(): string {
-  const d = new Date();
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `${p(d.getHours())}:${p(d.getMinutes())}`;
+  return hm(new Date());
 }
 
 export function ReminderEngine() {
@@ -37,6 +39,8 @@ export function ReminderEngine() {
   const router = useRouter();
   const tasksRef = useRef<Rem[]>([]);
   const dayRef = useRef<string>("");
+  // Синхронная защита от повторного показа (в т.ч. при гонке двух проверок).
+  const firedRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     let alive = true;
@@ -49,8 +53,53 @@ export function ReminderEngine() {
         if (!alive) return;
         tasksRef.current = json.tasks;
         // Новый день — забываем отметки о прошлых напоминаниях.
-        if (dayRef.current && dayRef.current !== json.today) saveFired({});
+        if (dayRef.current && dayRef.current !== json.today) {
+          saveFired({});
+          firedRef.current.clear();
+        }
         dayRef.current = json.today;
+      } catch {}
+    }
+
+    // Отложить напоминание: перенести время задачи и разрешить повторный показ.
+    async function snooze(task: Rem, kind: "hour" | "tomorrow") {
+      const d = new Date();
+      let newDate: string;
+      let newTime: string;
+      let label: string;
+      if (kind === "hour") {
+        d.setTime(Date.now() + 60 * 60_000);
+        newDate = ymd(d);
+        newTime = hm(d);
+        label = `до ${newTime}`;
+      } else {
+        d.setDate(d.getDate() + 1);
+        newDate = ymd(d);
+        newTime = task.time; // то же время, но завтра
+        label = `на завтра, ${newTime}`;
+      }
+
+      // Обновляем локальное состояние движка, чтобы не сработало тут же снова.
+      if (newDate === dayRef.current) {
+        const t = tasksRef.current.find((x) => x.id === task.id);
+        if (t) t.time = newTime;
+      } else {
+        tasksRef.current = tasksRef.current.filter((x) => x.id !== task.id);
+      }
+      const fired = loadFired();
+      for (const k of [`${task.id}:${dayRef.current}`, `${task.id}:${newDate}`]) {
+        delete fired[k];
+        firedRef.current.delete(k);
+      }
+      saveFired(fired);
+
+      // Подтверждаем сразу, задачу переносим в фоне.
+      toast({ title: "Отложено", body: label, duration: 3000 });
+      try {
+        await updateTask(task.id, {
+          scheduledDate: newDate,
+          scheduledTime: newTime,
+        });
       } catch {}
     }
 
@@ -65,6 +114,8 @@ export function ReminderEngine() {
             label: "Выполнить",
             onClick: () => void toggleTask(task.id, true).catch(() => {}),
           },
+          { label: "+1 час", onClick: () => void snooze(task, "hour") },
+          { label: "Завтра", onClick: () => void snooze(task, "tomorrow") },
         ],
       });
       try {
@@ -93,8 +144,9 @@ export function ReminderEngine() {
       let changed = false;
       for (const task of tasksRef.current) {
         const key = `${task.id}:${day}`;
-        if (fired[key]) continue;
+        if (firedRef.current.has(key) || fired[key]) continue;
         if (task.time <= now) {
+          firedRef.current.add(key); // синхронно застолбили — гонки не будет
           fired[key] = true;
           changed = true;
           fireReminder(task);

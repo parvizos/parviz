@@ -105,7 +105,7 @@ function ToastViewport({
             </button>
           </div>
           {t.actions && t.actions.length > 0 && (
-            <div className="flex gap-1 border-t border-border px-2 py-1.5">
+            <div className="flex flex-wrap gap-1 border-t border-border px-2 py-1.5">
               {t.actions.map((a, i) => (
                 <button
                   key={i}
