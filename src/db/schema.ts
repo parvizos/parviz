@@ -516,6 +516,8 @@ export const journal = sqliteTable("journal", {
   date: text("date").notNull().unique(),
   mood: integer("mood"),
   body: text("body"),
+  /** Теги записи (#настя #учёба) — для поиска и фильтра. */
+  tags: text("tags", { mode: "json" }).$type<string[]>(),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });

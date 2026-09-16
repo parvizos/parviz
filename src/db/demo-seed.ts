@@ -339,12 +339,23 @@ export async function seedDemo(db: DrizzleDb): Promise<void> {
   /* ── Ежедневник ── */
   const journalVals: (typeof journal.$inferInsert)[] = [];
   const moods = [5, 4, 3, 4, 5, 2, 4, 3, 5, 4];
+  const journalTagSets = [
+    ["учёба", "матан"],
+    ["настя"],
+    ["друзья"],
+    ["спорт", "зал"],
+    ["работа", "стажировка"],
+    ["дом"],
+    ["учёба", "код"],
+    ["настя", "кино"],
+  ];
   for (let i = 0; i < 35; i++) {
     if (i % 5 === 3) continue; // не каждый день
     journalVals.push({
       date: iso(-i),
       mood: at(moods, i),
       body: `<p>${at(["Продуктивный день — закрыл пару задач.", "Учился весь вечер, устал.", "Гулял с друзьями, отдохнул.", "Тренировка + немного кода.", "Ничего особенного, обычный день."], i)}</p>`,
+      tags: i % 2 === 0 ? at(journalTagSets, i) : null,
     });
   }
   await db.insert(journal).values(journalVals);

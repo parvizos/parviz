@@ -16,6 +16,8 @@ import {
 } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import { db, schemaReady } from "@/db";
+import { stripHtml } from "@/lib/text";
+import { tagsOf } from "@/lib/journal-tags";
 import {
   areas,
   projects,
@@ -562,6 +564,47 @@ export async function getDayTasks(date: string): Promise<TaskWithContext[]> {
 export async function getRecentJournalEntries(limit = 20): Promise<Journal[]> {
   await schemaReady();
   return db.select().from(journal).orderBy(desc(journal.date)).limit(limit);
+}
+
+/** Поиск по дневнику: по тексту записи и/или по тегу. Пустые дни отсеиваем. */
+export async function searchJournal(opts: {
+  q?: string;
+  tag?: string;
+}): Promise<Journal[]> {
+  await schemaReady();
+  const rows = await db.select().from(journal).orderBy(desc(journal.date));
+  const q = opts.q?.trim().toLowerCase();
+  const tag = opts.tag?.trim().toLowerCase();
+  return rows.filter((r) => {
+    const tags = tagsOf(r.tags);
+    if (!r.body && !r.mood && tags.length === 0) return false;
+    if (tag && !tags.some((t) => t.toLowerCase() === tag)) return false;
+    if (q) {
+      const hay = `${stripHtml(r.body)} ${tags.join(" ")}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+/** Все теги дневника с числом записей — для облака фильтров. */
+export async function getAllJournalTags(): Promise<
+  { tag: string; count: number }[]
+> {
+  await schemaReady();
+  const rows = await db.select({ tags: journal.tags }).from(journal);
+  const counts = new Map<string, { tag: string; count: number }>();
+  for (const r of rows) {
+    for (const t of tagsOf(r.tags)) {
+      const key = t.toLowerCase();
+      const e = counts.get(key);
+      if (e) e.count += 1;
+      else counts.set(key, { tag: t, count: 1 });
+    }
+  }
+  return [...counts.values()].sort(
+    (a, b) => b.count - a.count || a.tag.localeCompare(b.tag),
+  );
 }
 
 /* ───────────────────────  Финансы  ─────────────────────── */

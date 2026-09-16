@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import {
   getJournalEntry,
   getDayTasks,
@@ -16,6 +16,7 @@ import {
   diffDays,
 } from "@/lib/dates";
 import { moodOf } from "@/lib/journal-format";
+import { tagsOf } from "@/lib/journal-tags";
 import { excerpt } from "@/lib/text";
 import { JournalEditor } from "./JournalEditor";
 import { DayJump } from "./DayJump";
@@ -85,6 +86,13 @@ export async function DayView({ date }: { date: string }) {
               Сегодня
             </Link>
           )}
+          <Link
+            href="/dnevnik/poisk"
+            aria-label="Поиск по дневнику"
+            className="flex h-9 items-center gap-1.5 rounded-xl border border-border px-3 text-[13px] text-muted transition-colors hover:bg-surface-2 hover:text-text"
+          >
+            <Search size={15} /> Поиск
+          </Link>
         </div>
       </div>
 
@@ -94,6 +102,7 @@ export async function DayView({ date }: { date: string }) {
           date={date}
           initialMood={entry?.mood ?? null}
           initialBody={entry?.body ?? null}
+          initialTags={tagsOf(entry?.tags)}
         />
       </div>
 
@@ -150,6 +159,7 @@ export async function DayView({ date }: { date: string }) {
           <div className="flex flex-col gap-1.5">
             {recentOther.map((e) => {
               const m = moodOf(e.mood);
+              const ts = tagsOf(e.tags);
               return (
                 <Link
                   key={e.id}
@@ -163,6 +173,18 @@ export async function DayView({ date }: { date: string }) {
                   <span className="min-w-0 flex-1 truncate text-[13.5px] text-text">
                     {excerpt(e.body, 90) || (m ? m.label : "")}
                   </span>
+                  {ts.length > 0 && (
+                    <span className="hidden shrink-0 items-center gap-1 sm:flex">
+                      {ts.slice(0, 3).map((t) => (
+                        <span
+                          key={t}
+                          className="rounded bg-surface-2 px-1.5 py-0.5 text-[11px] text-muted"
+                        >
+                          #{t}
+                        </span>
+                      ))}
+                    </span>
+                  )}
                 </Link>
               );
             })}

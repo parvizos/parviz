@@ -473,6 +473,7 @@ const upsertJournalSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   mood: z.coerce.number().int().min(1).max(5).nullable().optional(),
   body: z.string().max(200_000).nullable().optional(),
+  tags: z.array(z.string().max(30)).max(16).nullable().optional(),
 });
 
 export type UpsertJournalInput = {
@@ -505,22 +506,25 @@ export async function upsertJournal(date: string, input: UpsertJournalInput) {
 /** Тихое авто-сохранение записи дня (без ревалидации всего приложения). */
 export async function autosaveJournal(
   date: string,
-  input: { mood?: number | null; body?: string | null },
+  input: { mood?: number | null; body?: string | null; tags?: string[] | null },
 ) {
   await schemaReady();
   const data = upsertJournalSchema.parse({ date, ...input });
+  const tags = data.tags && data.tags.length > 0 ? data.tags : null;
   await db
     .insert(journal)
     .values({
       date: data.date,
       mood: data.mood ?? null,
       body: data.body ?? null,
+      tags,
     })
     .onConflictDoUpdate({
       target: journal.date,
       set: {
         mood: data.mood ?? null,
         body: data.body ?? null,
+        tags,
         updatedAt: new Date(),
       },
     });
