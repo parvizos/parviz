@@ -6,6 +6,7 @@ import { IconButton } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
 import { Sidebar } from "./Sidebar";
 import { useUi } from "./ui-context";
+import { DemoBanner } from "./DemoBanner";
 
 type AreaLink = {
   id: string;
@@ -18,10 +19,12 @@ type AreaLink = {
 export function AppShell({
   counts,
   areas,
+  demo = false,
   children,
 }: {
   counts: { inbox: number; today: number };
   areas: AreaLink[];
+  demo?: boolean;
   children: ReactNode;
 }) {
   const [drawer, setDrawer] = useState(false);
@@ -58,6 +61,7 @@ export function AppShell({
       )}
 
       <div className={cn(focusMode ? "" : "lg:pl-[264px]")}>
+        {demo && <DemoBanner />}
         {/* Верхняя панель — только на телефоне */}
         <header
           className={cn(

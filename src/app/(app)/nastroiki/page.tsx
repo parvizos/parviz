@@ -2,7 +2,9 @@ import { Download, Database, Clock, ShieldCheck, Table2 } from "lucide-react";
 import { listBackups } from "@/lib/backup";
 import { getServerHealth } from "@/lib/health";
 import { appTimeZone } from "@/lib/dates";
+import { currentWorkspace, demoAvailable } from "@/db";
 import { ServerHealth } from "@/components/app/ServerHealth";
+import { DemoSettings } from "@/components/app/DemoSettings";
 import { PageHeader } from "@/components/ui/misc";
 
 export const metadata = { title: "Настройки" };
@@ -37,6 +39,17 @@ export default async function SettingsPage() {
           Здоровье сервера
         </h2>
         <ServerHealth initial={health} />
+      </section>
+
+      {/* Демо-режим */}
+      <section className="mb-8">
+        <h2 className="mb-2.5 px-1 text-[13px] font-semibold uppercase tracking-wide text-muted">
+          Демо-режим
+        </h2>
+        <DemoSettings
+          workspace={currentWorkspace()}
+          available={demoAvailable}
+        />
       </section>
 
       {/* Данные */}

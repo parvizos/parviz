@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { UiProvider } from "@/components/app/ui-context";
 import { AppShell } from "@/components/app/AppShell";
+import { currentWorkspace } from "@/db";
 import { backupIfDue } from "@/lib/backup";
 import { baseCurrency } from "@/lib/currency";
 import { postDuePlanned } from "@/lib/finance-actions";
@@ -72,7 +73,7 @@ export default async function AppLayout({
       organizationOptions={organizationOptions}
       baseCurrency={baseCurrency()}
     >
-      <AppShell counts={counts} areas={areaLinks}>
+      <AppShell counts={counts} areas={areaLinks} demo={currentWorkspace() === "demo"}>
         {children}
       </AppShell>
     </UiProvider>
