@@ -5,7 +5,7 @@ import { moodOf } from "@/lib/journal-format";
 import { tagsOf } from "@/lib/journal-tags";
 import { excerpt } from "@/lib/text";
 import { ruWeekday, ruMonthDayShort } from "@/lib/dates";
-import { cn } from "@/lib/cn";
+import { CollapsibleChips } from "@/components/app/CollapsibleChips";
 import { JournalSearchBox } from "@/components/app/JournalSearchBox";
 import { EmptyState } from "@/components/ui/misc";
 
@@ -62,32 +62,20 @@ export default async function JournalSearchPage({
 
       {/* Облако тегов */}
       {allTags.length > 0 && (
-        <div className="mb-6 flex flex-wrap gap-1.5">
-          {allTags.map(({ tag: t, count }) => {
-            const active = tag?.toLowerCase() === t.toLowerCase();
-            return (
-              <Link
-                key={t}
-                href={hrefFor(active ? undefined : t)}
-                className={cn(
-                  "inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-[12.5px] font-medium transition-colors",
-                  active
-                    ? "border-accent bg-accent text-accent-fg"
-                    : "border-border bg-surface text-muted hover:border-border-strong hover:bg-surface-2 hover:text-text",
-                )}
-              >
-                #{t}
-                <span
-                  className={cn(
-                    "tabular",
-                    active ? "text-accent-fg/70" : "text-faint",
-                  )}
-                >
-                  {count}
-                </span>
-              </Link>
-            );
-          })}
+        <div className="mb-6">
+          <CollapsibleChips
+            limit={12}
+            chips={allTags.map(({ tag: t, count }) => {
+              const active = tag?.toLowerCase() === t.toLowerCase();
+              return {
+                key: t,
+                label: `#${t}`,
+                count,
+                href: hrefFor(active ? undefined : t),
+                active,
+              };
+            })}
+          />
         </div>
       )}
 

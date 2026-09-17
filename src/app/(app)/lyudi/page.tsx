@@ -7,6 +7,7 @@ import { parseSocials } from "@/lib/socials";
 import { cn } from "@/lib/cn";
 import { PersonCard } from "@/components/app/crm-items";
 import { PeopleSearchBox } from "@/components/app/PeopleSearchBox";
+import { CollapsibleChips, type FilterChip } from "@/components/app/CollapsibleChips";
 import { NewPersonButton } from "@/components/app/crm-buttons";
 import { Avatar } from "@/components/app/Avatar";
 import { PageHeader, EmptyState } from "@/components/ui/misc";
@@ -20,35 +21,6 @@ function plPeople(n: number): string {
   if (a === 1 && b !== 11) return "человек";
   if (a >= 2 && a <= 4 && (b < 10 || b >= 20)) return "человека";
   return "человек";
-}
-
-function OrgChip({
-  href,
-  active,
-  label,
-  count,
-}: {
-  href: string;
-  active: boolean;
-  label: string;
-  count: number;
-}) {
-  return (
-    <Link
-      href={href}
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[12.5px] font-medium transition-colors",
-        active
-          ? "border-accent bg-accent text-accent-fg"
-          : "border-border bg-surface text-muted hover:border-border-strong hover:bg-surface-2 hover:text-text",
-      )}
-    >
-      {label}
-      <span className={cn("tabular", active ? "text-accent-fg/70" : "text-faint")}>
-        {count}
-      </span>
-    </Link>
-  );
 }
 
 function MiniPerson({
@@ -211,25 +183,33 @@ export default async function PeoplePage({
           )}
 
           {orgChips.length > 0 && (
-            <div className="mb-4 flex flex-wrap gap-1.5">
-              <OrgChip href={orgHref()} active={!org} label="Все" count={all.length} />
-              {orgChips.map((o) => (
-                <OrgChip
-                  key={o.id}
-                  href={orgHref(org === o.id ? undefined : o.id)}
-                  active={org === o.id}
-                  label={o.name}
-                  count={o.count}
-                />
-              ))}
-              {noOrgCount > 0 && (
-                <OrgChip
-                  href={orgHref(org === "none" ? undefined : "none")}
-                  active={org === "none"}
-                  label="Без организации"
-                  count={noOrgCount}
-                />
-              )}
+            <div className="mb-4">
+              <CollapsibleChips
+                limit={10}
+                chips={[
+                  { key: "all", label: "Все", count: all.length, href: orgHref(), active: !org },
+                  ...orgChips.map(
+                    (o): FilterChip => ({
+                      key: o.id,
+                      label: o.name,
+                      count: o.count,
+                      href: orgHref(org === o.id ? undefined : o.id),
+                      active: org === o.id,
+                    }),
+                  ),
+                  ...(noOrgCount > 0
+                    ? [
+                        {
+                          key: "none",
+                          label: "Без организации",
+                          count: noOrgCount,
+                          href: orgHref(org === "none" ? undefined : "none"),
+                          active: org === "none",
+                        } as FilterChip,
+                      ]
+                    : []),
+                ]}
+              />
             </div>
           )}
 
