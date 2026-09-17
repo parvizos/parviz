@@ -913,7 +913,8 @@ export type NotableKind =
   | "area"
   | "subject"
   | "lesson"
-  | "task";
+  | "task"
+  | "organization";
 
 /**
  * Автосохранение «базы знаний» (HTML из того же редактора, что и конспекты)
@@ -945,6 +946,9 @@ export async function autosaveEntityBody(
       break;
     case "task":
       await db.update(tasks).set(patch).where(eq(tasks.id, id));
+      break;
+    case "organization":
+      await db.update(organizations).set(patch).where(eq(organizations.id, id));
       break;
   }
 }

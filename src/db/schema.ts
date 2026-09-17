@@ -855,6 +855,8 @@ export const organizations = sqliteTable(
     kind: text("kind").$type<OrgKind>().notNull().default("other"),
     note: text("note"),
     url: text("url"),
+    /** База знаний: свободное описание с фото (HTML из RichEditor). */
+    body: text("body"),
     color: text("color"),
     icon: text("icon"),
     position: integer("position").notNull().default(0),

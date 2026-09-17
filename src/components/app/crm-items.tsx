@@ -115,7 +115,21 @@ export function PersonCard({
   );
 }
 
-export function OrgCard({ org }: { org: OrgWithCount }) {
+export type OrgMemberPreview = {
+  id: string;
+  name: string;
+  avatar: string | null;
+  icon: string | null;
+  color: string | null;
+};
+
+export function OrgCard({
+  org,
+  members = [],
+}: {
+  org: OrgWithCount;
+  members?: OrgMemberPreview[];
+}) {
   const meta = ORG_KIND_META[org.kind];
   return (
     <Link
@@ -123,7 +137,7 @@ export function OrgCard({ org }: { org: OrgWithCount }) {
       className="group flex items-center gap-3.5 rounded-2xl border border-border bg-surface p-4 transition-colors hover:border-border-strong hover:bg-surface-2"
     >
       <div
-        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[18px]"
+        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-[20px]"
         style={{
           background: `color-mix(in oklab, ${areaColor(org.color)} 16%, transparent)`,
           color: areaColor(org.color),
@@ -138,10 +152,33 @@ export function OrgCard({ org }: { org: OrgWithCount }) {
         <div className="text-[12.5px] text-muted">
           {meta.label} · {org.peopleCount} чел.
         </div>
+        {members.length > 0 && (
+          <div className="mt-2 flex items-center -space-x-1.5">
+            {members.slice(0, 5).map((m) => (
+              <span
+                key={m.id}
+                className="rounded-full ring-2 ring-surface transition-[ring-color] group-hover:ring-surface-2"
+              >
+                <Avatar
+                  name={m.name}
+                  avatar={m.avatar}
+                  icon={m.icon}
+                  color={m.color}
+                  size={22}
+                />
+              </span>
+            ))}
+            {org.peopleCount > 5 && (
+              <span className="pl-3 text-[11px] text-faint">
+                +{org.peopleCount - 5}
+              </span>
+            )}
+          </div>
+        )}
       </div>
       <ChevronRight
         size={18}
-        className="shrink-0 text-faint transition-transform group-hover:translate-x-0.5"
+        className="shrink-0 self-center text-faint transition-transform group-hover:translate-x-0.5"
       />
     </Link>
   );

@@ -132,8 +132,8 @@ export async function seedDemo(db: DrizzleDb): Promise<void> {
   const orgRows = await db
     .insert(organizations)
     .values([
-      { name: "МГУ", kind: "university", color: "#5b5bd6", icon: "🎓" },
-      { name: "Кофейня «Бариста»", kind: "company", color: "#c9832a", icon: "☕", note: "Подработка по выходным." },
+      { name: "МГУ", kind: "university", color: "#5b5bd6", icon: "🎓", body: "<h2>Мой вуз</h2><p>Факультет ВМК, 3 курс. Корпус на Ленинских горах.</p><ul><li>Деканат — ауд. 605</li><li>Стипендия приходит 25-го</li><li>Библиотека работает до 20:00</li></ul>" },
+      { name: "Кофейня «Бариста»", kind: "company", color: "#c9832a", icon: "☕", note: "Подработка по выходным.", body: "<h2>Подработка</h2><p>Смены сб-вс, ставка почасовая. Управляющий — Марк.</p><blockquote>Форма — чёрная футболка, приходить за 10 минут.</blockquote>" },
       { name: "IT-стартап «Кодзилла»", kind: "company", color: "#0f9a8f", icon: "🚀" },
       { name: "Спортзал «Титан»", kind: "other", color: "#d64545", icon: "🏋️" },
     ])
