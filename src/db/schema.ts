@@ -902,6 +902,8 @@ export const people = sqliteTable(
     note: text("note"),
     /** База знаний: свободное досье с фото (HTML из RichEditor). */
     body: text("body"),
+    /** Избранный — закрепляется наверху списка людей. */
+    favorite: integer("favorite", { mode: "boolean" }).notNull().default(false),
     color: text("color"),
     icon: text("icon"),
     /** Ссылка на аватар (картинка в базе): /api/images/<id>. */

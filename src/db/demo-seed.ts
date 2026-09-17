@@ -186,6 +186,7 @@ export async function seedDemo(db: DrizzleDb): Promise<void> {
         socials: socialsFor(i),
         note: i % 4 === 0 ? "Познакомились в универе." : null,
         body: personBodies[i] ?? null,
+        favorite: [1, 8, 10].includes(i),
         position: i,
       })),
     )

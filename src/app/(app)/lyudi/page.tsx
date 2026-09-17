@@ -53,14 +53,22 @@ function MiniPerson({
   );
 }
 
+const SORTS: { key: string; label: string }[] = [
+  { key: "name", label: "Имя" },
+  { key: "recent", label: "Недавние" },
+  { key: "birthday", label: "Дни рождения" },
+  { key: "meetings", label: "Встречи" },
+];
+
 export default async function PeoplePage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; org?: string }>;
+  searchParams: Promise<{ q?: string; org?: string; sort?: string }>;
 }) {
   const sp = await searchParams;
   const q = sp.q?.trim() ?? "";
   const org = sp.org?.trim() || undefined;
+  const sort = SORTS.some((s) => s.key === sp.sort) ? sp.sort! : "name";
   const today = todayISO();
   const all = await getPeopleWithStats();
 
@@ -96,6 +104,23 @@ export default async function PeoplePage({
     return true;
   });
 
+  // Сортировка: избранные всегда наверху, затем по выбранному критерию.
+  const sorted = [...filtered].sort((a, b) => {
+    if (a.favorite !== b.favorite) return a.favorite ? -1 : 1;
+    if (sort === "recent") {
+      return (b.lastMeetingDate ?? "").localeCompare(a.lastMeetingDate ?? "");
+    }
+    if (sort === "birthday") {
+      const da = daysUntilBirthday(a.birthday, today) ?? 100000;
+      const db = daysUntilBirthday(b.birthday, today) ?? 100000;
+      return da - db || a.name.localeCompare(b.name);
+    }
+    if (sort === "meetings") {
+      return b.meetingCount - a.meetingCount || a.name.localeCompare(b.name);
+    }
+    return a.name.localeCompare(b.name);
+  });
+
   const hasFilter = !!(q || org);
 
   // Виджеты-подсказки (только без фильтра).
@@ -118,6 +143,16 @@ export default async function PeoplePage({
     const params = new URLSearchParams();
     if (q) params.set("q", q);
     if (nextOrg) params.set("org", nextOrg);
+    if (sort !== "name") params.set("sort", sort);
+    const qs = params.toString();
+    return `/lyudi${qs ? `?${qs}` : ""}`;
+  }
+
+  function sortHref(nextSort: string) {
+    const params = new URLSearchParams();
+    if (q) params.set("q", q);
+    if (org) params.set("org", org);
+    if (nextSort !== "name") params.set("sort", nextSort);
     const qs = params.toString();
     return `/lyudi${qs ? `?${qs}` : ""}`;
   }
@@ -213,7 +248,7 @@ export default async function PeoplePage({
             </div>
           )}
 
-          {filtered.length === 0 ? (
+          {sorted.length === 0 ? (
             <EmptyState
               icon={<Users size={22} />}
               title="Никого не нашлось"
@@ -221,11 +256,29 @@ export default async function PeoplePage({
             />
           ) : (
             <>
-              <p className="mb-3 px-1 text-[12.5px] text-faint">
-                {filtered.length} {plPeople(filtered.length)}
-              </p>
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2 px-1">
+                <p className="text-[12.5px] text-faint">
+                  {sorted.length} {plPeople(sorted.length)}
+                </p>
+                <div className="flex flex-wrap gap-0.5">
+                  {SORTS.map((s) => (
+                    <Link
+                      key={s.key}
+                      href={sortHref(s.key)}
+                      className={cn(
+                        "rounded-lg px-2.5 py-1 text-[12px] font-medium transition-colors",
+                        sort === s.key
+                          ? "bg-accent text-accent-fg"
+                          : "text-muted hover:bg-surface-2 hover:text-text",
+                      )}
+                    >
+                      {s.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {filtered.map((p) => (
+                {sorted.map((p) => (
                   <PersonCard key={p.id} person={p} today={today} />
                 ))}
               </div>

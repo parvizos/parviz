@@ -979,3 +979,9 @@ export async function deletePerson(id: string) {
   await db.delete(people).where(eq(people.id, id));
   revalidateAll();
 }
+
+export async function togglePersonFavorite(id: string, favorite: boolean) {
+  await schemaReady();
+  await db.update(people).set({ favorite }).where(eq(people.id, id));
+  revalidateAll();
+}
