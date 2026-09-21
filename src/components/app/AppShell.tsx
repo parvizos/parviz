@@ -7,6 +7,7 @@ import { cn } from "@/lib/cn";
 import { Sidebar } from "./Sidebar";
 import { useUi } from "./ui-context";
 import { DemoBanner } from "./DemoBanner";
+import type { PageTreeNode } from "@/lib/queries";
 
 type AreaLink = {
   id: string;
@@ -19,11 +20,13 @@ type AreaLink = {
 export function AppShell({
   counts,
   areas,
+  pages,
   demo = false,
   children,
 }: {
   counts: { inbox: number; today: number };
   areas: AreaLink[];
+  pages: PageTreeNode[];
   demo?: boolean;
   children: ReactNode;
 }) {
@@ -39,7 +42,7 @@ export function AppShell({
           focusMode && "lg:hidden",
         )}
       >
-        <Sidebar counts={counts} areas={areas} />
+        <Sidebar counts={counts} areas={areas} pages={pages} />
       </aside>
 
       {/* Выезжающее меню на телефоне */}
@@ -54,6 +57,7 @@ export function AppShell({
             <Sidebar
               counts={counts}
               areas={areas}
+              pages={pages}
               onNavigate={() => setDrawer(false)}
             />
           </aside>

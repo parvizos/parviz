@@ -33,7 +33,9 @@ import {
   organizations,
   people,
   meetings,
+  pages,
   exchangeRates,
+  type Page,
   type Task,
   type Area,
   type Subject,
@@ -1146,4 +1148,79 @@ export async function getOrganizationOptions() {
     .from(organizations)
     .where(isNull(organizations.archivedAt))
     .orderBy(asc(organizations.position), asc(organizations.name));
+}
+
+/* ─────────────────────────  Блокнот (страницы)  ───────────────────────── */
+
+export type PageTreeNode = {
+  id: string;
+  parentId: string | null;
+  title: string;
+  icon: string | null;
+  position: number;
+};
+
+/** Все страницы (плоско) для дерева в сайдбаре. */
+export async function getPageTree(): Promise<PageTreeNode[]> {
+  await schemaReady();
+  return db
+    .select({
+      id: pages.id,
+      parentId: pages.parentId,
+      title: pages.title,
+      icon: pages.icon,
+      position: pages.position,
+    })
+    .from(pages)
+    .where(isNull(pages.archivedAt))
+    .orderBy(asc(pages.position), asc(pages.createdAt));
+}
+
+export async function getPage(id: string): Promise<Page | null> {
+  await schemaReady();
+  const [row] = await db.select().from(pages).where(eq(pages.id, id)).limit(1);
+  return row ?? null;
+}
+
+/** Дочерние страницы (parentId === null — верхний уровень). */
+export async function getChildPages(
+  parentId: string | null,
+): Promise<PageTreeNode[]> {
+  await schemaReady();
+  return db
+    .select({
+      id: pages.id,
+      parentId: pages.parentId,
+      title: pages.title,
+      icon: pages.icon,
+      position: pages.position,
+    })
+    .from(pages)
+    .where(
+      and(
+        isNull(pages.archivedAt),
+        parentId ? eq(pages.parentId, parentId) : isNull(pages.parentId),
+      ),
+    )
+    .orderBy(asc(pages.position), asc(pages.createdAt));
+}
+
+/** Цепочка предков от корня до страницы (включительно). */
+export async function getPageBreadcrumbs(
+  id: string,
+): Promise<{ id: string; title: string; icon: string | null }[]> {
+  await schemaReady();
+  const all = await db
+    .select({ id: pages.id, parentId: pages.parentId, title: pages.title, icon: pages.icon })
+    .from(pages);
+  const map = new Map(all.map((p) => [p.id, p]));
+  const chain: { id: string; title: string; icon: string | null }[] = [];
+  let cur = map.get(id);
+  const seen = new Set<string>();
+  while (cur && !seen.has(cur.id)) {
+    seen.add(cur.id);
+    chain.unshift({ id: cur.id, title: cur.title, icon: cur.icon });
+    cur = cur.parentId ? map.get(cur.parentId) : undefined;
+  }
+  return chain;
 }

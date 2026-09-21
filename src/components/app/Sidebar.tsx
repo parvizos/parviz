@@ -40,6 +40,8 @@ import { cn } from "@/lib/cn";
 import { logout } from "@/lib/auth-actions";
 import { areaColor } from "@/lib/task-format";
 import { useUi } from "./ui-context";
+import { PageTree } from "./PageTree";
+import type { PageTreeNode } from "@/lib/queries";
 
 type Counts = { inbox: number; today: number };
 type AreaLink = {
@@ -104,10 +106,12 @@ function isActive(pathname: string, href: string): boolean {
 export function Sidebar({
   counts,
   areas,
+  pages,
   onNavigate,
 }: {
   counts: Counts;
   areas: AreaLink[];
+  pages: PageTreeNode[];
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
@@ -195,6 +199,9 @@ export function Sidebar({
             );
           })}
         </ul>
+
+        {/* Блокнот */}
+        <PageTree pages={pages} onNavigate={onNavigate} />
 
         {/* Сферы */}
         <div className="mt-6 flex items-center justify-between px-3">

@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { eq } from "drizzle-orm";
+import { eq, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { db, schemaReady } from "@/db";
 import { todayISO } from "@/lib/dates";
@@ -19,6 +19,7 @@ import {
   organizations,
   people,
   meetings,
+  pages,
   PROJECT_STATUSES,
   TASK_STATUSES,
   LESSON_KINDS,
@@ -987,5 +988,81 @@ export async function deletePerson(id: string) {
 export async function togglePersonFavorite(id: string, favorite: boolean) {
   await schemaReady();
   await db.update(people).set({ favorite }).where(eq(people.id, id));
+  revalidateAll();
+}
+
+/* ───────────────────────  Блокнот (страницы)  ─────────────────────── */
+
+/** Создать страницу. `parentId` — вложить в родителя, иначе верхний уровень. */
+export async function createPage(input?: {
+  parentId?: string | null;
+  title?: string;
+}): Promise<string> {
+  await schemaReady();
+  const parentId = input?.parentId ?? null;
+  // Позиция — в конец списка соседей.
+  const siblings = await db
+    .select({ position: pages.position })
+    .from(pages)
+    .where(parentId ? eq(pages.parentId, parentId) : isNull(pages.parentId));
+  const position = siblings.reduce((m, s) => Math.max(m, s.position), -1) + 1;
+  const [row] = await db
+    .insert(pages)
+    .values({ parentId, title: (input?.title ?? "").slice(0, 500), position })
+    .returning({ id: pages.id });
+  revalidateAll();
+  return row.id;
+}
+
+const updatePageSchema = z.object({
+  title: z.string().max(500).optional(),
+  icon: z.string().max(20).nullable().optional(),
+});
+export type UpdatePageInput = z.input<typeof updatePageSchema>;
+
+/** Заголовок и иконка попадают в сайдбар — обновляем разметку. */
+export async function updatePage(id: string, input: UpdatePageInput) {
+  await schemaReady();
+  const data = updatePageSchema.parse(input);
+  if (Object.keys(data).length === 0) return;
+  await db
+    .update(pages)
+    .set({ ...data, updatedAt: new Date() })
+    .where(eq(pages.id, id));
+  revalidateAll();
+}
+
+/** Тело в сайдбаре не показывается — без ревалидации, чтобы не мигало при печати. */
+export async function autosavePageBody(id: string, html: string) {
+  await schemaReady();
+  const body = html.length > 200_000 ? html.slice(0, 200_000) : html;
+  await db
+    .update(pages)
+    .set({ body: body || null, updatedAt: new Date() })
+    .where(eq(pages.id, id));
+}
+
+/** Удаляет страницу вместе со всеми вложенными (каскад по коду). */
+export async function deletePage(id: string) {
+  await schemaReady();
+  const all = await db
+    .select({ id: pages.id, parentId: pages.parentId })
+    .from(pages);
+  const childrenOf = new Map<string, string[]>();
+  for (const p of all) {
+    if (!p.parentId) continue;
+    const arr = childrenOf.get(p.parentId) ?? [];
+    arr.push(p.id);
+    childrenOf.set(p.parentId, arr);
+  }
+  const toDelete: string[] = [];
+  const stack = [id];
+  while (stack.length) {
+    const cur = stack.pop()!;
+    toDelete.push(cur);
+    const kids = childrenOf.get(cur);
+    if (kids) stack.push(...kids);
+  }
+  await db.delete(pages).where(inArray(pages.id, toDelete));
   revalidateAll();
 }

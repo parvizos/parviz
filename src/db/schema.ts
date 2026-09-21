@@ -522,6 +522,30 @@ export const journal = sqliteTable("journal", {
   updatedAt: updatedAt(),
 });
 
+/**
+ * Блокнот в стиле Notion: страницы, вложенные друг в друга (parentId).
+ * Тело — HTML из того же блочного редактора. Удаление каскадит по коду.
+ */
+export const pages = sqliteTable(
+  "pages",
+  {
+    id: id(),
+    /** Родительская страница (null — верхний уровень). */
+    parentId: text("parent_id"),
+    title: text("title").notNull().default(""),
+    icon: text("icon"),
+    body: text("body"),
+    position: integer("position").notNull().default(0),
+    archivedAt: integer("archived_at", { mode: "timestamp_ms" }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("pages_parent_idx").on(t.parentId)],
+);
+
+export type Page = typeof pages.$inferSelect;
+export type NewPage = typeof pages.$inferInsert;
+
 export type Area = typeof areas.$inferSelect;
 export type NewArea = typeof areas.$inferInsert;
 export type Project = typeof projects.$inferSelect;

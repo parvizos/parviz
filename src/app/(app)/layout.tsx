@@ -15,6 +15,7 @@ import {
   getCategoryOptions,
   getPersonOptions,
   getOrganizationOptions,
+  getPageTree,
 } from "@/lib/queries";
 
 // Данные читаются из БД на каждый запрос — не пытаемся пререндерить статически.
@@ -32,6 +33,7 @@ export default async function AppLayout({
   const [
     counts,
     areas,
+    pageTree,
     areaOptions,
     projectOptions,
     subjectOptions,
@@ -42,6 +44,7 @@ export default async function AppLayout({
   ] = await Promise.all([
     getSidebarCounts(),
     getAreasWithCounts(),
+    getPageTree(),
     getAreaOptions(),
     getProjectOptions(),
     getSubjectOptions(),
@@ -73,7 +76,12 @@ export default async function AppLayout({
       organizationOptions={organizationOptions}
       baseCurrency={baseCurrency()}
     >
-      <AppShell counts={counts} areas={areaLinks} demo={currentWorkspace() === "demo"}>
+      <AppShell
+        counts={counts}
+        areas={areaLinks}
+        pages={pageTree}
+        demo={currentWorkspace() === "demo"}
+      >
         {children}
       </AppShell>
     </UiProvider>

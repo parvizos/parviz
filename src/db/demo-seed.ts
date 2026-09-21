@@ -36,6 +36,7 @@ import {
   goals,
   goalContributions,
   images,
+  pages,
 } from "./schema";
 import { encryptSecret } from "@/lib/crypto";
 
@@ -45,7 +46,7 @@ const ALL_TABLES = [
   attendance, grades, exams, studySessions, topics, materials, files,
   entityTags, tags, links, lessons, notes, meetings, credentials, journal,
   tasks, people, organizations, accounts, categories, subjects, projects,
-  areas, images, exchangeRates,
+  areas, images, exchangeRates, pages,
 ];
 
 /** Полностью очистить демо-базу (для «Обновить демо-данные»). */
@@ -62,6 +63,17 @@ function iso(offset = 0): string {
 }
 const rub = (n: number) => Math.round(n * 100);
 const at = <T>(arr: T[], i: number): T => arr[((i % arr.length) + arr.length) % arr.length];
+
+/** Чек-лист в формате TipTap (round-trip с редактором). */
+function taskList(items: [string, boolean][]): string {
+  const lis = items
+    .map(
+      ([t, done]) =>
+        `<li data-type="taskItem" data-checked="${done}"><label><input type="checkbox"${done ? ' checked="checked"' : ""}><span></span></label><div><p>${t}</p></div></li>`,
+    )
+    .join("");
+  return `<ul data-type="taskList">${lis}</ul>`;
+}
 
 /** Наполнить демо-базу. Возвращает число созданных задач (для лога). */
 export async function seedDemo(db: DrizzleDb): Promise<void> {
@@ -526,4 +538,118 @@ export async function seedDemo(db: DrizzleDb): Promise<void> {
       position: i,
     })),
   );
+
+  /* ── Блокнот (вложенные страницы, как в Notion) ── */
+  const [pKnowledge] = await db
+    .insert(pages)
+    .values({
+      title: "База знаний",
+      icon: "📚",
+      position: 0,
+      body: "<p>Всё, что нужно помнить: конспекты, шпаргалки, полезные ссылки. Вкладывай страницы друг в друга без ограничений — слева в дереве видно всю структуру.</p>",
+    })
+    .returning({ id: pages.id });
+
+  const [pMath, pProg] = await db
+    .insert(pages)
+    .values([
+      {
+        parentId: pKnowledge.id,
+        title: "Высшая математика",
+        icon: "🧮",
+        position: 0,
+        body: "<h2>Разделы курса</h2><ul><li>Пределы и непрерывность</li><li>Производные</li><li>Интегралы</li><li>Ряды</li></ul>",
+      },
+      {
+        parentId: pKnowledge.id,
+        title: "Программирование",
+        icon: "💻",
+        position: 1,
+        body: "<p>Языки, паттерны, шпаргалки — всё в одном месте.</p>",
+      },
+    ])
+    .returning({ id: pages.id });
+
+  await db.insert(pages).values([
+    {
+      parentId: pMath.id,
+      title: "Интегралы",
+      icon: "➗",
+      position: 0,
+      body: '<h2>Основные приёмы</h2><ul><li>По частям: ∫u dv = uv − ∫v du</li><li>Замена переменной</li><li>Разложение на простые дроби</li></ul><blockquote>Практика решает: 20 задач в неделю — и рука набита.</blockquote>',
+    },
+    {
+      parentId: pMath.id,
+      title: "Матрицы и СЛАУ",
+      icon: "📐",
+      position: 1,
+      body: "<p>Определитель, ранг, обратная матрица, метод Гаусса.</p>",
+    },
+    {
+      parentId: pProg.id,
+      title: "JavaScript — шпаргалка",
+      icon: "🟨",
+      position: 0,
+      body: "<h2>Что вспоминаю чаще всего</h2><ul><li><code>map / filter / reduce</code></li><li>Промисы, <code>async/await</code></li><li>Деструктуризация и spread</li></ul>",
+    },
+  ]);
+
+  const [pGoals] = await db
+    .insert(pages)
+    .values({
+      title: "Цели на год",
+      icon: "🎯",
+      position: 1,
+      body:
+        "<h2>Главное на 2026</h2>" +
+        taskList([
+          ["Закрыть сессию на 4.5+", true],
+          ["Накопить на новый ноутбук", false],
+          ["Пробежать 10 км без остановки", false],
+          ["Прочитать 12 книг", false],
+        ]),
+    })
+    .returning({ id: pages.id });
+
+  await db.insert(pages).values([
+    {
+      parentId: pGoals.id,
+      title: "Спорт-план",
+      icon: "🏋️",
+      position: 0,
+      body: "<h2>Неделя в зале</h2><ul><li>Пн — ноги</li><li>Ср — грудь и спина</li><li>Пт — руки и плечи</li></ul><p>Кардио по выходным, шаги 8000+ каждый день.</p>",
+    },
+    {
+      parentId: pGoals.id,
+      title: "Список книг",
+      icon: "📖",
+      position: 1,
+      body: "<ol><li>Атомные привычки — Джеймс Клир</li><li>Так говорил Заратустра</li><li>Мастер и Маргарита</li><li>Думай медленно, решай быстро</li></ol>",
+    },
+  ]);
+
+  const [pTravel] = await db
+    .insert(pages)
+    .values({
+      title: "Путешествия",
+      icon: "✈️",
+      position: 2,
+      body: "<p>Куда хочу поехать и что там посмотреть.</p>",
+    })
+    .returning({ id: pages.id });
+
+  await db.insert(pages).values({
+    parentId: pTravel.id,
+    title: "Стамбул",
+    icon: "🕌",
+    position: 0,
+    body: "<h2>Маршрут на 5 дней</h2><ul><li>Айя-София и Голубая мечеть</li><li>Гранд-базар</li><li>Прогулка по Босфору на пароме</li><li>Район Балат — фото</li></ul><p><strong>Бюджет:</strong> ~50 000 ₽ на всё.</p>",
+  });
+
+  await db.insert(pages).values({
+    title: "Идеи и мысли",
+    icon: "💡",
+    position: 3,
+    body: "<p>Свалка идей — потом разберу по местам.</p><ul><li>Приложение-трекер привычек</li><li>Телеграм-бот с расписанием пар</li><li>Блог про учёбу в универе</li></ul>",
+  });
 }
