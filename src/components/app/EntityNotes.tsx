@@ -1,7 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { BookText, Check, Loader2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { BookText, Check, Loader2, Maximize2, Minimize2 } from "lucide-react";
+import { cn } from "@/lib/cn";
 import { stripHtml } from "@/lib/text";
 import { autosaveEntityBody, type NotableKind } from "@/lib/actions";
 import { RichEditor } from "./RichEditor";
@@ -20,7 +21,7 @@ function plWords(n: number): string {
 
 /**
  * «База знаний» одной сущности: большое свободное описание с фото.
- * Единый редактор (тот же, что и конспекты) + автосохранение по сущности.
+ * Разворачивается на весь экран отдельным окном (тот же редактор — курсор не теряется).
  */
 export function EntityNotes({
   kind,
@@ -37,7 +38,22 @@ export function EntityNotes({
 }) {
   const [words, setWords] = useState(() => countWords(stripHtml(initialHTML)));
   const [status, setStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const [expanded, setExpanded] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!expanded) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setExpanded(false);
+    };
+    document.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [expanded]);
 
   function markSaved() {
     setStatus("saved");
@@ -58,37 +74,91 @@ export function EntityNotes({
     }, 800);
   }
 
+  const statusEl = (
+    <span className="flex items-center gap-1 text-[12px] text-faint">
+      {status === "saving" && (
+        <>
+          <Loader2 size={12} className="animate-spin" /> Сохраняю…
+        </>
+      )}
+      {status === "saved" && (
+        <>
+          <Check size={12} className="text-success" /> Сохранено
+        </>
+      )}
+      {status === "idle" && words > 0 && `${words} ${plWords(words)}`}
+    </span>
+  );
+
+  const heading = (
+    <h2 className="flex items-center gap-1.5 text-[13px] font-semibold uppercase tracking-wide text-muted">
+      <BookText size={14} />
+      {title}
+    </h2>
+  );
+
   return (
     <section>
-      <div className="mb-2.5 flex items-center gap-2 px-1">
-        <h2 className="flex items-center gap-1.5 text-[13px] font-semibold uppercase tracking-wide text-muted">
-          <BookText size={14} />
-          {title}
-        </h2>
-        <span className="ml-auto flex items-center gap-1 text-[12px] text-faint">
-          {status === "saving" && (
-            <>
-              <Loader2 size={12} className="animate-spin" /> Сохраняю…
-            </>
+      {!expanded && (
+        <div className="mb-2.5 flex items-center gap-2 px-1">
+          {heading}
+          <div className="ml-auto flex items-center gap-2">
+            {statusEl}
+            <button
+              type="button"
+              onClick={() => setExpanded(true)}
+              aria-label="Развернуть на весь экран"
+              title="Развернуть на весь экран"
+              className="flex h-7 w-7 items-center justify-center rounded-lg text-faint transition-colors hover:bg-surface-2 hover:text-text"
+            >
+              <Maximize2 size={15} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div
+        className={cn(
+          expanded
+            ? "fixed inset-0 z-50 flex flex-col bg-bg"
+            : "rounded-2xl border border-border bg-surface p-4 sm:p-5",
+        )}
+      >
+        {expanded && (
+          <div className="flex h-[52px] shrink-0 items-center gap-2 border-b border-border bg-bg/95 px-4 backdrop-blur sm:px-6">
+            {heading}
+            <div className="ml-auto flex items-center gap-2">
+              {statusEl}
+              <button
+                type="button"
+                onClick={() => setExpanded(false)}
+                aria-label="Свернуть"
+                title="Свернуть (Esc)"
+                className="flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[13px] font-medium text-muted transition-colors hover:bg-surface-2 hover:text-text"
+              >
+                <Minimize2 size={15} /> Свернуть
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div
+          className={cn(
+            expanded &&
+              "mx-auto w-full max-w-3xl flex-1 overflow-y-auto px-4 py-6 sm:px-6",
           )}
-          {status === "saved" && (
-            <>
-              <Check size={12} className="text-success" /> Сохранено
-            </>
-          )}
-          {status === "idle" && words > 0 && `${words} ${plWords(words)}`}
-        </span>
-      </div>
-      <div className="rounded-2xl border border-border bg-surface p-4 sm:p-5">
-        <RichEditor
-          initialHTML={initialHTML}
-          placeholder={
-            placeholder ??
-            "Пиши что угодно и вставляй фото: перетащи, вставь из буфера или жми «/». Заметки, идеи, контекст…"
-          }
-          onChange={onBody}
-          minHeightClass="min-h-[30vh]"
-        />
+        >
+          <RichEditor
+            initialHTML={initialHTML}
+            placeholder={
+              placeholder ??
+              "Пиши что угодно и вставляй фото: перетащи, вставь из буфера или жми «/». Заметки, идеи, контекст…"
+            }
+            onChange={onBody}
+            minHeightClass="min-h-[30vh]"
+            toolbarStickyClass={expanded ? "top-0" : undefined}
+          />
+        </div>
       </div>
     </section>
   );

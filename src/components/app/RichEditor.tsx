@@ -139,12 +139,14 @@ export function RichEditor({
   onChange,
   toolbar = true,
   minHeightClass = "min-h-[45vh]",
+  toolbarStickyClass = "top-14 lg:top-2",
 }: {
   initialHTML: string;
   placeholder?: string;
   onChange?: (html: string, text: string) => void;
   toolbar?: boolean;
   minHeightClass?: string;
+  toolbarStickyClass?: string;
 }) {
   const [, force] = useReducer((x: number) => x + 1, 0);
   const editorRef = useRef<Editor | null>(null);
@@ -308,7 +310,12 @@ export function RichEditor({
   return (
     <div>
       {toolbar && editor && (
-        <div className="sticky top-14 z-10 -mx-1 mb-3 flex items-center rounded-xl border border-border bg-surface/90 px-1.5 py-1 backdrop-blur lg:top-2">
+        <div
+          className={cn(
+            "sticky z-10 -mx-1 mb-3 flex items-center rounded-xl border border-border bg-surface/90 px-1.5 py-1 backdrop-blur",
+            toolbarStickyClass,
+          )}
+        >
           <Toolbar
             editor={editor}
             onImage={() => fileInputRef.current?.click()}

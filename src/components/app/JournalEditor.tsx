@@ -1,7 +1,15 @@
 "use client";
 
-import { useRef, useState, type KeyboardEvent } from "react";
-import { Check, Loader2, Hash, X } from "lucide-react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import {
+  Check,
+  Loader2,
+  Hash,
+  X,
+  Maximize2,
+  Minimize2,
+  NotebookPen,
+} from "lucide-react";
 import { cn } from "@/lib/cn";
 import { autosaveJournal } from "@/lib/actions";
 import { MOODS } from "@/lib/journal-format";
@@ -23,10 +31,25 @@ export function JournalEditor({
   const [tags, setTags] = useState<string[]>(initialTags);
   const [tagInput, setTagInput] = useState("");
   const [status, setStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const [expanded, setExpanded] = useState(false);
   const moodRef = useRef<number | null>(initialMood);
   const bodyRef = useRef<string>(initialBody ?? "");
   const tagsRef = useRef<string[]>(initialTags);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!expanded) return;
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      if (e.key === "Escape") setExpanded(false);
+    };
+    document.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [expanded]);
 
   function markSaved() {
     setStatus("saved");
@@ -90,8 +113,23 @@ export function JournalEditor({
     }
   }
 
-  return (
-    <div>
+  const statusEl = (
+    <span className="flex items-center gap-1 text-[12px] text-faint">
+      {status === "saving" && (
+        <>
+          <Loader2 size={12} className="animate-spin" /> Сохраняю…
+        </>
+      )}
+      {status === "saved" && (
+        <>
+          <Check size={12} className="text-success" /> Сохранено
+        </>
+      )}
+    </span>
+  );
+
+  const inner = (
+    <>
       <div className="mb-4 flex items-center justify-between">
         <div className="flex gap-2">
           {MOODS.map((m) => (
@@ -112,18 +150,20 @@ export function JournalEditor({
             </button>
           ))}
         </div>
-        <span className="flex items-center gap-1 text-[12px] text-faint">
-          {status === "saving" && (
-            <>
-              <Loader2 size={12} className="animate-spin" /> Сохраняю…
-            </>
+        <div className="flex items-center gap-2">
+          {statusEl}
+          {!expanded && (
+            <button
+              type="button"
+              onClick={() => setExpanded(true)}
+              aria-label="Развернуть на весь экран"
+              title="Развернуть на весь экран"
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-faint transition-colors hover:bg-surface-2 hover:text-text"
+            >
+              <Maximize2 size={16} />
+            </button>
           )}
-          {status === "saved" && (
-            <>
-              <Check size={12} className="text-success" /> Сохранено
-            </>
-          )}
-        </span>
+        </div>
       </div>
 
       {/* Теги записи */}
@@ -160,7 +200,37 @@ export function JournalEditor({
         placeholder="Как прошёл день? Что случилось, что важно, о чём думаешь…"
         onChange={onBody}
         minHeightClass="min-h-[38vh]"
+        toolbarStickyClass={expanded ? "top-0" : undefined}
       />
+    </>
+  );
+
+  return (
+    <div className={cn(expanded && "fixed inset-0 z-50 flex flex-col bg-bg")}>
+      {expanded && (
+        <div className="flex h-[52px] shrink-0 items-center gap-2 border-b border-border bg-bg/95 px-4 backdrop-blur sm:px-6">
+          <h2 className="flex items-center gap-1.5 text-[13px] font-semibold uppercase tracking-wide text-muted">
+            <NotebookPen size={14} /> Запись дня
+          </h2>
+          <button
+            type="button"
+            onClick={() => setExpanded(false)}
+            aria-label="Свернуть"
+            title="Свернуть (Esc)"
+            className="ml-auto flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[13px] font-medium text-muted transition-colors hover:bg-surface-2 hover:text-text"
+          >
+            <Minimize2 size={15} /> Свернуть
+          </button>
+        </div>
+      )}
+      <div
+        className={cn(
+          expanded &&
+            "mx-auto w-full max-w-3xl flex-1 overflow-y-auto px-4 py-6 sm:px-6",
+        )}
+      >
+        {inner}
+      </div>
     </div>
   );
 }
