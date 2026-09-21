@@ -26,9 +26,10 @@ import {
 import { RichEditor } from "./RichEditor";
 import { EmojiPicker } from "./EmojiPicker";
 import { CoverPicker } from "./CoverPicker";
+import { Backlinks } from "./Backlinks";
 import { coverStyle } from "@/lib/cover";
 import { useUi } from "./ui-context";
-import type { PageTreeNode } from "@/lib/queries";
+import type { PageTreeNode, Backlink } from "@/lib/queries";
 
 function countWords(text: string): number {
   const t = text.trim();
@@ -48,6 +49,7 @@ export function PageWorkspace({
   page,
   breadcrumbs,
   subpages,
+  backlinks,
 }: {
   page: {
     id: string;
@@ -59,6 +61,7 @@ export function PageWorkspace({
   };
   breadcrumbs: Crumb[];
   subpages: PageTreeNode[];
+  backlinks: Backlink[];
 }) {
   const router = useRouter();
   const { focusMode, setFocusMode } = useUi();
@@ -383,6 +386,7 @@ export function PageWorkspace({
             {head}
             {editor}
             {subpagesSection}
+            <Backlinks items={backlinks} />
           </div>
         </div>
       </div>
@@ -395,6 +399,7 @@ export function PageWorkspace({
       {head}
       {editor}
       {subpagesSection}
+      <Backlinks items={backlinks} />
     </div>
   );
 }

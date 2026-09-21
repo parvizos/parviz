@@ -18,6 +18,7 @@ import {
   getPersonTransactions,
   getPersonMeetings,
   getAccountOptions,
+  getBacklinks,
 } from "@/lib/queries";
 import { getDebts } from "@/lib/finance-queries";
 import { todayISO, ruMonthDay, diffDays } from "@/lib/dates";
@@ -39,6 +40,7 @@ import { MeetingCard, NewMeetingButton } from "@/components/app/meeting-items";
 import { EditPersonButton } from "@/components/app/crm-buttons";
 import { NewTaskButton } from "@/components/app/buttons";
 import { EntityNotes } from "@/components/app/EntityNotes";
+import { Backlinks } from "@/components/app/Backlinks";
 
 export const dynamic = "force-dynamic";
 
@@ -103,13 +105,15 @@ export default async function PersonDetailPage({
   const person = await getPerson(id);
   if (!person) notFound();
 
-  const [tasks, txs, debts, meetings, accountOptions] = await Promise.all([
-    getPersonTasks(id),
-    getPersonTransactions(id),
-    getDebts({ personId: id }),
-    getPersonMeetings(id),
-    getAccountOptions(),
-  ]);
+  const [tasks, txs, debts, meetings, accountOptions, backlinks] =
+    await Promise.all([
+      getPersonTasks(id),
+      getPersonTransactions(id),
+      getDebts({ personId: id }),
+      getPersonMeetings(id),
+      getAccountOptions(),
+      getBacklinks(id),
+    ]);
   const today = todayISO();
   const open = tasks.filter((t) => t.status === "open");
   const done = tasks.filter((t) => t.status !== "open");
@@ -295,6 +299,9 @@ export default async function PersonDetailPage({
           placeholder="Всё об этом человеке: как познакомились, что важно помнить, фото… Перетащи фото или жми «/»."
         />
       </div>
+
+      {/* Где упоминается */}
+      <Backlinks items={backlinks} title="Упоминается" />
 
       {/* Встречи */}
       <section className="mb-8">

@@ -1227,3 +1227,59 @@ export async function getPageBreadcrumbs(
   }
   return chain;
 }
+
+/* ─────────────────────────  Обратные ссылки  ───────────────────────── */
+
+export type Backlink = {
+  kind: "page" | "note" | "meeting";
+  id: string;
+  title: string;
+  icon: string | null;
+  href: string;
+};
+
+/**
+ * Где упомянута сущность (@) — ищем `data-mention-id="<id>"` в телах
+ * страниц, конспектов и встреч. id — UUID, безопасен для LIKE.
+ */
+export async function getBacklinks(id: string): Promise<Backlink[]> {
+  await schemaReady();
+  const pattern = `%data-mention-id="${id}"%`;
+  const [pgs, nts, mts] = await Promise.all([
+    db
+      .select({ id: pages.id, title: pages.title, icon: pages.icon })
+      .from(pages)
+      .where(and(isNull(pages.archivedAt), like(pages.body, pattern))),
+    db
+      .select({ id: notes.id, title: notes.title })
+      .from(notes)
+      .where(like(notes.body, pattern)),
+    db
+      .select({ id: meetings.id, title: meetings.title })
+      .from(meetings)
+      .where(like(meetings.body, pattern)),
+  ]);
+  return [
+    ...pgs.map((p) => ({
+      kind: "page" as const,
+      id: p.id,
+      title: p.title || "Без названия",
+      icon: p.icon,
+      href: `/bloknot/${p.id}`,
+    })),
+    ...nts.map((n) => ({
+      kind: "note" as const,
+      id: n.id,
+      title: n.title || "Без названия",
+      icon: null,
+      href: `/konspekty/${n.id}`,
+    })),
+    ...mts.map((m) => ({
+      kind: "meeting" as const,
+      id: m.id,
+      title: m.title || "Встреча",
+      icon: null,
+      href: `/vstrechi/${m.id}`,
+    })),
+  ];
+}

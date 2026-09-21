@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
   type ReactNode,
 } from "react";
@@ -45,6 +46,8 @@ import {
   type ExamForEdit,
 } from "./study2-dialogs";
 import { CommandPalette, type PageOption } from "./CommandPalette";
+import { MentionProvider } from "./mention-context";
+import type { MentionItem } from "./mention";
 import { ToastProvider } from "./toast";
 import { ReminderEngine } from "./ReminderEngine";
 import { useRouter } from "next/navigation";
@@ -420,6 +423,32 @@ export function UiProvider({
   );
   const openCommand = useCallback(() => setCmdOpen(true), []);
 
+  // Что можно упомянуть (@) в любом редакторе: люди, проекты, страницы.
+  const mentionOptions = useMemo<MentionItem[]>(
+    () => [
+      ...personOptions.map((p) => ({
+        type: "person" as const,
+        id: p.id,
+        label: p.name,
+        href: `/lyudi/${p.id}`,
+      })),
+      ...projectOptions.map((p) => ({
+        type: "project" as const,
+        id: p.id,
+        label: p.name,
+        href: `/proekty/${p.id}`,
+      })),
+      ...pageOptions.map((p) => ({
+        type: "page" as const,
+        id: p.id,
+        label: p.title || "Без названия",
+        href: `/bloknot/${p.id}`,
+        icon: p.icon,
+      })),
+    ],
+    [personOptions, projectOptions, pageOptions],
+  );
+
   const anyOpen =
     task.open ||
     project.open ||
@@ -465,6 +494,7 @@ export function UiProvider({
   }, [anyOpen, openNewTask]);
 
   return (
+    <MentionProvider value={mentionOptions}>
     <Ctx.Provider
       value={{
         openNewTask,
@@ -667,5 +697,6 @@ export function UiProvider({
       )}
       </ToastProvider>
     </Ctx.Provider>
+    </MentionProvider>
   );
 }

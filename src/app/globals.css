@@ -474,3 +474,25 @@ body {
   cursor: col-resize;
 }
 .ProseMirror.resize-cursor { cursor: col-resize; }
+
+/* Упоминания (@человек / проект / страница) */
+.ProseMirror a.mention,
+a.mention {
+  display: inline;
+  color: var(--accent-soft-text);
+  background: var(--accent-soft);
+  padding: 0.05em 0.35em;
+  border-radius: 6px;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ProseMirror a.mention:hover,
+a.mention:hover {
+  background: color-mix(in oklab, var(--accent) 22%, transparent);
+}
+.ProseMirror a.mention.ProseMirror-selectednode {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}

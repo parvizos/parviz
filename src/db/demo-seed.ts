@@ -83,6 +83,15 @@ const callout = (variant: "info" | "warn" | "success" | "note", html: string) =>
 const toggle = (summary: string, html: string) =>
   `<details open><summary>${summary}</summary><div data-type="detailsContent">${html}</div></details>`;
 
+/** Инлайн-упоминание (@сущность) для демо-контента. */
+const mention = (
+  kind: "person" | "project" | "page",
+  id: string,
+  label: string,
+  href: string,
+) =>
+  `<a data-mention data-mention-type="${kind}" data-mention-id="${id}" data-mention-label="${label}" href="${href}" class="mention">@${label}</a>`;
+
 /** Таблица из заголовков и строк. */
 function table(headers: string[], rows: string[][]): string {
   const head = `<tr>${headers.map((h) => `<th><p>${h}</p></th>`).join("")}</tr>`;
@@ -642,7 +651,8 @@ export async function seedDemo(db: DrizzleDb): Promise<void> {
           ["Пробежать 10 км без остановки", false],
           ["Прочитать 12 книг", false],
         ]) +
-        callout("success", "<p>Одна цель уже закрыта — так держать, брат 💪</p>"),
+        callout("success", "<p>Одна цель уже закрыта — так держать, брат 💪</p>") +
+        `<p>По учёбе главное — дотянуть ${mention("project", proj[0], "Курсовая работа", `/proekty/${proj[0]}`)}. А ${mention("person", ppl[8], "Настя", `/lyudi/${ppl[8]}`)} поддерживает 💛</p>`,
     })
     .returning({ id: pages.id });
 
@@ -694,6 +704,7 @@ export async function seedDemo(db: DrizzleDb): Promise<void> {
     position: 3,
     body:
       "<p>Свалка идей — потом разберу по местам.</p><ul><li>Приложение-трекер привычек</li><li>Телеграм-бот с расписанием пар</li><li>Блог про учёбу в универе</li></ul>" +
+      `<p>Первую идею уже начал — см. ${mention("project", proj[4], "Пет-проект: трекер привычек", `/proekty/${proj[4]}`)}.</p>` +
       callout("note", "<p>Правило: сначала записать сюда, оценивать потом. Не фильтровать на входе.</p>"),
   });
 }

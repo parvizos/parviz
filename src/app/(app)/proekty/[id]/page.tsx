@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, CalendarDays, CheckCircle2 } from "lucide-react";
-import { getProject, getProjectTasks } from "@/lib/queries";
+import { getProject, getProjectTasks, getBacklinks } from "@/lib/queries";
 import { todayISO, relativeLabel, dateTone } from "@/lib/dates";
 import { cn } from "@/lib/cn";
 import { areaColor, PROJECT_STATUS_META } from "@/lib/task-format";
@@ -9,6 +9,7 @@ import { TaskGroup } from "@/components/app/TaskGroup";
 import { QuickAdd } from "@/components/app/QuickAdd";
 import { EditProjectButton } from "@/components/app/buttons";
 import { EntityNotes } from "@/components/app/EntityNotes";
+import { Backlinks } from "@/components/app/Backlinks";
 import { EmptyState } from "@/components/ui/misc";
 
 export const dynamic = "force-dynamic";
@@ -39,7 +40,10 @@ export default async function ProjectDetailPage({
   const project = await getProject(id);
   if (!project) notFound();
 
-  const tasks = await getProjectTasks(id);
+  const [tasks, backlinks] = await Promise.all([
+    getProjectTasks(id),
+    getBacklinks(id),
+  ]);
   const today = todayISO();
   const open = tasks.filter((t) => t.status === "open");
   const done = tasks.filter((t) => t.status !== "open");
@@ -127,6 +131,9 @@ export default async function ProjectDetailPage({
           placeholder="Цель, план, ссылки, важные детали и фото… Перетащи фото или жми «/»."
         />
       </div>
+
+      {/* Где упоминается */}
+      <Backlinks items={backlinks} title="Упоминается" />
 
       {total > 0 && (
         <div className="mb-6 flex items-center gap-3">

@@ -41,9 +41,20 @@ import {
   StickyNote,
   Rows3,
   Columns3,
+  FileText,
+  User,
+  FolderKanban,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { createSlashCommand, type SlashItem, type SlashState } from "./slash-command";
+import {
+  Mention,
+  createMentionCommand,
+  type MentionItem,
+  type MentionState,
+} from "./mention";
+import { useMentionOptions } from "./mention-context";
 import { SketchPad } from "./SketchPad";
 import { ImageCropper } from "./ImageCropper";
 import { uploadImage } from "@/lib/image-upload";
@@ -209,6 +220,8 @@ export function RichEditor({
   minHeightClass?: string;
   toolbarStickyClass?: string;
 }) {
+  const router = useRouter();
+  const mentionOptions = useMentionOptions();
   const [, force] = useReducer((x: number) => x + 1, 0);
   const editorRef = useRef<Editor | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -221,6 +234,16 @@ export function RichEditor({
   const [slashIndex, setSlashIndex] = useState(0);
   const slashRef = useRef<SlashState | null>(null);
   const slashIndexRef = useRef(0);
+
+  // Состояние меню упоминаний (@).
+  const [mention, setMention] = useState<MentionState | null>(null);
+  const [mentionIndex, setMentionIndex] = useState(0);
+  const mentionRef = useRef<MentionState | null>(null);
+  const mentionIndexRef = useRef(0);
+  const mentionOptionsRef = useRef<MentionItem[]>(mentionOptions);
+  useEffect(() => {
+    mentionOptionsRef.current = mentionOptions;
+  }, [mentionOptions]);
 
   const SLASH_ITEMS: SlashItem[] = [
     { title: "Текст", icon: <Type size={16} />, keywords: ["text", "параграф"], run: (e, r) => e.chain().focus().deleteRange(r).setParagraph().run() },
@@ -251,6 +274,38 @@ export function RichEditor({
         it.title.toLowerCase().includes(q) ||
         it.keywords?.some((k) => k.includes(q)),
     );
+  }
+
+  function getMentionItems(query: string): MentionItem[] {
+    const q = query.trim().toLowerCase();
+    const all = mentionOptionsRef.current;
+    const list = q
+      ? all.filter((m) => m.label.toLowerCase().includes(q))
+      : all;
+    return list.slice(0, 8);
+  }
+
+  function onMentionKeyDown(e: KeyboardEvent): boolean {
+    const s = mentionRef.current;
+    if (!s || s.items.length === 0) return false;
+    if (e.key === "ArrowDown") {
+      const n = Math.min(mentionIndexRef.current + 1, s.items.length - 1);
+      mentionIndexRef.current = n;
+      setMentionIndex(n);
+      return true;
+    }
+    if (e.key === "ArrowUp") {
+      const n = Math.max(mentionIndexRef.current - 1, 0);
+      mentionIndexRef.current = n;
+      setMentionIndex(n);
+      return true;
+    }
+    if (e.key === "Enter") {
+      const item = s.items[mentionIndexRef.current];
+      if (item) s.command(item);
+      return true;
+    }
+    return false;
   }
 
   function onSlashKeyDown(e: KeyboardEvent): boolean {
@@ -304,7 +359,34 @@ export function RichEditor({
       DetailsSummary,
       DetailsContent,
       TableKit.configure({ table: { resizable: true } }),
-      // Рефы читаются только в колбэках слэш-меню (не во время рендера).
+      Mention,
+      // Рефы читаются только в колбэках меню (не во время рендера).
+      // eslint-disable-next-line react-hooks/refs
+      createMentionCommand({
+        getItems: getMentionItems,
+        onOpen: (state) => {
+          mentionRef.current = state;
+          mentionIndexRef.current = 0;
+          setMention(state);
+          setMentionIndex(0);
+        },
+        onUpdate: (state) => {
+          setMention((s) => {
+            const next = s
+              ? { ...s, items: state.items, rect: state.rect, command: state.command }
+              : s;
+            mentionRef.current = next;
+            return next;
+          });
+          mentionIndexRef.current = 0;
+          setMentionIndex(0);
+        },
+        onKeyDown: onMentionKeyDown,
+        onClose: () => {
+          mentionRef.current = null;
+          setMention(null);
+        },
+      }),
       // eslint-disable-next-line react-hooks/refs
       createSlashCommand({
         getItems,
@@ -414,7 +496,19 @@ export function RichEditor({
         <TableControls editor={editor} />
       )}
 
-      <EditorContent editor={editor} />
+      {/* Клик по @упоминанию — переход на сущность (делегирование по DOM). */}
+      <div
+        onClick={(e) => {
+          const a = (e.target as HTMLElement).closest?.("a.mention");
+          const href = a?.getAttribute("href");
+          if (href && href !== "#") {
+            e.preventDefault();
+            router.push(href);
+          }
+        }}
+      >
+        <EditorContent editor={editor} />
+      </div>
 
       <input
         ref={fileInputRef}
@@ -490,6 +584,55 @@ export function RichEditor({
               {i === slashIndex && (
                 <CornerDownLeft size={13} className="text-faint" />
               )}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {mention && mention.rect && mention.items.length > 0 && (
+        <div
+          className="fixed z-50 flex max-h-72 w-64 flex-col overflow-y-auto rounded-xl border border-border bg-surface p-1 shadow-[var(--shadow-lg)]"
+          style={{
+            top: Math.min(mention.rect.bottom + 6, window.innerHeight - 300),
+            left: Math.min(mention.rect.left, window.innerWidth - 272),
+          }}
+        >
+          {mention.items.map((item, i) => (
+            <button
+              key={`${item.type}-${item.id}`}
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onMouseEnter={() => {
+                mentionIndexRef.current = i;
+                setMentionIndex(i);
+              }}
+              onClick={() => mention.command(item)}
+              className={cn(
+                "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13.5px]",
+                i === mentionIndex ? "bg-surface-2 text-text" : "text-muted",
+              )}
+            >
+              <span className="flex h-5 w-5 items-center justify-center text-faint">
+                {item.type === "page" ? (
+                  item.icon ? (
+                    <span className="text-[15px] leading-none">{item.icon}</span>
+                  ) : (
+                    <FileText size={15} />
+                  )
+                ) : item.type === "person" ? (
+                  <User size={15} />
+                ) : (
+                  <FolderKanban size={15} />
+                )}
+              </span>
+              <span className="flex-1 truncate text-text">{item.label}</span>
+              <span className="text-[11px] text-faint">
+                {item.type === "person"
+                  ? "человек"
+                  : item.type === "project"
+                    ? "проект"
+                    : "страница"}
+              </span>
             </button>
           ))}
         </div>

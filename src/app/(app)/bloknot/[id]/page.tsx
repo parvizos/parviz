@@ -1,5 +1,10 @@
 import { notFound } from "next/navigation";
-import { getPage, getPageBreadcrumbs, getChildPages } from "@/lib/queries";
+import {
+  getPage,
+  getPageBreadcrumbs,
+  getChildPages,
+  getBacklinks,
+} from "@/lib/queries";
 import { PageWorkspace } from "@/components/app/PageWorkspace";
 
 export const dynamic = "force-dynamic";
@@ -21,10 +26,11 @@ export default async function BloknotItemPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [page, breadcrumbs, subpages] = await Promise.all([
+  const [page, breadcrumbs, subpages, backlinks] = await Promise.all([
     getPage(id),
     getPageBreadcrumbs(id),
     getChildPages(id),
+    getBacklinks(id),
   ]);
   if (!page) notFound();
 
@@ -40,6 +46,7 @@ export default async function BloknotItemPage({
       }}
       breadcrumbs={breadcrumbs}
       subpages={subpages}
+      backlinks={backlinks}
     />
   );
 }
