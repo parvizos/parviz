@@ -23,10 +23,13 @@ import {
   Building2,
   Handshake,
   KeyRound,
+  FileText,
   CornerDownLeft,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import type { AreaOption, ProjectOption, SubjectOption } from "./types";
+
+export type PageOption = { id: string; title: string; icon: string | null };
 
 type Command = {
   id: string;
@@ -42,6 +45,7 @@ export function CommandPalette({
   areas,
   projects,
   subjects,
+  pages,
   onNewTask,
   onNewProject,
   onNewArea,
@@ -58,6 +62,7 @@ export function CommandPalette({
   areas: AreaOption[];
   projects: ProjectOption[];
   subjects: SubjectOption[];
+  pages: PageOption[];
   onNewTask: () => void;
   onNewProject: () => void;
   onNewArea: () => void;
@@ -136,8 +141,19 @@ export function CommandPalette({
         ),
         run: go(`/sfery/${a.id}`),
       })),
+      ...pages.map((p) => ({
+        id: `pg-${p.id}`,
+        label: p.title || "Без названия",
+        hint: "страница",
+        icon: p.icon ? (
+          <span className="text-[15px] leading-none">{p.icon}</span>
+        ) : (
+          <FileText size={16} />
+        ),
+        run: go(`/bloknot/${p.id}`),
+      })),
     ];
-  }, [router, onClose, onNewTask, onNewProject, onNewArea, onNewSubject, onNewNote, onNewMeeting, onNewCredential, onNewTransaction, onNewPerson, onToggleTheme, projects, subjects, areas]);
+  }, [router, onClose, onNewTask, onNewProject, onNewArea, onNewSubject, onNewNote, onNewMeeting, onNewCredential, onNewTransaction, onNewPerson, onToggleTheme, projects, subjects, areas, pages]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();

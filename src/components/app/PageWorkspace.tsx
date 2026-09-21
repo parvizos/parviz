@@ -13,6 +13,7 @@ import {
   Maximize2,
   Minimize2,
   NotebookText,
+  Image as ImageIcon,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { stripHtml } from "@/lib/text";
@@ -24,6 +25,8 @@ import {
 } from "@/lib/actions";
 import { RichEditor } from "./RichEditor";
 import { EmojiPicker } from "./EmojiPicker";
+import { CoverPicker } from "./CoverPicker";
+import { coverStyle } from "@/lib/cover";
 import { useUi } from "./ui-context";
 import type { PageTreeNode } from "@/lib/queries";
 
@@ -51,6 +54,7 @@ export function PageWorkspace({
     title: string;
     body: string | null;
     icon: string | null;
+    cover: string | null;
     parentId: string | null;
   };
   breadcrumbs: Crumb[];
@@ -60,6 +64,7 @@ export function PageWorkspace({
   const { focusMode, setFocusMode } = useUi();
   const [title, setTitle] = useState(page.title);
   const [icon, setIcon] = useState<string | null>(page.icon);
+  const [cover, setCover] = useState<string | null>(page.cover);
   const [words, setWords] = useState(() => countWords(stripHtml(page.body)));
   const [status, setStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [pending, startTransition] = useTransition();
@@ -110,6 +115,19 @@ export function PageWorkspace({
     startTransition(async () => {
       try {
         await updatePage(page.id, { icon: next });
+        markSaved();
+      } catch {
+        setStatus("idle");
+      }
+    });
+  }
+
+  function onCover(next: string | null) {
+    setCover(next);
+    setStatus("saving");
+    startTransition(async () => {
+      try {
+        await updatePage(page.id, { cover: next });
         markSaved();
       } catch {
         setStatus("idle");
@@ -230,32 +248,75 @@ export function PageWorkspace({
   );
 
   const head = (
-    <div className="mb-2">
-      <EmojiPicker
-        value={icon}
-        onPick={onIcon}
-        triggerClassName={cn(
-          "flex items-center justify-center rounded-xl transition-colors hover:bg-surface-2",
-          icon ? "h-14 w-14 text-[44px] leading-none" : "h-9 gap-1.5 px-2 text-[13px] text-faint",
+    <>
+      {cover && (
+        <div
+          className="group/cover relative mb-3 h-40 overflow-hidden rounded-2xl sm:h-52"
+          style={coverStyle(cover)}
+        >
+          <div className="absolute right-2 top-2 opacity-0 transition-opacity group-hover/cover:opacity-100">
+            <CoverPicker
+              value={cover}
+              onPick={onCover}
+              align="right"
+              triggerClassName="flex h-7 items-center gap-1.5 rounded-lg bg-black/35 px-2.5 text-[12px] font-medium text-white backdrop-blur transition-colors hover:bg-black/55"
+              trigger={
+                <>
+                  <ImageIcon size={13} /> Изменить обложку
+                </>
+              }
+            />
+          </div>
+        </div>
+      )}
+      <div className={cn("mb-2", cover && icon && "relative z-10 -mt-10")}>
+        {!cover && (
+          <div className="mb-1">
+            <CoverPicker
+              value={cover}
+              onPick={onCover}
+              triggerClassName="flex h-7 items-center gap-1.5 rounded-lg px-2 text-[12.5px] text-faint transition-colors hover:bg-surface-2 hover:text-muted"
+              trigger={
+                <>
+                  <ImageIcon size={14} /> Добавить обложку
+                </>
+              }
+            />
+          </div>
         )}
-        trigger={
-          icon ? (
+        <EmojiPicker
+          value={icon}
+          onPick={onIcon}
+          triggerClassName={cn(
+            "flex items-center justify-center transition-colors",
             icon
-          ) : (
-            <>
-              <FileText size={16} /> Добавить иконку
-            </>
-          )
-        }
-      />
-      <input
-        value={title}
-        onChange={(e) => onTitle(e.target.value)}
-        placeholder="Без названия"
-        autoFocus={!title}
-        className="mt-2 w-full bg-transparent text-[34px] font-bold leading-tight tracking-tight text-text outline-none placeholder:text-faint/50"
-      />
-    </div>
+              ? cn(
+                  "h-16 w-16 rounded-2xl text-[48px] leading-none",
+                  cover
+                    ? "bg-surface shadow-[var(--shadow-sm)] ring-4 ring-bg"
+                    : "hover:bg-surface-2",
+                )
+              : "h-9 gap-1.5 rounded-xl px-2 text-[13px] text-faint hover:bg-surface-2",
+          )}
+          trigger={
+            icon ? (
+              icon
+            ) : (
+              <>
+                <FileText size={16} /> Добавить иконку
+              </>
+            )
+          }
+        />
+        <input
+          value={title}
+          onChange={(e) => onTitle(e.target.value)}
+          placeholder="Без названия"
+          autoFocus={!title}
+          className="mt-2 w-full bg-transparent text-[34px] font-bold leading-tight tracking-tight text-text outline-none placeholder:text-faint/50"
+        />
+      </div>
+    </>
   );
 
   const editor = (

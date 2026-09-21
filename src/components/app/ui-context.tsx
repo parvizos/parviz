@@ -44,7 +44,7 @@ import {
   type GradeForEdit,
   type ExamForEdit,
 } from "./study2-dialogs";
-import { CommandPalette } from "./CommandPalette";
+import { CommandPalette, type PageOption } from "./CommandPalette";
 import { ToastProvider } from "./toast";
 import { ReminderEngine } from "./ReminderEngine";
 import { useRouter } from "next/navigation";
@@ -144,6 +144,7 @@ export function UiProvider({
   categoryOptions,
   personOptions,
   organizationOptions,
+  pageOptions = [],
   baseCurrency = "RUB",
 }: {
   children: ReactNode;
@@ -154,6 +155,7 @@ export function UiProvider({
   categoryOptions: CategoryOption[];
   personOptions: PersonOption[];
   organizationOptions: OrganizationOption[];
+  pageOptions?: PageOption[];
   baseCurrency?: string;
 }) {
   const [task, setTask] = useState<{
@@ -650,6 +652,7 @@ export function UiProvider({
           areas={areaOptions}
           projects={projectOptions}
           subjects={subjectOptions}
+          pages={pageOptions}
           onNewTask={() => openNewTask()}
           onNewProject={() => openNewProject()}
           onNewArea={openNewArea}

@@ -562,6 +562,7 @@ export async function seedDemo(db: DrizzleDb): Promise<void> {
     .values({
       title: "База знаний",
       icon: "📚",
+      cover: "linear-gradient(135deg,#667eea,#764ba2)",
       position: 0,
       body: "<p>Всё, что нужно помнить: конспекты, шпаргалки, полезные ссылки. Вкладывай страницы друг в друга без ограничений — слева в дереве видно всю структуру.</p>",
     })
@@ -631,6 +632,7 @@ export async function seedDemo(db: DrizzleDb): Promise<void> {
     .values({
       title: "Цели на год",
       icon: "🎯",
+      cover: "linear-gradient(135deg,#43e97b,#38f9d7)",
       position: 1,
       body:
         "<h2>Главное на 2026</h2>" +
@@ -666,6 +668,7 @@ export async function seedDemo(db: DrizzleDb): Promise<void> {
     .values({
       title: "Путешествия",
       icon: "✈️",
+      cover: "linear-gradient(135deg,#4facfe,#00f2fe)",
       position: 2,
       body: "<p>Куда хочу поехать и что там посмотреть.</p>",
     })

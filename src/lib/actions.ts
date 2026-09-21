@@ -1017,6 +1017,7 @@ export async function createPage(input?: {
 const updatePageSchema = z.object({
   title: z.string().max(500).optional(),
   icon: z.string().max(20).nullable().optional(),
+  cover: z.string().max(2000).nullable().optional(),
 });
 export type UpdatePageInput = z.input<typeof updatePageSchema>;
 

@@ -534,6 +534,8 @@ export const pages = sqliteTable(
     parentId: text("parent_id"),
     title: text("title").notNull().default(""),
     icon: text("icon"),
+    /** Обложка: CSS-градиент (`linear-gradient(...)`) или URL картинки. */
+    cover: text("cover"),
     body: text("body"),
     position: integer("position").notNull().default(0),
     archivedAt: integer("archived_at", { mode: "timestamp_ms" }),

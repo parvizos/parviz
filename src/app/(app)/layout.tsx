@@ -74,6 +74,7 @@ export default async function AppLayout({
       categoryOptions={categoryOptions}
       personOptions={personOptions}
       organizationOptions={organizationOptions}
+      pageOptions={pageTree.map((p) => ({ id: p.id, title: p.title, icon: p.icon }))}
       baseCurrency={baseCurrency()}
     >
       <AppShell

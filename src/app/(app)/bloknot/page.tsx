@@ -2,6 +2,8 @@ import Link from "next/link";
 import { NotebookText, FileText, ChevronRight } from "lucide-react";
 import { getPageTree } from "@/lib/queries";
 import { NewPageButton } from "@/components/app/NewPageButton";
+import { coverStyle } from "@/lib/cover";
+import { cn } from "@/lib/cn";
 import { PageHeader, EmptyState } from "@/components/ui/misc";
 
 export const metadata = { title: "Блокнот" };
@@ -32,30 +34,40 @@ export default async function BloknotPage() {
       />
 
       {roots.length > 0 ? (
-        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+        <div className="grid grid-cols-1 items-start gap-2.5 sm:grid-cols-2">
           {roots.map((p) => {
             const kids = childCount.get(p.id) ?? 0;
             return (
               <Link
                 key={p.id}
                 href={`/bloknot/${p.id}`}
-                className="group flex items-center gap-3 rounded-2xl border border-border bg-surface px-4 py-3.5 transition-colors hover:border-accent/40 hover:bg-surface-2"
+                className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-surface transition-colors hover:border-accent/40 hover:bg-surface-2"
               >
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-surface-2 text-[24px] leading-none">
-                  {p.icon || <FileText size={20} className="text-faint" />}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[15px] font-semibold text-text">
-                    {p.title || "Без названия"}
+                {p.cover && (
+                  <div className="h-16 w-full" style={coverStyle(p.cover)} />
+                )}
+                <div className="flex items-center gap-3 px-4 py-3.5">
+                  <span
+                    className={cn(
+                      "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-surface-2 text-[24px] leading-none",
+                      p.cover && "-mt-9 ring-4 ring-surface group-hover:ring-surface-2",
+                    )}
+                  >
+                    {p.icon || <FileText size={20} className="text-faint" />}
                   </span>
-                  <span className="text-[12.5px] text-faint">
-                    {kids > 0 ? `${kids} ${plPages(kids)} внутри` : "Пустая страница"}
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[15px] font-semibold text-text">
+                      {p.title || "Без названия"}
+                    </span>
+                    <span className="text-[12.5px] text-faint">
+                      {kids > 0 ? `${kids} ${plPages(kids)} внутри` : "Пустая страница"}
+                    </span>
                   </span>
-                </span>
-                <ChevronRight
-                  size={18}
-                  className="shrink-0 text-faint transition-transform group-hover:translate-x-0.5"
-                />
+                  <ChevronRight
+                    size={18}
+                    className="shrink-0 text-faint transition-transform group-hover:translate-x-0.5"
+                  />
+                </div>
               </Link>
             );
           })}
