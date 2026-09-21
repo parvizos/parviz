@@ -75,6 +75,23 @@ function taskList(items: [string, boolean][]): string {
   return `<ul data-type="taskList">${lis}</ul>`;
 }
 
+/** Выноска (callout) для демо-контента. */
+const callout = (variant: "info" | "warn" | "success" | "note", html: string) =>
+  `<div data-callout data-variant="${variant}">${html}</div>`;
+
+/** Сворачиваемый блок (toggle). */
+const toggle = (summary: string, html: string) =>
+  `<details open><summary>${summary}</summary><div data-type="detailsContent">${html}</div></details>`;
+
+/** Таблица из заголовков и строк. */
+function table(headers: string[], rows: string[][]): string {
+  const head = `<tr>${headers.map((h) => `<th><p>${h}</p></th>`).join("")}</tr>`;
+  const body = rows
+    .map((r) => `<tr>${r.map((c) => `<td><p>${c}</p></td>`).join("")}</tr>`)
+    .join("");
+  return `<table><tbody>${head}${body}</tbody></table>`;
+}
+
 /** Наполнить демо-базу. Возвращает число созданных задач (для лога). */
 export async function seedDemo(db: DrizzleDb): Promise<void> {
   /* ── Сферы ── */
@@ -590,7 +607,22 @@ export async function seedDemo(db: DrizzleDb): Promise<void> {
       title: "JavaScript — шпаргалка",
       icon: "🟨",
       position: 0,
-      body: "<h2>Что вспоминаю чаще всего</h2><ul><li><code>map / filter / reduce</code></li><li>Промисы, <code>async/await</code></li><li>Деструктуризация и spread</li></ul>",
+      body:
+        "<h2>Методы массивов</h2>" +
+        table(
+          ["Метод", "Что делает", "Мутирует?"],
+          [
+            ["map", "новый массив из каждого элемента", "нет"],
+            ["filter", "оставляет подходящие", "нет"],
+            ["reduce", "сворачивает в одно значение", "нет"],
+            ["push", "добавляет в конец", "да"],
+          ],
+        ) +
+        callout("info", "<p><strong>Правило:</strong> map/filter/reduce возвращают новый массив — исходный не трогают. push/splice — мутируют.</p>") +
+        toggle(
+          "Асинхронность за 10 секунд",
+          "<p>Промис — «обещание значения в будущем». <code>async/await</code> — синтаксис поверх промисов.</p><ul><li>await ждёт результат</li><li>try/catch ловит ошибки</li></ul>",
+        ),
     },
   ]);
 
@@ -607,7 +639,8 @@ export async function seedDemo(db: DrizzleDb): Promise<void> {
           ["Накопить на новый ноутбук", false],
           ["Пробежать 10 км без остановки", false],
           ["Прочитать 12 книг", false],
-        ]),
+        ]) +
+        callout("success", "<p>Одна цель уже закрыта — так держать, брат 💪</p>"),
     })
     .returning({ id: pages.id });
 
@@ -643,13 +676,21 @@ export async function seedDemo(db: DrizzleDb): Promise<void> {
     title: "Стамбул",
     icon: "🕌",
     position: 0,
-    body: "<h2>Маршрут на 5 дней</h2><ul><li>Айя-София и Голубая мечеть</li><li>Гранд-базар</li><li>Прогулка по Босфору на пароме</li><li>Район Балат — фото</li></ul><p><strong>Бюджет:</strong> ~50 000 ₽ на всё.</p>",
+    body:
+      "<h2>Маршрут на 5 дней</h2><ul><li>Айя-София и Голубая мечеть</li><li>Гранд-базар</li><li>Прогулка по Босфору на пароме</li><li>Район Балат — фото</li></ul>" +
+      callout("warn", "<p><strong>Бюджет:</strong> ~50 000 ₽ на всё. Лиры лучше менять на месте, не в аэропорту.</p>") +
+      toggle(
+        "Что взять с собой",
+        "<ul><li>Паспорт + копия</li><li>Адаптер розетки</li><li>Удобная обувь</li><li>Пауэрбанк</li></ul>",
+      ),
   });
 
   await db.insert(pages).values({
     title: "Идеи и мысли",
     icon: "💡",
     position: 3,
-    body: "<p>Свалка идей — потом разберу по местам.</p><ul><li>Приложение-трекер привычек</li><li>Телеграм-бот с расписанием пар</li><li>Блог про учёбу в универе</li></ul>",
+    body:
+      "<p>Свалка идей — потом разберу по местам.</p><ul><li>Приложение-трекер привычек</li><li>Телеграм-бот с расписанием пар</li><li>Блог про учёбу в универе</li></ul>" +
+      callout("note", "<p>Правило: сначала записать сюда, оценивать потом. Не фильтровать на входе.</p>"),
   });
 }

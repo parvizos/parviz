@@ -6,6 +6,9 @@ import { Placeholder } from "@tiptap/extension-placeholder";
 import { TaskList } from "@tiptap/extension-task-list";
 import { TaskItem } from "@tiptap/extension-task-item";
 import { Image } from "@tiptap/extension-image";
+import { TableKit } from "@tiptap/extension-table";
+import { Details, DetailsSummary, DetailsContent } from "@tiptap/extension-details";
+import { Callout } from "./callout";
 import {
   useEffect,
   useReducer,
@@ -30,6 +33,14 @@ import {
   Type,
   Minus,
   CornerDownLeft,
+  Table as TableIcon,
+  ChevronRight,
+  Info,
+  AlertTriangle,
+  CheckCircle2,
+  StickyNote,
+  Rows3,
+  Columns3,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { createSlashCommand, type SlashItem, type SlashState } from "./slash-command";
@@ -120,6 +131,20 @@ function Toolbar({
         <Code2 size={16} />
       </Btn>
       {sep}
+      {sep}
+      <Btn label="Выноска" active={editor.isActive("callout")} onClick={() => editor.chain().focus().toggleCallout("info").run()}>
+        <Info size={16} />
+      </Btn>
+      <Btn label="Сворачиваемый блок" active={editor.isActive("details")} onClick={() => (editor.isActive("details") ? editor.chain().focus().unsetDetails().run() : editor.chain().focus().setDetails().run())}>
+        <ChevronRight size={17} />
+      </Btn>
+      <Btn label="Таблица" active={editor.isActive("table")} onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}>
+        <TableIcon size={16} />
+      </Btn>
+      <Btn label="Разделитель" onClick={() => editor.chain().focus().setHorizontalRule().run()}>
+        <Minus size={17} />
+      </Btn>
+      {sep}
       <Btn label="Картинка" onClick={onImage}>
         <ImagePlus size={16} />
       </Btn>
@@ -129,6 +154,42 @@ function Toolbar({
       <Btn label="Нарисовать" onClick={onSketch}>
         <Pen size={16} />
       </Btn>
+    </div>
+  );
+}
+
+/** Панель управления таблицей — появляется, когда курсор внутри таблицы. */
+function TableControls({ editor }: { editor: Editor }) {
+  const item =
+    "inline-flex h-7 items-center gap-1 rounded-lg px-2 text-[12px] font-medium text-muted transition-colors hover:bg-surface-2 hover:text-text";
+  return (
+    <div className="-mx-1 mb-3 flex flex-wrap items-center gap-0.5 rounded-xl border border-border bg-surface/90 px-1.5 py-1 backdrop-blur">
+      <span className="px-1.5 text-[11px] font-semibold uppercase tracking-wide text-faint">
+        Таблица
+      </span>
+      <button type="button" onMouseDown={(e) => e.preventDefault()} className={item} onClick={() => editor.chain().focus().addRowAfter().run()}>
+        <Rows3 size={13} /> +строка
+      </button>
+      <button type="button" onMouseDown={(e) => e.preventDefault()} className={item} onClick={() => editor.chain().focus().addColumnAfter().run()}>
+        <Columns3 size={13} /> +столбец
+      </button>
+      <button type="button" onMouseDown={(e) => e.preventDefault()} className={item} onClick={() => editor.chain().focus().deleteRow().run()}>
+        −строка
+      </button>
+      <button type="button" onMouseDown={(e) => e.preventDefault()} className={item} onClick={() => editor.chain().focus().deleteColumn().run()}>
+        −столбец
+      </button>
+      <button type="button" onMouseDown={(e) => e.preventDefault()} className={item} onClick={() => editor.chain().focus().toggleHeaderRow().run()}>
+        шапка
+      </button>
+      <button
+        type="button"
+        onMouseDown={(e) => e.preventDefault()}
+        className="ml-auto inline-flex h-7 items-center gap-1 rounded-lg px-2 text-[12px] font-medium text-muted transition-colors hover:bg-surface-2 hover:text-danger"
+        onClick={() => editor.chain().focus().deleteTable().run()}
+      >
+        Удалить
+      </button>
     </div>
   );
 }
@@ -170,7 +231,13 @@ export function RichEditor({
     { title: "Чек-лист", icon: <ListChecks size={16} />, keywords: ["todo", "задачи", "чекбокс"], run: (e, r) => e.chain().focus().deleteRange(r).toggleTaskList().run() },
     { title: "Цитата", icon: <Quote size={16} />, keywords: ["quote"], run: (e, r) => e.chain().focus().deleteRange(r).toggleBlockquote().run() },
     { title: "Код", icon: <Code2 size={16} />, keywords: ["code", "код"], run: (e, r) => e.chain().focus().deleteRange(r).toggleCodeBlock().run() },
-    { title: "Разделитель", icon: <Minus size={16} />, keywords: ["hr", "линия"], run: (e, r) => e.chain().focus().deleteRange(r).setHorizontalRule().run() },
+    { title: "Разделитель", icon: <Minus size={16} />, keywords: ["hr", "линия", "divider"], run: (e, r) => e.chain().focus().deleteRange(r).setHorizontalRule().run() },
+    { title: "Сворачиваемый блок", icon: <ChevronRight size={16} />, keywords: ["toggle", "тоггл", "спойлер", "детали", "свернуть"], run: (e, r) => e.chain().focus().deleteRange(r).setDetails().run() },
+    { title: "Таблица", icon: <TableIcon size={16} />, keywords: ["table", "таблица"], run: (e, r) => e.chain().focus().deleteRange(r).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() },
+    { title: "Выноска: инфо", hint: "💡", icon: <Info size={16} />, keywords: ["callout", "выноска", "инфо", "заметка"], run: (e, r) => e.chain().focus().deleteRange(r).setCallout("info").run() },
+    { title: "Выноска: важно", hint: "⚠️", icon: <AlertTriangle size={16} />, keywords: ["callout", "выноска", "важно", "внимание", "warning"], run: (e, r) => e.chain().focus().deleteRange(r).setCallout("warn").run() },
+    { title: "Выноска: успех", hint: "✅", icon: <CheckCircle2 size={16} />, keywords: ["callout", "выноска", "успех", "готово", "success"], run: (e, r) => e.chain().focus().deleteRange(r).setCallout("success").run() },
+    { title: "Выноска: заметка", hint: "📝", icon: <StickyNote size={16} />, keywords: ["callout", "выноска", "заметка", "note"], run: (e, r) => e.chain().focus().deleteRange(r).setCallout("note").run() },
     { title: "Картинка", icon: <ImagePlus size={16} />, keywords: ["image", "картинка"], run: (e, r) => { e.chain().focus().deleteRange(r).run(); fileInputRef.current?.click(); } },
     { title: "Камера", icon: <Camera size={16} />, keywords: ["camera", "фото", "доска", "снимок"], run: (e, r) => { e.chain().focus().deleteRange(r).run(); cameraInputRef.current?.click(); } },
     { title: "Рисунок", icon: <Pen size={16} />, keywords: ["draw", "рисовать", "формула", "схема", "sketch"], run: (e, r) => { e.chain().focus().deleteRange(r).run(); setSketchOpen(true); } },
@@ -219,6 +286,24 @@ export function RichEditor({
       TaskList,
       TaskItem.configure({ nested: true }),
       Image.configure({ inline: false, allowBase64: false }),
+      Callout,
+      // Новые тогглы создаём раскрытыми (курсор сразу в теле), но HTML
+      // с `<details>` без `open` уважаем — parseHTML читает атрибут.
+      Details.configure({ persist: true, HTMLAttributes: { class: "toggle" } }).extend({
+        addAttributes() {
+          return {
+            ...this.parent?.(),
+            open: {
+              default: true,
+              parseHTML: (el) => el.hasAttribute("open"),
+              renderHTML: ({ open }) => (open ? { open: "" } : {}),
+            },
+          };
+        },
+      }),
+      DetailsSummary,
+      DetailsContent,
+      TableKit.configure({ table: { resizable: true } }),
       // Рефы читаются только в колбэках слэш-меню (не во время рендера).
       // eslint-disable-next-line react-hooks/refs
       createSlashCommand({
@@ -325,6 +410,10 @@ export function RichEditor({
         </div>
       )}
 
+      {toolbar && editor && editor.isActive("table") && (
+        <TableControls editor={editor} />
+      )}
+
       <EditorContent editor={editor} />
 
       <input
@@ -370,7 +459,7 @@ export function RichEditor({
 
       {slash && slash.rect && slash.items.length > 0 && (
         <div
-          className="fixed z-50 w-64 overflow-hidden rounded-xl border border-border bg-surface p-1 shadow-[var(--shadow-lg)]"
+          className="fixed z-50 flex max-h-80 w-64 flex-col overflow-y-auto rounded-xl border border-border bg-surface p-1 shadow-[var(--shadow-lg)]"
           style={{
             top: Math.min(slash.rect.bottom + 6, window.innerHeight - 320),
             left: Math.min(slash.rect.left, window.innerWidth - 272),
@@ -395,6 +484,9 @@ export function RichEditor({
                 {item.icon}
               </span>
               <span className="flex-1 text-text">{item.title}</span>
+              {item.hint && (
+                <span className="text-[13px] leading-none">{item.hint}</span>
+              )}
               {i === slashIndex && (
                 <CornerDownLeft size={13} className="text-faint" />
               )}

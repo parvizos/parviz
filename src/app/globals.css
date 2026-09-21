@@ -329,3 +329,148 @@ body {
   height: 0;
   pointer-events: none;
 }
+
+/* ─────────────────  Блоки блокнота: выноски, тоггл, таблицы  ───────────────── */
+
+/* Выноска (callout): цветная плашка с эмодзи-иконкой (иконка из ::before). */
+.ProseMirror div[data-callout] {
+  position: relative;
+  margin: 0.9em 0;
+  padding: 0.7em 0.95em 0.7em 2.7em;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+.ProseMirror div[data-callout]::before {
+  content: "💡";
+  position: absolute;
+  left: 0.85em;
+  top: 0.6em;
+  font-size: 1.05em;
+  line-height: 1.45;
+}
+.ProseMirror div[data-callout] > p { margin: 0.25em 0; }
+.ProseMirror div[data-callout] > p:first-child { margin-top: 0; }
+.ProseMirror div[data-callout] > p:last-child { margin-bottom: 0; }
+.ProseMirror div[data-callout][data-variant="info"] {
+  border-color: color-mix(in oklab, var(--accent) 35%, var(--border));
+  background: var(--accent-soft);
+}
+.ProseMirror div[data-callout][data-variant="info"]::before { content: "💡"; }
+.ProseMirror div[data-callout][data-variant="warn"] {
+  border-color: color-mix(in oklab, var(--warning) 45%, var(--border));
+  background: var(--warning-soft);
+}
+.ProseMirror div[data-callout][data-variant="warn"]::before { content: "⚠️"; }
+.ProseMirror div[data-callout][data-variant="success"] {
+  border-color: color-mix(in oklab, var(--success) 45%, var(--border));
+  background: var(--success-soft);
+}
+.ProseMirror div[data-callout][data-variant="success"]::before { content: "✅"; }
+.ProseMirror div[data-callout][data-variant="note"] {
+  border-color: var(--border-strong);
+  background: var(--surface-2);
+}
+.ProseMirror div[data-callout][data-variant="note"]::before { content: "📝"; }
+
+/* Сворачиваемый блок (toggle) — на основе <details> с кастомным NodeView. */
+.ProseMirror div[data-type="details"] {
+  display: flex;
+  gap: 0.4em;
+  margin: 0.7em 0;
+  padding: 0.5em 0.7em;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.ProseMirror div[data-type="details"] > button {
+  flex: 0 0 auto;
+  width: 1.5em;
+  height: 1.6em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--faint);
+}
+.ProseMirror div[data-type="details"] > button:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.ProseMirror div[data-type="details"] > button::before {
+  content: "";
+  width: 0.42em;
+  height: 0.42em;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 0.15s ease;
+}
+.ProseMirror div[data-type="details"].is-open > button::before {
+  transform: rotate(45deg);
+}
+.ProseMirror div[data-type="details"] > div {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.ProseMirror div[data-type="details"] summary {
+  font-weight: 600;
+  list-style: none;
+  cursor: text;
+  outline: none;
+}
+.ProseMirror div[data-type="details"] summary::-webkit-details-marker { display: none; }
+.ProseMirror div[data-type="details"] div[data-type="detailsContent"] {
+  margin-top: 0.35em;
+  color: var(--text);
+}
+.ProseMirror div[data-type="details"] div[data-type="detailsContent"] > * {
+  margin-top: 0.35em;
+}
+.ProseMirror div[data-type="details"]:not(.is-open) div[data-type="detailsContent"] {
+  display: none;
+}
+
+/* Таблицы */
+.ProseMirror .tableWrapper { overflow-x: auto; margin: 0.9em 0; }
+.ProseMirror table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  border: 1px solid var(--border);
+}
+.ProseMirror th,
+.ProseMirror td {
+  border: 1px solid var(--border);
+  padding: 0.45em 0.6em;
+  vertical-align: top;
+  position: relative;
+  min-width: 3em;
+}
+.ProseMirror th {
+  background: var(--surface-2);
+  font-weight: 600;
+  text-align: left;
+}
+.ProseMirror th > p,
+.ProseMirror td > p { margin: 0; }
+.ProseMirror .selectedCell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: color-mix(in oklab, var(--accent) 14%, transparent);
+  pointer-events: none;
+}
+.ProseMirror .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--accent);
+  cursor: col-resize;
+}
+.ProseMirror.resize-cursor { cursor: col-resize; }
