@@ -61,6 +61,21 @@ export function NoteWorkspace({
   // Выходим из режима фокуса, когда покидаем конспект.
   useEffect(() => () => setFocusMode(false), [setFocusMode]);
 
+  // В полноэкранном режиме: Esc — свернуть, блокируем прокрутку страницы.
+  useEffect(() => {
+    if (!focusMode) return;
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      if (e.key === "Escape") setFocusMode(false);
+    };
+    document.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [focusMode, setFocusMode]);
+
   function markSaved() {
     setStatus("saved");
     setTimeout(() => setStatus((s) => (s === "saved" ? "idle" : s)), 1500);
@@ -117,82 +132,82 @@ export function NoteWorkspace({
     });
   }
 
-  return (
-    <div className="mx-auto max-w-[720px]">
-      {/* Верхняя панель */}
-      <div className="mb-6 flex items-center gap-2">
-        <Link
-          href="/konspekty"
-          className="inline-flex items-center gap-1.5 text-[13px] text-muted transition-colors hover:text-text"
-        >
-          <ArrowLeft size={15} /> Конспекты
-        </Link>
-        <span className="ml-auto flex items-center gap-1 text-[12px] text-faint">
-          {status === "saving" && (
-            <>
-              <Loader2 size={12} className="animate-spin" /> Сохраняю…
-            </>
-          )}
-          {status === "saved" && (
-            <>
-              <Check size={12} className="text-success" /> Сохранено
-            </>
-          )}
-          {status === "idle" && `${words} ${plWords(words)}`}
-        </span>
+  const topBar = (
+    <>
+      <Link
+        href="/konspekty"
+        className="inline-flex items-center gap-1.5 text-[13px] text-muted transition-colors hover:text-text"
+      >
+        <ArrowLeft size={15} /> Конспекты
+      </Link>
+      <span className="ml-auto flex items-center gap-1 text-[12px] text-faint">
+        {status === "saving" && (
+          <>
+            <Loader2 size={12} className="animate-spin" /> Сохраняю…
+          </>
+        )}
+        {status === "saved" && (
+          <>
+            <Check size={12} className="text-success" /> Сохранено
+          </>
+        )}
+        {status === "idle" && `${words} ${plWords(words)}`}
+      </span>
 
-        <select
-          value={subjectId}
-          onChange={(e) => onSubject(e.target.value)}
-          disabled={pending}
-          className="h-8 max-w-[150px] rounded-lg border border-border bg-surface px-2 text-[12.5px] text-muted"
-          aria-label="Предмет"
-        >
-          <option value="">Без предмета</option>
-          {subjectOptions.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-        </select>
+      <select
+        value={subjectId}
+        onChange={(e) => onSubject(e.target.value)}
+        disabled={pending}
+        className="h-8 max-w-[150px] rounded-lg border border-border bg-surface px-2 text-[12.5px] text-muted"
+        aria-label="Предмет"
+      >
+        <option value="">Без предмета</option>
+        {subjectOptions.map((s) => (
+          <option key={s.id} value={s.id}>
+            {s.name}
+          </option>
+        ))}
+      </select>
 
-        <button
-          onClick={() => setFocusMode(!focusMode)}
-          aria-label={focusMode ? "Выйти из фокуса" : "Режим фокуса"}
-          title={focusMode ? "Выйти из фокуса" : "Режим фокуса"}
-          className={cn(
-            "flex h-8 w-8 items-center justify-center rounded-lg transition-colors",
-            focusMode
-              ? "text-accent"
-              : "text-faint hover:bg-surface-2 hover:text-text",
-          )}
-        >
-          {focusMode ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-        </button>
-        <button
-          onClick={onPin}
-          aria-label={pinned ? "Открепить" : "Закрепить"}
-          title={pinned ? "Открепить" : "Закрепить"}
-          className={cn(
-            "flex h-8 w-8 items-center justify-center rounded-lg transition-colors",
-            pinned
-              ? "text-accent"
-              : "text-faint hover:bg-surface-2 hover:text-text",
-          )}
-        >
-          <Pin size={16} className={pinned ? "fill-current" : ""} />
-        </button>
-        <button
-          onClick={onDelete}
-          aria-label="Удалить"
-          title="Удалить"
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-faint transition-colors hover:bg-surface-2 hover:text-danger"
-        >
-          <Trash2 size={16} />
-        </button>
-      </div>
+      <button
+        onClick={() => setFocusMode(!focusMode)}
+        aria-label={focusMode ? "Свернуть" : "Развернуть на весь экран"}
+        title={focusMode ? "Свернуть (Esc)" : "Развернуть на весь экран"}
+        className={cn(
+          "flex h-8 w-8 items-center justify-center rounded-lg transition-colors",
+          focusMode
+            ? "text-accent"
+            : "text-faint hover:bg-surface-2 hover:text-text",
+        )}
+      >
+        {focusMode ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+      </button>
+      <button
+        onClick={onPin}
+        aria-label={pinned ? "Открепить" : "Закрепить"}
+        title={pinned ? "Открепить" : "Закрепить"}
+        className={cn(
+          "flex h-8 w-8 items-center justify-center rounded-lg transition-colors",
+          pinned
+            ? "text-accent"
+            : "text-faint hover:bg-surface-2 hover:text-text",
+        )}
+      >
+        <Pin size={16} className={pinned ? "fill-current" : ""} />
+      </button>
+      <button
+        onClick={onDelete}
+        aria-label="Удалить"
+        title="Удалить"
+        className="flex h-8 w-8 items-center justify-center rounded-lg text-faint transition-colors hover:bg-surface-2 hover:text-danger"
+      >
+        <Trash2 size={16} />
+      </button>
+    </>
+  );
 
-      {/* Заголовок */}
+  const content = (
+    <>
       <input
         value={title}
         onChange={(e) => onTitle(e.target.value)}
@@ -200,13 +215,32 @@ export function NoteWorkspace({
         autoFocus={!title}
         className="mb-4 w-full bg-transparent text-[30px] font-semibold leading-tight tracking-tight text-text outline-none placeholder:text-faint/60"
       />
-
-      {/* Тело */}
       <RichEditor
         initialHTML={note.body ?? ""}
         placeholder="Пиши как в статье: заголовки, списки, цитаты, чек-боксы…"
         onChange={onBody}
+        toolbarStickyClass={focusMode ? "top-0" : undefined}
       />
+    </>
+  );
+
+  if (focusMode) {
+    return (
+      <div className="fixed inset-0 z-50 flex flex-col bg-bg">
+        <div className="flex h-[52px] shrink-0 items-center gap-2 border-b border-border bg-bg/95 px-4 backdrop-blur sm:px-6">
+          {topBar}
+        </div>
+        <div className="flex-1 overflow-y-auto">
+          <div className="mx-auto max-w-[720px] px-4 py-6 sm:px-6">{content}</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto max-w-[720px]">
+      <div className="mb-6 flex items-center gap-2">{topBar}</div>
+      {content}
     </div>
   );
 }
