@@ -537,6 +537,7 @@ export const pages = sqliteTable(
     /** Обложка: CSS-градиент (`linear-gradient(...)`) или URL картинки. */
     cover: text("cover"),
     body: text("body"),
+    favorite: integer("favorite", { mode: "boolean" }).notNull().default(false),
     position: integer("position").notNull().default(0),
     archivedAt: integer("archived_at", { mode: "timestamp_ms" }),
     createdAt: createdAt(),

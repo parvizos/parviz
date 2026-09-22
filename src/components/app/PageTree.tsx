@@ -3,10 +3,20 @@
 import { useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ChevronRight, FileText, Plus, Loader2 } from "lucide-react";
+import { ChevronRight, FileText, Plus, Loader2, Star } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { createPage } from "@/lib/actions";
+import { createPage, togglePageFavorite, movePage } from "@/lib/actions";
 import type { PageTreeNode } from "@/lib/queries";
+
+type DropZone = "before" | "after" | "inside";
+type Dnd = {
+  dragId: string | null;
+  dropTarget: { id: string; zone: DropZone } | null;
+  onDragStart: (id: string) => void;
+  onDragOver: (id: string, zone: DropZone) => void;
+  onDrop: () => void;
+  onDragEnd: () => void;
+};
 
 /**
  * Дерево Блокнота в сайдбаре: бесконечная вложенность, иконки-эмодзи,
@@ -82,8 +92,125 @@ export function PageTree({
     });
   }
 
+  function toggleFavorite(id: string, next: boolean) {
+    startTransition(async () => {
+      await togglePageFavorite(id, next);
+    });
+  }
+
+  // Перетаскивание страниц в дереве.
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [dropTarget, setDropTarget] = useState<{
+    id: string;
+    zone: DropZone;
+  } | null>(null);
+
+  function onMove() {
+    const dId = dragId;
+    const dt = dropTarget;
+    setDragId(null);
+    setDropTarget(null);
+    if (!dId || !dt || dId === dt.id) return;
+    const target = pages.find((p) => p.id === dt.id);
+    if (!target) return;
+
+    let parentId: string | null;
+    let beforeId: string | null = null;
+    if (dt.zone === "inside") {
+      parentId = target.id;
+      setManual((prev) => new Set(prev).add(target.id)); // раскрыть цель
+    } else {
+      parentId = target.parentId;
+      if (dt.zone === "before") {
+        beforeId = target.id;
+      } else {
+        // «after» — вставить перед следующим соседом (пропуская саму перетаскиваемую).
+        const sibs = childrenOf.get(target.parentId) ?? [];
+        const ti = sibs.findIndex((s) => s.id === target.id);
+        for (let j = ti + 1; j < sibs.length; j++) {
+          if (sibs[j].id !== dId) {
+            beforeId = sibs[j].id;
+            break;
+          }
+        }
+      }
+    }
+    startTransition(async () => {
+      await movePage(dId, { parentId, beforeId });
+    });
+  }
+
+  const dnd: Dnd = {
+    dragId,
+    dropTarget,
+    onDragStart: (id) => setDragId(id),
+    onDragOver: (id, zone) =>
+      setDropTarget((prev) =>
+        prev && prev.id === id && prev.zone === zone ? prev : { id, zone },
+      ),
+    onDrop: onMove,
+    onDragEnd: () => {
+      setDragId(null);
+      setDropTarget(null);
+    },
+  };
+
+  const favorites = pages.filter((p) => p.favorite);
+
   return (
     <>
+      {favorites.length > 0 && (
+        <>
+          <div className="mt-6 px-3">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-faint">
+              Избранное
+            </span>
+          </div>
+          <ul className="mt-1 flex flex-col gap-0.5">
+            {favorites.map((f) => {
+              const active = f.id === activeId;
+              return (
+                <li key={f.id}>
+                  <div
+                    className={cn(
+                      "group flex h-8 items-center gap-1.5 rounded-lg pl-3 pr-1 text-[13.5px] transition-colors",
+                      active
+                        ? "bg-surface-2 font-medium text-text"
+                        : "text-muted hover:bg-surface-2 hover:text-text",
+                    )}
+                  >
+                    <Link
+                      href={`/bloknot/${f.id}`}
+                      onClick={onNavigate}
+                      className="flex min-w-0 flex-1 items-center gap-1.5 py-1"
+                    >
+                      {f.icon ? (
+                        <span className="shrink-0 text-[14px] leading-none">
+                          {f.icon}
+                        </span>
+                      ) : (
+                        <FileText size={14} className="shrink-0 text-faint" />
+                      )}
+                      <span className="truncate">
+                        {f.title || "Без названия"}
+                      </span>
+                    </Link>
+                    <button
+                      onClick={() => toggleFavorite(f.id, false)}
+                      aria-label="Убрать из избранного"
+                      title="Убрать из избранного"
+                      className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-warning transition-colors hover:bg-surface-3"
+                    >
+                      <Star size={13} className="fill-current" />
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </>
+      )}
+
       <div className="mt-6 flex items-center justify-between px-3">
         <Link
           href="/bloknot"
@@ -129,6 +256,8 @@ export function PageTree({
               activeId={activeId}
               onToggle={toggle}
               onCreateChild={createChild}
+              onToggleFavorite={toggleFavorite}
+              dnd={dnd}
               onNavigate={onNavigate}
             />
           ))
@@ -146,6 +275,8 @@ function PageNode({
   activeId,
   onToggle,
   onCreateChild,
+  onToggleFavorite,
+  dnd,
   onNavigate,
 }: {
   node: PageTreeNode;
@@ -155,6 +286,8 @@ function PageNode({
   activeId: string | null;
   onToggle: (id: string) => void;
   onCreateChild: (parentId: string) => void;
+  onToggleFavorite: (id: string, next: boolean) => void;
+  dnd: Dnd;
   onNavigate?: () => void;
 }) {
   const kids = childrenOf.get(node.id) ?? [];
@@ -162,17 +295,51 @@ function PageNode({
   const isOpen = expanded.has(node.id);
   const active = node.id === activeId;
 
+  const isDragging = dnd.dragId === node.id;
+  const dt = dnd.dropTarget?.id === node.id ? dnd.dropTarget.zone : null;
+
   return (
     <li>
       <div
+        draggable
+        onDragStart={(e) => {
+          e.dataTransfer.effectAllowed = "move";
+          dnd.onDragStart(node.id);
+        }}
+        onDragOver={(e) => {
+          if (!dnd.dragId || dnd.dragId === node.id) return;
+          e.preventDefault();
+          const r = e.currentTarget.getBoundingClientRect();
+          const y = e.clientY - r.top;
+          const zone =
+            y < r.height * 0.3
+              ? "before"
+              : y > r.height * 0.7
+                ? "after"
+                : "inside";
+          dnd.onDragOver(node.id, zone);
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          dnd.onDrop();
+        }}
+        onDragEnd={dnd.onDragEnd}
         className={cn(
-          "group flex h-8 items-center gap-0.5 rounded-lg pr-1 text-[13.5px] transition-colors",
+          "group relative flex h-8 items-center gap-0.5 rounded-lg pr-1 text-[13.5px] transition-colors",
           active
             ? "bg-surface-2 font-medium text-text"
             : "text-muted hover:bg-surface-2 hover:text-text",
+          isDragging && "opacity-40",
+          dt === "inside" && "ring-2 ring-inset ring-accent",
         )}
         style={{ paddingLeft: 6 + depth * 14 }}
       >
+        {dt === "before" && (
+          <span className="pointer-events-none absolute inset-x-1 -top-px h-0.5 rounded-full bg-accent" />
+        )}
+        {dt === "after" && (
+          <span className="pointer-events-none absolute inset-x-1 -bottom-px h-0.5 rounded-full bg-accent" />
+        )}
         <button
           onClick={() => hasKids && onToggle(node.id)}
           className={cn(
@@ -192,6 +359,7 @@ function PageNode({
         <Link
           href={`/bloknot/${node.id}`}
           onClick={onNavigate}
+          draggable={false}
           className="flex min-w-0 flex-1 items-center gap-1.5 py-1"
         >
           {node.icon ? (
@@ -201,6 +369,19 @@ function PageNode({
           )}
           <span className="truncate">{node.title || "Без названия"}</span>
         </Link>
+        <button
+          onClick={() => onToggleFavorite(node.id, !node.favorite)}
+          className={cn(
+            "flex h-5 w-5 shrink-0 items-center justify-center rounded transition-colors hover:bg-surface-3",
+            node.favorite
+              ? "text-warning"
+              : "text-faint opacity-0 hover:text-text focus:opacity-100 group-hover:opacity-100",
+          )}
+          aria-label={node.favorite ? "Убрать из избранного" : "В избранное"}
+          title={node.favorite ? "Убрать из избранного" : "В избранное"}
+        >
+          <Star size={12} className={node.favorite ? "fill-current" : ""} />
+        </button>
         <button
           onClick={() => onCreateChild(node.id)}
           className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-faint opacity-0 transition-colors hover:bg-surface-3 hover:text-text focus:opacity-100 group-hover:opacity-100"
@@ -222,6 +403,8 @@ function PageNode({
               activeId={activeId}
               onToggle={onToggle}
               onCreateChild={onCreateChild}
+              onToggleFavorite={onToggleFavorite}
+              dnd={dnd}
               onNavigate={onNavigate}
             />
           ))}

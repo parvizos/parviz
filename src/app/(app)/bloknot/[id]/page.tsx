@@ -42,6 +42,7 @@ export default async function BloknotItemPage({
         body: page.body,
         icon: page.icon,
         cover: page.cover,
+        favorite: page.favorite,
         parentId: page.parentId,
       }}
       breadcrumbs={breadcrumbs}

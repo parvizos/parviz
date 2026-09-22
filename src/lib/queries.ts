@@ -1158,6 +1158,7 @@ export type PageTreeNode = {
   title: string;
   icon: string | null;
   cover: string | null;
+  favorite: boolean;
   position: number;
 };
 
@@ -1171,6 +1172,7 @@ export async function getPageTree(): Promise<PageTreeNode[]> {
       title: pages.title,
       icon: pages.icon,
       cover: pages.cover,
+      favorite: pages.favorite,
       position: pages.position,
     })
     .from(pages)
@@ -1196,6 +1198,7 @@ export async function getChildPages(
       title: pages.title,
       icon: pages.icon,
       cover: pages.cover,
+      favorite: pages.favorite,
       position: pages.position,
     })
     .from(pages)

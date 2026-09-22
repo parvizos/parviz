@@ -14,6 +14,7 @@ import {
   Minimize2,
   NotebookText,
   Image as ImageIcon,
+  Star,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { stripHtml } from "@/lib/text";
@@ -22,6 +23,7 @@ import {
   autosavePageBody,
   createPage,
   deletePage,
+  togglePageFavorite,
 } from "@/lib/actions";
 import { RichEditor } from "./RichEditor";
 import { EmojiPicker } from "./EmojiPicker";
@@ -57,6 +59,7 @@ export function PageWorkspace({
     body: string | null;
     icon: string | null;
     cover: string | null;
+    favorite: boolean;
     parentId: string | null;
   };
   breadcrumbs: Crumb[];
@@ -68,6 +71,7 @@ export function PageWorkspace({
   const [title, setTitle] = useState(page.title);
   const [icon, setIcon] = useState<string | null>(page.icon);
   const [cover, setCover] = useState<string | null>(page.cover);
+  const [favorite, setFavorite] = useState(page.favorite);
   const [words, setWords] = useState(() => countWords(stripHtml(page.body)));
   const [status, setStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [pending, startTransition] = useTransition();
@@ -134,6 +138,18 @@ export function PageWorkspace({
         markSaved();
       } catch {
         setStatus("idle");
+      }
+    });
+  }
+
+  function onFavorite() {
+    const next = !favorite;
+    setFavorite(next);
+    startTransition(async () => {
+      try {
+        await togglePageFavorite(page.id, next);
+      } catch {
+        setFavorite(!next);
       }
     });
   }
@@ -224,6 +240,19 @@ export function PageWorkspace({
       {crumbs}
       <div className="ml-auto flex shrink-0 items-center gap-2">
         {statusEl}
+        <button
+          onClick={onFavorite}
+          aria-label={favorite ? "Убрать из избранного" : "В избранное"}
+          title={favorite ? "Убрать из избранного" : "В избранное"}
+          className={cn(
+            "flex h-8 w-8 items-center justify-center rounded-lg transition-colors",
+            favorite
+              ? "text-warning"
+              : "text-faint hover:bg-surface-2 hover:text-text",
+          )}
+        >
+          <Star size={16} className={favorite ? "fill-current" : ""} />
+        </button>
         <button
           onClick={() => setFocusMode(!focusMode)}
           aria-label={focusMode ? "Свернуть" : "Развернуть на весь экран"}

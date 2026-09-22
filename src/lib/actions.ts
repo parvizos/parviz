@@ -1033,6 +1033,16 @@ export async function updatePage(id: string, input: UpdatePageInput) {
   revalidateAll();
 }
 
+/** В избранное / из избранного — обновляем сайдбар. */
+export async function togglePageFavorite(id: string, favorite: boolean) {
+  await schemaReady();
+  await db
+    .update(pages)
+    .set({ favorite, updatedAt: new Date() })
+    .where(eq(pages.id, id));
+  revalidateAll();
+}
+
 /** Тело в сайдбаре не показывается — без ревалидации, чтобы не мигало при печати. */
 export async function autosavePageBody(id: string, html: string) {
   await schemaReady();
@@ -1041,6 +1051,81 @@ export async function autosavePageBody(id: string, html: string) {
     .update(pages)
     .set({ body: body || null, updatedAt: new Date() })
     .where(eq(pages.id, id));
+}
+
+/**
+ * Перемещает страницу: меняет родителя и/или порядок среди соседей.
+ * `beforeId` — вставить перед этой страницей (null/остутствует — в конец).
+ * Защита от цикла: нельзя вложить страницу в себя или своего потомка.
+ */
+export async function movePage(
+  id: string,
+  target: { parentId: string | null; beforeId?: string | null },
+) {
+  await schemaReady();
+  const all = await db
+    .select({
+      id: pages.id,
+      parentId: pages.parentId,
+      position: pages.position,
+      createdAt: pages.createdAt,
+    })
+    .from(pages)
+    .where(isNull(pages.archivedAt));
+  const self = all.find((p) => p.id === id);
+  if (!self) return;
+  const parentId = target.parentId ?? null;
+  if (parentId === id) return;
+
+  // Собираем потомков перемещаемой страницы — в них вкладывать нельзя.
+  const childrenOf = new Map<string, string[]>();
+  for (const p of all) {
+    if (!p.parentId) continue;
+    const arr = childrenOf.get(p.parentId) ?? [];
+    arr.push(p.id);
+    childrenOf.set(p.parentId, arr);
+  }
+  const descendants = new Set<string>();
+  const stack = [id];
+  while (stack.length) {
+    const cur = stack.pop()!;
+    for (const kid of childrenOf.get(cur) ?? []) {
+      if (!descendants.has(kid)) {
+        descendants.add(kid);
+        stack.push(kid);
+      }
+    }
+  }
+  if (parentId && descendants.has(parentId)) return;
+
+  // Соседи новой ветки (без самой страницы), в текущем порядке.
+  const siblings = all
+    .filter((p) => p.parentId === parentId && p.id !== id)
+    .sort(
+      (a, b) =>
+        a.position - b.position ||
+        (a.createdAt?.getTime() ?? 0) - (b.createdAt?.getTime() ?? 0),
+    );
+  let index = siblings.length;
+  if (target.beforeId && target.beforeId !== id) {
+    const i = siblings.findIndex((s) => s.id === target.beforeId);
+    if (i >= 0) index = i;
+  }
+  siblings.splice(index, 0, self);
+
+  await Promise.all(
+    siblings.map((p, i) =>
+      db
+        .update(pages)
+        .set(
+          p.id === id
+            ? { parentId, position: i, updatedAt: new Date() }
+            : { position: i },
+        )
+        .where(eq(pages.id, p.id)),
+    ),
+  );
+  revalidateAll();
 }
 
 /** Удаляет страницу вместе со всеми вложенными (каскад по коду). */
