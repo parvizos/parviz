@@ -1,28 +1,15 @@
-import { Download, Database, Clock, ShieldCheck, Table2 } from "lucide-react";
+import { Download, Database, Clock, Table2, FileJson } from "lucide-react";
 import { listBackups } from "@/lib/backup";
 import { getServerHealth } from "@/lib/health";
 import { appTimeZone } from "@/lib/dates";
 import { currentWorkspace, demoAvailable } from "@/db";
 import { ServerHealth } from "@/components/app/ServerHealth";
 import { DemoSettings } from "@/components/app/DemoSettings";
+import { DataRestore } from "@/components/app/DataRestore";
 import { PageHeader } from "@/components/ui/misc";
 
 export const metadata = { title: "Настройки" };
 export const dynamic = "force-dynamic";
-
-function fmtBytes(n: number): string {
-  if (n < 1024) return `${n} Б`;
-  if (n < 1024 * 1024) return `${Math.round(n / 1024)} КБ`;
-  return `${(n / 1024 / 1024).toFixed(1)} МБ`;
-}
-function fmtDate(iso: string): string {
-  return new Intl.DateTimeFormat("ru-RU", {
-    day: "numeric",
-    month: "long",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(iso));
-}
 
 export default async function SettingsPage() {
   const backups = listBackups();
@@ -81,6 +68,14 @@ export default async function SettingsPage() {
                   Скачать базу (.db)
                 </a>
                 <a
+                  href="/api/export/json"
+                  download
+                  className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-surface px-4 text-sm font-medium text-text transition-colors hover:bg-surface-2 hover:border-border-strong"
+                >
+                  <FileJson size={16} />
+                  Скачать всё (JSON)
+                </a>
+                <a
                   href="/api/export/finance"
                   download
                   className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-surface px-4 text-sm font-medium text-text transition-colors hover:bg-surface-2 hover:border-border-strong"
@@ -98,38 +93,12 @@ export default async function SettingsPage() {
         </div>
       </section>
 
-      {/* Автобэкапы */}
+      {/* Автобэкапы и восстановление */}
       <section className="mb-8">
         <h2 className="mb-2.5 px-1 text-[13px] font-semibold uppercase tracking-wide text-muted">
-          Автобэкапы
+          Автобэкапы и восстановление
         </h2>
-        <div className="rounded-2xl border border-border bg-surface p-5">
-          <div className="mb-3 flex items-center gap-2 text-[13px] text-muted">
-            <ShieldCheck size={16} className="text-success" />
-            Каждый день сервер сам делает снимок в{" "}
-            <span className="font-mono text-[12px]">data/backups</span>. Хранятся
-            последние 7.
-          </div>
-          {backups.length > 0 ? (
-            <ul className="flex flex-col divide-y divide-border">
-              {backups.map((b) => (
-                <li
-                  key={b.name}
-                  className="flex items-center justify-between py-2.5 text-[13px]"
-                >
-                  <span className="font-mono text-text">{b.name}</span>
-                  <span className="text-muted tabular">
-                    {fmtDate(b.date)} · {fmtBytes(b.size)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-[13px] text-faint">
-              Пока нет снимков — первый появится при следующем заходе в приложение.
-            </p>
-          )}
-        </div>
+        <DataRestore backups={backups} />
       </section>
 
       {/* Окружение */}
