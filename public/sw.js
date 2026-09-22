@@ -1,5 +1,5 @@
 /* ParvizOS service worker — оффлайн-оболочка и кэш. */
-const VERSION = "v1";
+const VERSION = "v2";
 const CACHE = `parviz-${VERSION}`;
 const OFFLINE_URL = "/offline";
 const PRECACHE = [
@@ -99,6 +99,9 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
   if (url.pathname.startsWith("/api/export")) return; // большие файлы — мимо кэша
+  // Аудио отдаётся с Range (ответы 206) — их нельзя класть в Cache API,
+  // да и незачем: пусть браузер сам управляет потоком и перемоткой.
+  if (url.pathname.startsWith("/api/tracks/")) return;
 
   // Картинки из базы иммутабельны по id — cache-first (оффлайн-фото в конспектах)
   if (url.pathname.startsWith("/api/images/")) {

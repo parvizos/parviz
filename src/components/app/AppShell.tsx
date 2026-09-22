@@ -6,6 +6,9 @@ import { IconButton } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
 import { Sidebar } from "./Sidebar";
 import { useUi } from "./ui-context";
+import { usePlayer } from "./player-context";
+import { MiniPlayer } from "./MiniPlayer";
+import { NowPlaying } from "./NowPlaying";
 import { DemoBanner } from "./DemoBanner";
 import type { PageTreeNode } from "@/lib/queries";
 
@@ -32,6 +35,7 @@ export function AppShell({
 }) {
   const [drawer, setDrawer] = useState(false);
   const { openNewTask, openCommand, focusMode } = useUi();
+  const { current: playing } = usePlayer();
 
   return (
     <div className="min-h-full">
@@ -85,10 +89,19 @@ export function AppShell({
           </IconButton>
         </header>
 
-        <main className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6 sm:py-9">
+        <main
+          className={cn(
+            "mx-auto w-full max-w-3xl px-4 py-6 sm:px-6 sm:py-9",
+            playing && "pb-28 sm:pb-28",
+          )}
+        >
           {children}
         </main>
       </div>
+
+      {/* Плеер: мини-панель снизу и полноэкранный режим — живут над всем */}
+      <MiniPlayer />
+      <NowPlaying />
     </div>
   );
 }

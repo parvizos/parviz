@@ -24,7 +24,8 @@
     { "name": "Сегодня", "short_name": "Сегодня", "url": "/segodnya" },
     { "name": "Входящие", "short_name": "Входящие", "url": "/vhodyaschie" },
     { "name": "Ежедневник", "short_name": "Дневник", "url": "/dnevnik" },
-    { "name": "Блокнот", "short_name": "Блокнот", "url": "/bloknot" }
+    { "name": "Блокнот", "short_name": "Блокнот", "url": "/bloknot" },
+    { "name": "Музыка", "short_name": "Музыка", "url": "/muzyka" }
   ],
   "share_target": {
     "action": "/share",

@@ -195,6 +195,32 @@ body {
   animation: panel-in 0.16s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* Полноэкранный плеер выезжает снизу. */
+@keyframes sheet-up {
+  from {
+    opacity: 0;
+    transform: translateY(3%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-sheet-up {
+  animation: sheet-up 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Мини-эквалайзер у играющего трека. */
+@keyframes eq {
+  0%,
+  100% {
+    transform: scaleY(0.35);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     animation-duration: 0.001ms !important;

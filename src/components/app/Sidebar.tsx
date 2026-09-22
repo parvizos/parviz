@@ -25,6 +25,7 @@ import {
   KeyRound,
   GraduationCap,
   NotebookPen,
+  Music2,
   Award,
   AlarmClock,
   Timer,
@@ -66,6 +67,7 @@ const MAIN: NavItem[] = [
   { href: "/dnevnik", label: "Ежедневник", icon: NotebookPen },
   { href: "/proekty", label: "Проекты", icon: FolderKanban },
   { href: "/sfery", label: "Сферы", icon: Layers },
+  { href: "/muzyka", label: "Музыка", icon: Music2 },
 ];
 
 const STUDY: NavItem[] = [

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { UiProvider } from "@/components/app/ui-context";
+import { PlayerProvider } from "@/components/app/player-context";
 import { AppShell } from "@/components/app/AppShell";
 import { currentWorkspace } from "@/db";
 import { backupIfDue } from "@/lib/backup";
@@ -77,14 +78,16 @@ export default async function AppLayout({
       pageOptions={pageTree.map((p) => ({ id: p.id, title: p.title, icon: p.icon }))}
       baseCurrency={baseCurrency()}
     >
-      <AppShell
-        counts={counts}
-        areas={areaLinks}
-        pages={pageTree}
-        demo={currentWorkspace() === "demo"}
-      >
-        {children}
-      </AppShell>
+      <PlayerProvider>
+        <AppShell
+          counts={counts}
+          areas={areaLinks}
+          pages={pageTree}
+          demo={currentWorkspace() === "demo"}
+        >
+          {children}
+        </AppShell>
+      </PlayerProvider>
     </UiProvider>
   );
 }

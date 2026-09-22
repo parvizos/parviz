@@ -1019,3 +1019,47 @@ export const images = sqliteTable("images", {
 
 export type Image = typeof images.$inferSelect;
 export type NewImage = typeof images.$inferInsert;
+
+/* ─────────────────────────  Музыка  ───────────────────────── */
+
+/**
+ * Личная фонотека. Сами аудиофайлы лежат на диске (data/media/<id>.<ext>) —
+ * чтобы база и её бэкапы оставались лёгкими даже при большой коллекции.
+ * Здесь — только метаданные. Обложка хранится в таблице images (как и
+ * картинки конспектов), поэтому попадает в резервные копии.
+ */
+export const tracks = sqliteTable(
+  "tracks",
+  {
+    id: id(),
+    title: text("title").notNull().default(""),
+    artist: text("artist"),
+    album: text("album"),
+    /** Длительность в секундах (из тегов или измеренная плеером). */
+    duration: real("duration"),
+    /** MIME аудио (audio/mpeg, audio/flac, audio/mp4…). */
+    mime: text("mime").notNull(),
+    /** Расширение файла на диске (mp3, flac, m4a…) — для пути в data/media. */
+    ext: text("ext").notNull().default(""),
+    /** Размер аудиофайла в байтах. */
+    size: integer("size").notNull().default(0),
+    /** Обложка — ссылка на images.id (null — обложки нет). */
+    coverImageId: text("cover_image_id").references(() => images.id, {
+      onDelete: "set null",
+    }),
+    favorite: integer("favorite", { mode: "boolean" }).notNull().default(false),
+    /** Порядок в фонотеке (перетаскивание/сортировка). */
+    position: integer("position").notNull().default(0),
+    /** Сколько раз доигран до конца — для «часто слушаю». */
+    playCount: integer("play_count").notNull().default(0),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    index("tracks_position_idx").on(t.position),
+    index("tracks_favorite_idx").on(t.favorite),
+  ],
+);
+
+export type Track = typeof tracks.$inferSelect;
+export type NewTrack = typeof tracks.$inferInsert;

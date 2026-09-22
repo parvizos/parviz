@@ -36,6 +36,7 @@ import {
   goals,
   goalContributions,
   images,
+  tracks,
   pages,
 } from "./schema";
 import { encryptSecret } from "@/lib/crypto";
@@ -46,7 +47,7 @@ const ALL_TABLES = [
   attendance, grades, exams, studySessions, topics, materials, files,
   entityTags, tags, links, lessons, notes, meetings, credentials, journal,
   tasks, people, organizations, accounts, categories, subjects, projects,
-  areas, images, exchangeRates, pages,
+  areas, tracks, images, exchangeRates, pages,
 ];
 
 /** Полностью очистить демо-базу (для «Обновить демо-данные»). */
