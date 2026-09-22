@@ -24,6 +24,7 @@ import {
   Handshake,
   KeyRound,
   FileText,
+  Zap,
   CornerDownLeft,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
@@ -91,6 +92,7 @@ export function CommandPalette({
     };
     return [
       { id: "new-task", label: "Новая задача", hint: "N", icon: <Plus size={16} />, run: act(onNewTask) },
+      { id: "capture", label: "Быстрая запись (работает офлайн)", hint: "⚡", icon: <Zap size={16} />, run: go("/share") },
       { id: "new-project", label: "Новый проект", icon: <Plus size={16} />, run: act(onNewProject) },
       { id: "new-area", label: "Новая сфера", icon: <Plus size={16} />, run: act(onNewArea) },
       { id: "new-subject", label: "Новый предмет", icon: <Plus size={16} />, run: act(onNewSubject) },

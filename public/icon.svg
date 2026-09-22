@@ -1,6 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <rect width="512" height="512" rx="112" fill="#5b5bd6"/>
-  <text x="50%" y="53%" dominant-baseline="central" text-anchor="middle"
-        font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif"
-        font-size="300" font-weight="700" fill="#ffffff">P</text>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="116" fill="#5b5bd6"/>
+    <rect x="170" y="150" width="56" height="224" rx="16" fill="#ffffff"/>
+    <rect x="170" y="150" width="156" height="120" rx="60" fill="#ffffff"/>
+    <rect x="238" y="184" width="64" height="52" rx="26" fill="#5b5bd6"/></svg>

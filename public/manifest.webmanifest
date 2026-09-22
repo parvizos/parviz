@@ -1,19 +1,35 @@
 {
-  "name": "ParvizOS",
+  "name": "ParvizOS — личная система",
   "short_name": "ParvizOS",
-  "description": "Личная операционная система: дела, проекты, финансы, учёба.",
+  "description": "Личная операционная система: дела, проекты, финансы, учёба, люди, блокнот.",
   "lang": "ru",
+  "dir": "ltr",
+  "id": "/",
   "start_url": "/segodnya",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "background_color": "#0d0d10",
   "theme_color": "#0d0d10",
+  "categories": ["productivity", "utilities", "lifestyle"],
   "icons": [
-    {
-      "src": "/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    }
-  ]
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ],
+  "shortcuts": [
+    { "name": "Быстрая запись", "short_name": "Запись", "url": "/share" },
+    { "name": "Сегодня", "short_name": "Сегодня", "url": "/segodnya" },
+    { "name": "Входящие", "short_name": "Входящие", "url": "/vhodyaschie" },
+    { "name": "Ежедневник", "short_name": "Дневник", "url": "/dnevnik" },
+    { "name": "Блокнот", "short_name": "Блокнот", "url": "/bloknot" }
+  ],
+  "share_target": {
+    "action": "/share",
+    "method": "GET",
+    "enctype": "application/x-www-form-urlencoded",
+    "params": { "title": "title", "text": "text", "url": "url" }
+  }
 }
