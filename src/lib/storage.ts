@@ -57,7 +57,10 @@ function urlFor(cfg: S3Config, key: string): string {
   return `${cfg.endpoint}/${parts}`;
 }
 
-/** Заливает локальный файл в объектное хранилище (стримом, с известной длиной). */
+/**
+ * Заливает локальный файл в объектное хранилище (стримом, с известной длиной),
+ * с повтором при сбое — разовый сетевой блип не роняет загрузку.
+ */
 export async function s3PutFile(
   key: string,
   filePath: string,
@@ -66,23 +69,32 @@ export async function s3PutFile(
   const cfg = config();
   if (!cfg) throw new Error("S3 не настроен");
   const size = (await stat(filePath)).size;
-  const body = Readable.toWeb(
-    createReadStream(filePath),
-  ) as unknown as ReadableStream;
-  const res = await client(cfg).fetch(urlFor(cfg, key), {
-    method: "PUT",
-    body,
-    headers: {
-      "content-type": contentType || "application/octet-stream",
-      "content-length": String(size),
-      "x-amz-content-sha256": "UNSIGNED-PAYLOAD",
-    },
-    // duplex обязателен для стрима тела запроса в undici/fetch
-    duplex: "half",
-  } as RequestInit & { duplex: "half" });
-  if (!res.ok) {
-    throw new Error(`S3 PUT ${res.status}`);
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      if (attempt > 0) await new Promise((r) => setTimeout(r, 500 * attempt));
+      // Поток создаём на каждую попытку заново (использованный не перемотать).
+      const body = Readable.toWeb(
+        createReadStream(filePath),
+      ) as unknown as ReadableStream;
+      const res = await client(cfg).fetch(urlFor(cfg, key), {
+        method: "PUT",
+        body,
+        headers: {
+          "content-type": contentType || "application/octet-stream",
+          "content-length": String(size),
+          "x-amz-content-sha256": "UNSIGNED-PAYLOAD",
+        },
+        // duplex обязателен для стрима тела запроса в undici/fetch
+        duplex: "half",
+      } as RequestInit & { duplex: "half" });
+      if (!res.ok) throw new Error(`S3 PUT ${res.status}`);
+      return;
+    } catch (e) {
+      lastErr = e;
+    }
   }
+  throw lastErr instanceof Error ? lastErr : new Error("S3 PUT failed");
 }
 
 export type S3GetResult = {
