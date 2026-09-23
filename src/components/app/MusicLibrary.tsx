@@ -51,6 +51,7 @@ import {
   removeDownload,
   ensurePersisted,
   getStorageInfo,
+  neededRepairs,
   type StorageInfo,
 } from "@/lib/track-store";
 
@@ -76,6 +77,7 @@ export function MusicLibrary({ initialTracks }: { initialTracks: TrackMeta[] }) 
   const [dragOver, setDragOver] = useState(false);
   const dragDepth = useRef(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const autoVerifyRef = useRef(false);
 
   // Подмешиваем скачанные треки, которых нет в серверном списке — чтобы
   // фонотека полностью работала офлайн (в т.ч. при пустом ответе сервера).
@@ -138,6 +140,39 @@ export function MusicLibrary({ initialTracks }: { initialTracks: TrackMeta[] }) 
     [tracks, downloadedIds],
   );
   const undownloadedInView = filtered.filter((t) => !downloadedIds.has(t.id));
+
+  // Железобетон: при каждом выходе в сеть тихо проверяем целостность скачанного
+  // и докачиваем пропавшее/побитое — фонотека всегда готова к офлайну.
+  useEffect(() => {
+    if (!online) {
+      autoVerifyRef.current = false;
+      return;
+    }
+    if (autoVerifyRef.current || downloadedCount === 0) return;
+    autoVerifyRef.current = true;
+    let mounted = true;
+    (async () => {
+      const ids = await neededRepairs(tracks);
+      if (!mounted || ids.length === 0) return;
+      const byId = new Map(tracks.map((t) => [t.id, t]));
+      let fixed = 0;
+      for (const id of ids) {
+        const t = byId.get(id);
+        if (!t) continue;
+        try {
+          await downloadTrack(t);
+          fixed++;
+        } catch {}
+      }
+      if (mounted && fixed) {
+        toast({ title: `Восстановлено загрузок: ${fixed}` });
+        refreshStorage();
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [online, downloadedCount, tracks, toast, refreshStorage]);
 
   const handleFiles = useCallback(
     async (fileList: FileList | File[]) => {
@@ -220,20 +255,16 @@ export function MusicLibrary({ initialTracks }: { initialTracks: TrackMeta[] }) 
     });
   };
 
-  // Проверяет целостность скачанного и до-качивает обрывки/устаревшее.
+  // Глубокая проверка целостности + докачка пропавшего/побитого.
   const repair = async () => {
     if (repairing || !online) return;
     setRepairing(true);
     try {
-      const metas = await allDownloadedMeta();
+      const ids = await neededRepairs(tracks);
       const byId = new Map(tracks.map((t) => [t.id, t]));
-      const broken = metas.filter((m) => {
-        const t = byId.get(m.id);
-        return t && (m.bytes == null || m.bytes !== t.size);
-      });
       let fixed = 0;
-      for (const m of broken) {
-        const t = byId.get(m.id);
+      for (const id of ids) {
+        const t = byId.get(id);
         if (!t) continue;
         try {
           await downloadTrack(t);
@@ -242,7 +273,7 @@ export function MusicLibrary({ initialTracks }: { initialTracks: TrackMeta[] }) 
       }
       toast({
         title: fixed ? `Докачано: ${fixed}` : "Все загрузки целы",
-        body: fixed ? "Повреждённые копии обновлены." : undefined,
+        body: fixed ? "Повреждённые копии восстановлены." : undefined,
       });
     } finally {
       setRepairing(false);

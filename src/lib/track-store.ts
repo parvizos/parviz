@@ -98,6 +98,43 @@ export async function totalDownloadedBytes(): Promise<number> {
   return metas.reduce((s, m) => s + (m.size || 0), 0);
 }
 
+/** Ключи (id) реально присутствующих аудиофайлов — без загрузки блобов. */
+async function audioKeys(): Promise<Set<string>> {
+  try {
+    const db = await openDb();
+    const tx = db.transaction(AUDIO, "readonly");
+    const keys = (await reqToPromise(
+      tx.objectStore(AUDIO).getAllKeys(),
+    )) as IDBValidKey[];
+    return new Set(keys.map(String));
+  } catch {
+    return new Set();
+  }
+}
+
+/**
+ * Глубокая проверка целостности: возвращает id скачанных треков, которые
+ * нужно перекачать — аудиофайл пропал (вытеснен) или размер не совпадает с
+ * серверным. Не читает сами блобы (быстро). Метаданные и байты пишутся одной
+ * транзакцией, поэтому bytes == фактический размер блоба.
+ */
+export async function neededRepairs(
+  serverTracks: { id: string; size: number }[],
+): Promise<string[]> {
+  const [metas, keys] = await Promise.all([allDownloadedMeta(), audioKeys()]);
+  const sizeById = new Map(serverTracks.map((t) => [t.id, t.size]));
+  const need: string[] = [];
+  for (const m of metas) {
+    if (!sizeById.has(m.id)) continue; // трека уже нет на сервере — пропускаем
+    const expected = sizeById.get(m.id) ?? 0;
+    const audioPresent = keys.has(m.id);
+    if (!audioPresent || m.bytes == null || m.bytes !== expected) {
+      need.push(m.id);
+    }
+  }
+  return need;
+}
+
 /* ── Запись ── */
 
 async function putDownloaded(meta: TrackMeta, blob: Blob): Promise<void> {
@@ -130,11 +167,8 @@ export async function removeDownload(id: string): Promise<void> {
   emit();
 }
 
-/**
- * Скачивает трек в устройство с прогрессом. Попутно прогревает обложку
- * (её кэширует сервис-воркер), чтобы она была видна и без сети.
- */
-export async function downloadTrack(
+/** Одна попытка: скачать, проверить целостность и сохранить. */
+async function downloadOnce(
   track: TrackMeta,
   onProgress?: (frac: number) => void,
 ): Promise<void> {
@@ -164,10 +198,34 @@ export async function downloadTrack(
   // диске). Не совпало — это обрыв связи; битую копию не сохраняем.
   const expected = track.size || total || 0;
   if (expected > 0 && blob.size !== expected) {
-    throw new Error("Загрузка оборвалась — попробуй ещё раз");
+    throw new Error("Загрузка оборвалась");
   }
 
   await putDownloaded(track, blob);
+}
+
+/**
+ * Скачивает трек в устройство с прогрессом, с повтором при сбое (сеть/обрыв).
+ * Попутно прогревает обложку (её кэширует сервис-воркер) для показа без сети.
+ */
+export async function downloadTrack(
+  track: TrackMeta,
+  onProgress?: (frac: number) => void,
+): Promise<void> {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      if (attempt > 0)
+        await new Promise((r) => setTimeout(r, 500 * attempt));
+      await downloadOnce(track, onProgress);
+      lastErr = null;
+      break;
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  if (lastErr) throw lastErr instanceof Error ? lastErr : new Error("Не удалось скачать");
+
   if (track.coverImageId) {
     try {
       await fetch(`/api/images/${track.coverImageId}`);
