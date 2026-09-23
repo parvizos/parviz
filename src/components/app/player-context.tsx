@@ -13,6 +13,7 @@ import {
 } from "react";
 import type { TrackMeta } from "@/lib/music-queries";
 import { bumpPlayCount } from "@/lib/music-actions";
+import { getDownloadedBlob } from "@/lib/track-store";
 
 export type Repeat = "off" | "all" | "one";
 
@@ -210,6 +211,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const wantPlayRef = useRef(false);
   const restoredTimeRef = useRef<number | null>(null);
   const countedRef = useRef<string | null>(null);
+  const objectUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
     pbRef.current = pb;
@@ -286,47 +288,82 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     persist();
   }, [pb, volume, muted, persist]);
 
-  /* ── Загрузка текущего трека при его смене ── */
+  /* ── Загрузка текущего трека при его смене (оффлайн — из IndexedDB) ── */
   useEffect(() => {
-    /* Сброс экрана и запуск воспроизведения — синхронизация с <audio>. */
-    /* eslint-disable react-hooks/set-state-in-effect */
     const audio = audioRef.current;
     if (!audio) return;
+    let canceled = false;
+
+    /* eslint-disable react-hooks/set-state-in-effect */
+    setCurrentTime(0);
     if (!current) {
       audio.removeAttribute("src");
       audio.load();
       setIsPlaying(false);
-      setCurrentTime(0);
       setDuration(0);
+      if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current);
+        objectUrlRef.current = null;
+      }
       return;
     }
-    const url = `/api/tracks/${current.id}/audio`;
-    audio.src = url;
-    audio.load();
     setDuration(current.duration ?? 0);
-    setCurrentTime(0);
-    countedRef.current = null;
-
-    // Восстановление позиции после перезагрузки страницы.
-    if (restoredTimeRef.current != null) {
-      const t = restoredTimeRef.current;
-      restoredTimeRef.current = null;
-      const onCanPlay = () => {
-        try {
-          if (t > 0 && t < (audio.duration || Infinity)) audio.currentTime = t;
-        } catch {}
-        audio.removeEventListener("loadedmetadata", onCanPlay);
-      };
-      audio.addEventListener("loadedmetadata", onCanPlay);
-    }
-
-    if (wantPlayRef.current) {
-      setLoading(true);
-      audio.play().catch(() => setLoading(false));
-    }
     /* eslint-enable react-hooks/set-state-in-effect */
+    countedRef.current = null;
+    const wantPlay = wantPlayRef.current;
+    const restoreT = restoredTimeRef.current;
+    restoredTimeRef.current = null;
+
+    void (async () => {
+      // Если трек скачан — играем локальную копию (работает без сети).
+      let src = `/api/tracks/${current.id}/audio`;
+      try {
+        const blob = await getDownloadedBlob(current.id);
+        if (canceled) return;
+        if (blob) src = URL.createObjectURL(blob);
+      } catch {}
+      if (canceled) {
+        if (src.startsWith("blob:")) URL.revokeObjectURL(src);
+        return;
+      }
+      if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current);
+        objectUrlRef.current = null;
+      }
+      if (src.startsWith("blob:")) objectUrlRef.current = src;
+      audio.src = src;
+      audio.load();
+
+      // Восстановление позиции после перезагрузки страницы.
+      if (restoreT != null) {
+        const onMeta = () => {
+          try {
+            if (restoreT > 0 && restoreT < (audio.duration || Infinity))
+              audio.currentTime = restoreT;
+          } catch {}
+          audio.removeEventListener("loadedmetadata", onMeta);
+        };
+        audio.addEventListener("loadedmetadata", onMeta);
+      }
+      if (wantPlay) {
+        setLoading(true);
+        audio.play().catch(() => setLoading(false));
+      }
+    })();
+
+    return () => {
+      canceled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [current?.id]);
+
+  // Освобождаем последний blob-URL при размонтировании.
+  useEffect(
+    () => () => {
+      if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
+    },
+    [],
+  );
 
   /* ── Громкость ── */
   useEffect(() => {

@@ -19,11 +19,13 @@ import {
 import { usePlayer } from "./player-context";
 import { TrackCover } from "./TrackCover";
 import { SeekBar } from "./SeekBar";
+import { TrackDownloadButton, useOnline } from "./TrackDownloadButton";
 import { formatTime } from "@/lib/music-format";
 import { cn } from "@/lib/cn";
 
 export function NowPlaying() {
   const p = usePlayer();
+  const online = useOnline();
 
   // Закрытие по Esc.
   useEffect(() => {
@@ -72,7 +74,13 @@ export function NowPlaying() {
           <span className="text-[12px] font-semibold uppercase tracking-wider text-faint">
             Сейчас играет
           </span>
-          <div className="h-10 w-10" />
+          <TrackDownloadButton
+            track={track}
+            online={online}
+            size={20}
+            alwaysVisible
+            className="h-10 w-10"
+          />
         </div>
 
         {/* Обложка */}

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  CloudDownload,
   Loader2,
   MoreHorizontal,
   Music2,
@@ -13,17 +14,23 @@ import {
   Star,
   Trash2,
   Upload,
+  WifiOff,
   X,
 } from "lucide-react";
 import { usePlayer } from "./player-context";
 import { TrackCover } from "./TrackCover";
 import { useToast } from "./toast";
+import {
+  TrackDownloadButton,
+  useDownloadedIds,
+  useOnline,
+} from "./TrackDownloadButton";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Field, Input } from "@/components/ui/Field";
 import { PageHeader, EmptyState } from "@/components/ui/misc";
 import { cn } from "@/lib/cn";
-import { formatTime } from "@/lib/music-format";
+import { formatTime, formatBytes } from "@/lib/music-format";
 import type { TrackMeta } from "@/lib/music-queries";
 import {
   renameTrack,
@@ -36,6 +43,11 @@ import {
   measureDuration,
   uploadTrack,
 } from "@/lib/music-upload";
+import {
+  allDownloadedMeta,
+  downloadTrack,
+  removeDownload,
+} from "@/lib/track-store";
 
 type UploadJob = { id: string; name: string; progress: number; error?: string };
 
@@ -43,26 +55,69 @@ export function MusicLibrary({ initialTracks }: { initialTracks: TrackMeta[] }) 
   const player = usePlayer();
   const { toast } = useToast();
 
+  const online = useOnline();
+  const downloadedIds = useDownloadedIds();
+
   const [tracks, setTracks] = useState(initialTracks);
   const [jobs, setJobs] = useState<UploadJob[]>([]);
   const [query, setQuery] = useState("");
   const [favOnly, setFavOnly] = useState(false);
+  const [downloadedOnly, setDownloadedOnly] = useState(false);
+  const [bulk, setBulk] = useState<{ done: number; total: number } | null>(null);
   const [editing, setEditing] = useState<TrackMeta | null>(null);
   const [deleting, setDeleting] = useState<TrackMeta | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const dragDepth = useRef(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Подмешиваем скачанные треки, которых нет в серверном списке — чтобы
+  // фонотека полностью работала офлайн (в т.ч. при пустом ответе сервера).
+  useEffect(() => {
+    let mounted = true;
+    allDownloadedMeta().then((metas) => {
+      if (!mounted || !metas.length) return;
+      setTracks((prev) => {
+        const have = new Set(prev.map((t) => t.id));
+        const extra = metas.filter((m) => !have.has(m.id));
+        return extra.length ? [...prev, ...extra] : prev;
+      });
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return tracks.filter((t) => {
       if (favOnly && !t.favorite) return false;
+      if (downloadedOnly && !downloadedIds.has(t.id)) return false;
       if (!q) return true;
       return `${t.title} ${t.artist ?? ""} ${t.album ?? ""}`
         .toLowerCase()
         .includes(q);
     });
-  }, [tracks, query, favOnly]);
+  }, [tracks, query, favOnly, downloadedOnly, downloadedIds]);
+
+  // Что реально можно проиграть сейчас: онлайн — всё, офлайн — только скачанное.
+  const playableList = useMemo(
+    () => (online ? filtered : filtered.filter((t) => downloadedIds.has(t.id))),
+    [online, filtered, downloadedIds],
+  );
+
+  const downloadedCount = useMemo(
+    () => tracks.reduce((n, t) => (downloadedIds.has(t.id) ? n + 1 : n), 0),
+    [tracks, downloadedIds],
+  );
+  const usageBytes = useMemo(
+    () =>
+      tracks.reduce(
+        (s, t) => (downloadedIds.has(t.id) ? s + (t.size || 0) : s),
+        0,
+      ),
+    [tracks, downloadedIds],
+  );
+  const undownloadedInView = filtered.filter((t) => !downloadedIds.has(t.id));
 
   const handleFiles = useCallback(
     async (fileList: FileList | File[]) => {
@@ -100,9 +155,38 @@ export function MusicLibrary({ initialTracks }: { initialTracks: TrackMeta[] }) 
 
   const onPick = () => inputRef.current?.click();
 
-  const onRowPlay = (index: number, t: TrackMeta) => {
-    if (player.isCurrent(t.id)) player.toggle();
-    else player.playTracks(filtered, index);
+  const onRowPlay = (t: TrackMeta) => {
+    if (!online && !downloadedIds.has(t.id)) {
+      toast({
+        title: "Нет сети",
+        body: "Скачай трек, чтобы слушать офлайн.",
+      });
+      return;
+    }
+    if (player.isCurrent(t.id)) {
+      player.toggle();
+      return;
+    }
+    const idx = Math.max(
+      0,
+      playableList.findIndex((x) => x.id === t.id),
+    );
+    player.playTracks(playableList, idx);
+  };
+
+  const downloadAll = async () => {
+    if (!online || bulk) return;
+    const todo = undownloadedInView;
+    if (!todo.length) return;
+    setBulk({ done: 0, total: todo.length });
+    for (let i = 0; i < todo.length; i++) {
+      try {
+        await downloadTrack(todo[i]);
+      } catch {}
+      setBulk({ done: i + 1, total: todo.length });
+    }
+    setBulk(null);
+    toast({ title: "Готово", body: "Треки скачаны для офлайна." });
   };
 
   const onToggleFav = async (t: TrackMeta) => {
@@ -126,6 +210,7 @@ export function MusicLibrary({ initialTracks }: { initialTracks: TrackMeta[] }) 
     setDeleting(null);
     setTracks((list) => list.filter((x) => x.id !== t.id));
     player.removeTrack(t.id);
+    void removeDownload(t.id);
     try {
       await deleteTrack(t.id);
       toast({ title: "Трек удалён", body: t.title });
@@ -205,17 +290,17 @@ export function MusicLibrary({ initialTracks }: { initialTracks: TrackMeta[] }) 
       ) : (
         <>
           {/* Панель управления */}
-          <div className="mb-4 flex flex-wrap items-center gap-2">
+          <div className="mb-3 flex flex-wrap items-center gap-2">
             <Button
-              onClick={() => player.playTracks(filtered, 0)}
-              disabled={filtered.length === 0}
+              onClick={() => player.playTracks(playableList, 0)}
+              disabled={playableList.length === 0}
               size="sm"
             >
               <Play size={15} className="fill-current" /> Играть всё
             </Button>
             <Button
-              onClick={() => player.playShuffled(filtered)}
-              disabled={filtered.length === 0}
+              onClick={() => player.playShuffled(playableList)}
+              disabled={playableList.length === 0}
               variant="secondary"
               size="sm"
             >
@@ -233,6 +318,23 @@ export function MusicLibrary({ initialTracks }: { initialTracks: TrackMeta[] }) 
               <Star size={14} className={favOnly ? "fill-current" : ""} />
               Избранное
             </button>
+            <button
+              onClick={() => setDownloadedOnly((v) => !v)}
+              className={cn(
+                "inline-flex h-8 items-center gap-1.5 rounded-[10px] px-3 text-[13px] font-medium transition-colors",
+                downloadedOnly
+                  ? "bg-accent-soft text-accent-soft-text"
+                  : "border border-border text-muted hover:bg-surface-2 hover:text-text",
+              )}
+            >
+              <CloudDownload size={14} />
+              Скачанные
+            </button>
+            {!online && (
+              <span className="inline-flex h-8 items-center gap-1.5 rounded-[10px] bg-warning-soft px-3 text-[13px] font-medium text-warning">
+                <WifiOff size={14} /> Офлайн
+              </span>
+            )}
 
             <div className="relative ml-auto min-w-0">
               <Search
@@ -246,6 +348,34 @@ export function MusicLibrary({ initialTracks }: { initialTracks: TrackMeta[] }) 
                 className="h-8 w-40 rounded-[10px] border border-border bg-surface pl-8 pr-3 text-[13px] text-text outline-none transition-colors placeholder:text-faint focus:border-accent focus:w-52"
               />
             </div>
+          </div>
+
+          {/* Оффлайн: сколько скачано + «скачать всё» */}
+          <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[12.5px] text-muted">
+            {downloadedCount > 0 && (
+              <span>
+                Скачано для офлайна: {downloadedCount} · {formatBytes(usageBytes)}
+              </span>
+            )}
+            {online && undownloadedInView.length > 0 && (
+              <button
+                onClick={downloadAll}
+                disabled={!!bulk}
+                className="inline-flex items-center gap-1.5 font-medium text-accent transition-colors hover:text-accent-hover disabled:opacity-60"
+              >
+                {bulk ? (
+                  <>
+                    <Loader2 size={13} className="animate-spin" />
+                    Качаю {bulk.done}/{bulk.total}…
+                  </>
+                ) : (
+                  <>
+                    <CloudDownload size={14} />
+                    Скачать всё ({undownloadedInView.length})
+                  </>
+                )}
+              </button>
+            )}
           </div>
 
           {/* Загрузки в процессе */}
@@ -296,9 +426,11 @@ export function MusicLibrary({ initialTracks }: { initialTracks: TrackMeta[] }) 
               icon={<Search size={20} />}
               title="Ничего не найдено"
               description={
-                favOnly
-                  ? "В избранном пока пусто — отметь любимые треки звёздочкой."
-                  : "Попробуй изменить запрос."
+                downloadedOnly
+                  ? "Пока нет скачанных треков — нажми на облачко у трека, чтобы слушать офлайн."
+                  : favOnly
+                    ? "В избранном пока пусто — отметь любимые треки звёздочкой."
+                    : "Попробуй изменить запрос."
               }
             />
           ) : (
@@ -310,7 +442,9 @@ export function MusicLibrary({ initialTracks }: { initialTracks: TrackMeta[] }) 
                   index={i}
                   active={player.isCurrent(t.id)}
                   playing={player.isCurrent(t.id) && player.isPlaying}
-                  onPlay={() => onRowPlay(i, t)}
+                  online={online}
+                  playable={online || downloadedIds.has(t.id)}
+                  onPlay={() => onRowPlay(t)}
                   onToggleFav={() => onToggleFav(t)}
                   onEdit={() => setEditing(t)}
                   onDelete={() => setDeleting(t)}
@@ -381,6 +515,8 @@ function TrackRow({
   index,
   active,
   playing,
+  online,
+  playable,
   onPlay,
   onToggleFav,
   onEdit,
@@ -390,6 +526,8 @@ function TrackRow({
   index: number;
   active: boolean;
   playing: boolean;
+  online: boolean;
+  playable: boolean;
   onPlay: () => void;
   onToggleFav: () => void;
   onEdit: () => void;
@@ -401,6 +539,7 @@ function TrackRow({
       className={cn(
         "group flex cursor-pointer items-center gap-3 border-b border-border px-2.5 py-2 last:border-b-0 sm:px-3",
         active ? "bg-accent-soft/50" : "hover:bg-surface-2",
+        !playable && "opacity-55",
       )}
     >
       {/* Номер / обложка с кнопкой */}
@@ -440,6 +579,8 @@ function TrackRow({
       <span className="hidden shrink-0 text-[12px] tabular text-faint sm:block">
         {formatTime(track.duration)}
       </span>
+
+      <TrackDownloadButton track={track} online={online} />
 
       <button
         onClick={(e) => {
