@@ -37,9 +37,19 @@ export const CURRENCIES: CurrencyMeta[] = [
 
 const BY_CODE = new Map(CURRENCIES.map((c) => [c.code, c]));
 
-/** Базовая валюта приложения (в неё сводятся капитал и аналитика). */
-export function baseCurrency(): string {
-  return (process.env.APP_BASE_CURRENCY || "RUB").toUpperCase();
+/**
+ * Дефолтная основная валюта, если в настройках ничего не задано.
+ * По умолчанию — турецкая лира; можно переопределить через APP_BASE_CURRENCY.
+ * Саму основную валюту читай через getBaseCurrency() из "@/lib/settings"
+ * (она берётся из БД и меняется из интерфейса).
+ */
+export const DEFAULT_BASE_CURRENCY = (
+  process.env.APP_BASE_CURRENCY || "TRY"
+).toUpperCase();
+
+/** Привести код валюты к канону (верхний регистр, без пробелов). */
+export function normalizeCurrency(code: string): string {
+  return code.trim().toUpperCase();
 }
 
 export function currencyMeta(code: string): CurrencyMeta {

@@ -10,7 +10,7 @@ import {
   getNetWorth,
   getDuePlannedCount,
 } from "@/lib/finance-queries";
-import { baseCurrency } from "@/lib/currency";
+import { getBaseCurrency } from "@/lib/settings";
 import { currentMonth, isValidMonth } from "@/lib/dates";
 import { formatMoneyShort } from "@/lib/money";
 import { financeColor } from "@/lib/finance-format";
@@ -33,7 +33,7 @@ export default async function FinanceOverviewPage({
 }) {
   const { m } = await searchParams;
   const month = isValidMonth(m) ? m : currentMonth();
-  const base = baseCurrency();
+  const base = await getBaseCurrency();
 
   const [net, accounts, summary, spending, recent, dueCount] =
     await Promise.all([

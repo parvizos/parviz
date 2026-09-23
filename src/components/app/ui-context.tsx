@@ -148,7 +148,7 @@ export function UiProvider({
   personOptions,
   organizationOptions,
   pageOptions = [],
-  baseCurrency = "RUB",
+  baseCurrency = "TRY",
 }: {
   children: ReactNode;
   areaOptions: AreaOption[];
@@ -600,6 +600,7 @@ export function UiProvider({
         <AccountDialog
           onClose={() => setAccount((s) => ({ ...s, open: false }))}
           account={account.account}
+          defaultCurrency={baseCurrency}
         />
       )}
       {category.open && (

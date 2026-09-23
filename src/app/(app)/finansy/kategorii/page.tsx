@@ -1,6 +1,6 @@
 import { Tags } from "lucide-react";
 import { getCategoriesWithMonth } from "@/lib/queries";
-import { baseCurrency } from "@/lib/currency";
+import { getBaseCurrency } from "@/lib/settings";
 import { currentMonth, isValidMonth } from "@/lib/dates";
 import { PageHeader, EmptyState } from "@/components/ui/misc";
 import { MonthNav } from "@/components/app/MonthNav";
@@ -17,7 +17,7 @@ export default async function CategoriesPage({
 }) {
   const { m } = await searchParams;
   const month = isValidMonth(m) ? m : currentMonth();
-  const base = baseCurrency();
+  const base = await getBaseCurrency();
   const categories = await getCategoriesWithMonth(month);
   const expense = categories.filter((c) => c.kind === "expense");
   const income = categories.filter((c) => c.kind === "income");

@@ -19,6 +19,7 @@ import {
   type Planned,
 } from "@/db/schema";
 import { todayISO } from "@/lib/dates";
+import { getBaseCurrency } from "@/lib/settings";
 
 function revalidateAll() {
   revalidatePath("/", "layout");
@@ -79,6 +80,7 @@ export type DebtInput = z.input<typeof debtSchema>;
 export async function createDebt(input: DebtInput) {
   await schemaReady();
   const data = debtSchema.parse(input);
+  const base = await getBaseCurrency();
   const [row] = await db
     .insert(debts)
     .values({
@@ -86,7 +88,7 @@ export async function createDebt(input: DebtInput) {
       personId: data.personId ?? null,
       counterparty: data.counterparty ?? null,
       title: data.title ?? null,
-      currency: data.currency ?? "RUB",
+      currency: data.currency ?? base,
       principal: data.principal,
       date: data.date,
       dueDate: data.dueDate ?? null,
@@ -175,13 +177,14 @@ export type PlannedInput = z.input<typeof plannedSchema>;
 export async function createPlanned(input: PlannedInput) {
   await schemaReady();
   const data = plannedSchema.parse(input);
+  const base = await getBaseCurrency();
   const [row] = await db
     .insert(planned)
     .values({
       title: data.title,
       kind: data.kind ?? "expense",
       amount: data.amount,
-      currency: data.currency ?? "RUB",
+      currency: data.currency ?? base,
       accountId: data.accountId ?? null,
       toAccountId: data.kind === "transfer" ? data.toAccountId ?? null : null,
       categoryId: data.kind === "transfer" ? null : data.categoryId ?? null,
@@ -357,12 +360,13 @@ export type GoalInput = z.input<typeof goalSchema>;
 export async function createGoal(input: GoalInput) {
   await schemaReady();
   const data = goalSchema.parse(input);
+  const base = await getBaseCurrency();
   const [row] = await db
     .insert(goals)
     .values({
       title: data.title,
       targetAmount: data.targetAmount,
-      currency: data.currency ?? "RUB",
+      currency: data.currency ?? base,
       accountId: data.accountId ?? null,
       dueDate: data.dueDate ?? null,
       color: data.color ?? null,

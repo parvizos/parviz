@@ -1,27 +1,44 @@
 import { CreditCard } from "lucide-react";
 import { getAccountsWithBalances, getTotalBalance } from "@/lib/queries";
 import { getCurrencyRates } from "@/lib/finance-queries";
-import { baseCurrency } from "@/lib/currency";
+import { getBaseCurrency, getSettings, SETTING_KEYS } from "@/lib/settings";
 import { formatMoneyShort } from "@/lib/money";
 import { PageHeader, EmptyState } from "@/components/ui/misc";
 import { AccountCard } from "@/components/app/finance-items";
 import { NewAccountButton } from "@/components/app/finance-buttons";
 import { RatesCard, CurrencyConverter } from "@/components/app/finance2-items";
+import { BaseCurrencyCard } from "@/components/app/currency-settings";
 
 export const metadata = { title: "Счета" };
 export const dynamic = "force-dynamic";
 
+const DATE_FMT = new Intl.DateTimeFormat("ru-RU", {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+});
+
 export default async function AccountsPage() {
-  const base = baseCurrency();
-  const [accounts, total, rates] = await Promise.all([
+  const base = await getBaseCurrency();
+  const [accounts, total, rates, cfg] = await Promise.all([
     getAccountsWithBalances(),
     getTotalBalance(),
     getCurrencyRates(),
+    getSettings([SETTING_KEYS.ratesUpdatedAt, SETTING_KEYS.ratesSource]),
   ]);
   const usedRates = rates.filter((r) => r.inUse);
   const converterRates = rates
     .filter((r) => r.rateToBase != null)
     .map((r) => ({ code: r.code, rateToBase: r.rateToBase as number }));
+
+  const tsRaw = cfg.get(SETTING_KEYS.ratesUpdatedAt);
+  const ts = tsRaw ? Number(tsRaw) : NaN;
+  const updatedLabel = Number.isFinite(ts) ? DATE_FMT.format(new Date(ts)) : null;
+  const source = cfg.get(SETTING_KEYS.ratesSource) ?? null;
+
+  const currencyCard = (
+    <BaseCurrencyCard base={base} updatedLabel={updatedLabel} source={source} />
+  );
 
   return (
     <div>
@@ -50,22 +67,26 @@ export default async function AccountsPage() {
             ))}
           </div>
 
-          {usedRates.length > 0 && (
-            <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-2">
-              <RatesCard rates={usedRates} base={base} />
-              {converterRates.length > 0 && (
-                <CurrencyConverter rates={converterRates} base={base} />
-              )}
+          <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-2">
+            {currencyCard}
+            {usedRates.length > 0 && <RatesCard rates={usedRates} base={base} />}
+          </div>
+          {converterRates.length > 0 && (
+            <div className="mt-3">
+              <CurrencyConverter rates={converterRates} base={base} />
             </div>
           )}
         </>
       ) : (
-        <EmptyState
-          icon={<CreditCard size={22} />}
-          title="Нет счетов"
-          description="Добавь счёт — карту, наличные или накопления. Баланс будет считаться сам по операциям."
-          action={<NewAccountButton />}
-        />
+        <>
+          <EmptyState
+            icon={<CreditCard size={22} />}
+            title="Нет счетов"
+            description="Добавь счёт — карту, наличные или накопления. Баланс будет считаться сам по операциям."
+            action={<NewAccountButton />}
+          />
+          <div className="mt-4">{currencyCard}</div>
+        </>
       )}
     </div>
   );

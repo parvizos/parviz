@@ -81,14 +81,16 @@ export type AccountForEdit = {
 export function AccountDialog({
   onClose,
   account,
+  defaultCurrency = "RUB",
 }: {
   onClose: () => void;
   account?: AccountForEdit | null;
+  defaultCurrency?: string;
 }) {
   const editing = !!account;
   const [name, setName] = useState(account?.name ?? "");
   const [kind, setKind] = useState<AccountKind>(account?.kind ?? "card");
-  const [currency, setCurrency] = useState(account?.currency ?? "RUB");
+  const [currency, setCurrency] = useState(account?.currency ?? defaultCurrency);
   const [opening, setOpening] = useState(
     account ? minorToInput(account.openingBalance) : "",
   );

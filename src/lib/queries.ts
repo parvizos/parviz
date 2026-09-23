@@ -51,7 +51,8 @@ import {
   type Meeting,
 } from "@/db/schema";
 import { todayISO, isoWeekday } from "@/lib/dates";
-import { baseCurrency, toBase } from "@/lib/currency";
+import { toBase } from "@/lib/currency";
+import { getBaseCurrency } from "@/lib/settings";
 
 /** Курсы к базовой валюте (rateToBase; базовая = 1). Внутренний помощник. */
 async function ratesMap(): Promise<Map<string, number>> {
@@ -716,7 +717,7 @@ export async function getAccountsWithBalances(): Promise<AccountWithBalance[]> {
 
 /** Сумма всех счетов, сведённая в базовую валюту. */
 export async function getTotalBalance(): Promise<number> {
-  const base = baseCurrency();
+  const base = await getBaseCurrency();
   const [accs, rates] = await Promise.all([
     getAccountsWithBalances(),
     ratesMap(),
@@ -728,7 +729,7 @@ export type MonthSummary = { income: number; expense: number; net: number };
 
 export async function getMonthSummary(month: string): Promise<MonthSummary> {
   await schemaReady();
-  const base = baseCurrency();
+  const base = await getBaseCurrency();
   const [rows, rates] = await Promise.all([
     db
       .select({
@@ -765,7 +766,7 @@ export async function getSpendingByCategory(
   month: string,
 ): Promise<CategorySpend[]> {
   await schemaReady();
-  const base = baseCurrency();
+  const base = await getBaseCurrency();
   const [rows, rates] = await Promise.all([
     db
       .select({
@@ -883,7 +884,7 @@ export async function getCategoriesWithMonth(
     .from(categories)
     .where(isNull(categories.archivedAt))
     .orderBy(asc(categories.kind), asc(categories.position), asc(categories.createdAt));
-  const base = baseCurrency();
+  const base = await getBaseCurrency();
   const [spend, rates] = await Promise.all([
     db
       .select({

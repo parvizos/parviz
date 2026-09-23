@@ -6,7 +6,7 @@ import {
   getCapitalSeries,
   getIncomeExpenseSeries,
 } from "@/lib/finance-queries";
-import { baseCurrency } from "@/lib/currency";
+import { getBaseCurrency } from "@/lib/settings";
 import { currentMonth, monthLabel } from "@/lib/dates";
 import { formatMoneyShort } from "@/lib/money";
 import { financeColor } from "@/lib/finance-format";
@@ -21,7 +21,7 @@ export const metadata = { title: "Аналитика" };
 export const dynamic = "force-dynamic";
 
 export default async function AnalyticsPage() {
-  const base = baseCurrency();
+  const base = await getBaseCurrency();
   const month = currentMonth();
   const [net, capital, series, spending] = await Promise.all([
     getNetWorth(),

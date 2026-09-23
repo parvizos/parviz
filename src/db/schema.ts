@@ -724,6 +724,17 @@ export const exchangeRates = sqliteTable("exchange_rates", {
 
 export type ExchangeRate = typeof exchangeRates.$inferSelect;
 
+/* ─────────────────────  Настройки приложения (kv)  ───────────────────── */
+
+/** Простое key-value хранилище настроек (основная валюта, дата курсов и т. п.). */
+export const settings = sqliteTable("settings", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+  updatedAt: updatedAt(),
+});
+
+export type Setting = typeof settings.$inferSelect;
+
 /* ─────────────────────────  Домен: Долги  ───────────────────────── */
 
 export const DEBT_DIRECTIONS = ["owed_to_me", "i_owe"] as const;

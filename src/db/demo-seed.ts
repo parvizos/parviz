@@ -17,6 +17,7 @@ import {
   categories,
   transactions,
   exchangeRates,
+  settings,
   organizations,
   people,
   meetings,
@@ -48,7 +49,7 @@ const ALL_TABLES = [
   attendance, grades, exams, studySessions, topics, materials, files,
   entityTags, tags, links, lessons, notes, meetings, credentials, journal,
   tasks, people, organizations, accounts, categories, subjects, terms, projects,
-  areas, tracks, images, exchangeRates, pages,
+  areas, tracks, images, exchangeRates, settings, pages,
 ];
 
 /** Полностью очистить демо-базу (для «Обновить демо-данные»). */
@@ -424,6 +425,14 @@ export async function seedDemo(db: DrizzleDb): Promise<void> {
   const acc = accRows.map((a) => a.id);
   const [card, cash, piggy] = acc;
 
+  // Демо-курсы даны к рублю — значит и основная валюта демо = рубль.
+  await db
+    .insert(settings)
+    .values({ key: "base_currency", value: "RUB" })
+    .onConflictDoUpdate({
+      target: settings.key,
+      set: { value: "RUB", updatedAt: new Date() },
+    });
   await db.insert(exchangeRates).values([
     { code: "USD", rateToBase: 92 },
     { code: "EUR", rateToBase: 100 },

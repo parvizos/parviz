@@ -4,7 +4,8 @@ import { PlayerProvider } from "@/components/app/player-context";
 import { AppShell } from "@/components/app/AppShell";
 import { currentWorkspace } from "@/db";
 import { backupIfDue } from "@/lib/backup";
-import { baseCurrency } from "@/lib/currency";
+import { getBaseCurrency } from "@/lib/settings";
+import { refreshRatesIfDue } from "@/lib/currency-actions";
 import { postDuePlanned } from "@/lib/finance-actions";
 import {
   getSidebarCounts,
@@ -30,6 +31,8 @@ export default async function AppLayout({
   // Автопроведение подписок/планов до чтения данных — свежие операции
   // сразу попадают в этот рендер (без revalidate во время рендера).
   await postDuePlanned().catch(() => {});
+  // Мягкое автообновление курсов валют (не чаще раза в 6 ч, best-effort).
+  await refreshRatesIfDue().catch(() => {});
 
   const [
     counts,
@@ -76,7 +79,7 @@ export default async function AppLayout({
       personOptions={personOptions}
       organizationOptions={organizationOptions}
       pageOptions={pageTree.map((p) => ({ id: p.id, title: p.title, icon: p.icon }))}
-      baseCurrency={baseCurrency()}
+      baseCurrency={await getBaseCurrency()}
     >
       <PlayerProvider>
         <AppShell

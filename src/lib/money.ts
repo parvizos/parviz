@@ -16,6 +16,8 @@ function nf(currency: string, opts: Intl.NumberFormatOptions): Intl.NumberFormat
       f = new Intl.NumberFormat("ru-RU", {
         style: "currency",
         currency,
+        // Предпочитаем символ валюты (₺, ₸, ¥), а не ISO-код.
+        currencyDisplay: "narrowSymbol",
         ...opts,
       });
     } catch {

@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { HandCoins } from "lucide-react";
 import { getAccountOptions } from "@/lib/queries";
 import { getDebts, getDebtsSummary } from "@/lib/finance-queries";
-import { baseCurrency } from "@/lib/currency";
+import { getBaseCurrency } from "@/lib/settings";
 import { formatMoneyShort } from "@/lib/money";
 import { cn } from "@/lib/cn";
 import { PageHeader, EmptyState } from "@/components/ui/misc";
@@ -12,7 +12,7 @@ export const metadata = { title: "Долги" };
 export const dynamic = "force-dynamic";
 
 export default async function DebtsPage() {
-  const base = baseCurrency();
+  const base = await getBaseCurrency();
   const [debts, summary, accountOptions] = await Promise.all([
     getDebts(),
     getDebtsSummary(),

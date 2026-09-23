@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { CalendarClock } from "lucide-react";
 import { getPlanned, getMonthlyCommitment } from "@/lib/finance-queries";
-import { baseCurrency } from "@/lib/currency";
+import { getBaseCurrency } from "@/lib/settings";
 import { formatMoneyShort } from "@/lib/money";
 import { PageHeader, EmptyState } from "@/components/ui/misc";
 import { PlannedRow, NewPlannedButton } from "@/components/app/finance2-items";
@@ -10,7 +10,7 @@ export const metadata = { title: "Планы и подписки" };
 export const dynamic = "force-dynamic";
 
 export default async function PlansPage() {
-  const base = baseCurrency();
+  const base = await getBaseCurrency();
   const [plans, commit] = await Promise.all([
     getPlanned(),
     getMonthlyCommitment(),

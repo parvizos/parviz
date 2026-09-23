@@ -1,6 +1,7 @@
 import { Target } from "lucide-react";
 import { getGoals, getRatesMap } from "@/lib/finance-queries";
-import { baseCurrency, toBase } from "@/lib/currency";
+import { toBase } from "@/lib/currency";
+import { getBaseCurrency } from "@/lib/settings";
 import { formatMoneyShort } from "@/lib/money";
 import { PageHeader, EmptyState } from "@/components/ui/misc";
 import { GoalCard, NewGoalButton } from "@/components/app/finance2-items";
@@ -9,7 +10,7 @@ export const metadata = { title: "Цели" };
 export const dynamic = "force-dynamic";
 
 export default async function GoalsPage() {
-  const base = baseCurrency();
+  const base = await getBaseCurrency();
   const [goals, rates] = await Promise.all([getGoals(), getRatesMap()]);
 
   if (goals.length === 0) {

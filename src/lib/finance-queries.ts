@@ -34,7 +34,8 @@ import {
   type Goal,
 } from "@/db/schema";
 import { getAccountsWithBalances } from "@/lib/queries";
-import { baseCurrency, toBase } from "@/lib/currency";
+import { toBase } from "@/lib/currency";
+import { getBaseCurrency } from "@/lib/settings";
 import { todayISO } from "@/lib/dates";
 
 /* ───────────────────────────  Курсы валют  ─────────────────────────── */
@@ -66,7 +67,7 @@ export async function getUsedCurrencies(): Promise<string[]> {
 /** Курсы валют, что в ходу у счетов (кроме базовой) + отметка «курс не задан». */
 export async function getCurrencyRates(): Promise<RateRow[]> {
   await schemaReady();
-  const base = baseCurrency();
+  const base = await getBaseCurrency();
   const [used, stored] = await Promise.all([
     getUsedCurrencies(),
     db.select().from(exchangeRates),
@@ -173,7 +174,7 @@ export type DebtsSummary = {
 };
 
 export async function getDebtsSummary(): Promise<DebtsSummary> {
-  const base = baseCurrency();
+  const base = await getBaseCurrency();
   const [list, rates] = await Promise.all([getDebts(), getRatesMap()]);
   let receivable = 0;
   let payable = 0;
@@ -213,7 +214,7 @@ export type NetWorth = {
 };
 
 export async function getNetWorth(): Promise<NetWorth> {
-  const base = baseCurrency();
+  const base = await getBaseCurrency();
   const [accs, rates, debtsSum] = await Promise.all([
     getAccountsWithBalances(),
     getRatesMap(),
@@ -327,7 +328,7 @@ export type MonthlyCommitment = { base: string; expense: number; income: number 
 
 /** Зафиксированные в месяц суммы из активных подписок (в базовой валюте). */
 export async function getMonthlyCommitment(): Promise<MonthlyCommitment> {
-  const base = baseCurrency();
+  const base = await getBaseCurrency();
   const [rows, rates] = await Promise.all([
     db.select().from(planned).where(eq(planned.active, true)),
     getRatesMap(),
@@ -424,7 +425,7 @@ export type MonthPoint = { month: string; income: number; expense: number };
 
 export async function getIncomeExpenseSeries(n = 12): Promise<MonthPoint[]> {
   await schemaReady();
-  const base = baseCurrency();
+  const base = await getBaseCurrency();
   const rates = await getRatesMap();
   const rows = await db
     .select({
@@ -459,7 +460,7 @@ export type CapitalPoint = { month: string; capital: number };
 
 export async function getCapitalSeries(n = 12): Promise<CapitalPoint[]> {
   await schemaReady();
-  const base = baseCurrency();
+  const base = await getBaseCurrency();
   const rates = await getRatesMap();
 
   // Начальные остатки по валютам.

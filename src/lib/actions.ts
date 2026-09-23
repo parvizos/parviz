@@ -6,6 +6,7 @@ import { z } from "zod";
 import { db, schemaReady } from "@/db";
 import { todayISO } from "@/lib/dates";
 import { getActiveTermId } from "@/lib/term-queries";
+import { getBaseCurrency } from "@/lib/settings";
 import {
   areas,
   projects,
@@ -551,12 +552,13 @@ export type CreateAccountInput = z.input<typeof createAccountSchema>;
 export async function createAccount(input: CreateAccountInput) {
   await schemaReady();
   const data = createAccountSchema.parse(input);
+  const base = await getBaseCurrency();
   const [row] = await db
     .insert(accounts)
     .values({
       name: data.name,
       kind: data.kind ?? "card",
-      currency: data.currency ?? "RUB",
+      currency: data.currency ?? base,
       openingBalance: data.openingBalance ?? 0,
       color: data.color ?? null,
       icon: data.icon ?? null,

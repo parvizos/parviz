@@ -162,6 +162,13 @@
       "when": 1790163378803,
       "tag": "0022_illegal_komodo",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "6",
+      "when": 1790171977408,
+      "tag": "0023_curvy_lady_vermin",
+      "breakpoints": true
     }
   ]
 }
