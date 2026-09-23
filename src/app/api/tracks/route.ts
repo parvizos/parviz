@@ -1,13 +1,15 @@
 import type { NextRequest } from "next/server";
 import { createWriteStream } from "node:fs";
-import { rm } from "node:fs/promises";
+import { rm, rename } from "node:fs/promises";
+import { join } from "node:path";
 import { Readable, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { revalidatePath } from "next/cache";
 import { db, schemaReady } from "@/db";
 import { tracks, images } from "@/db/schema";
 import { isAuthed } from "@/lib/session";
-import { ensureMediaDir, trackFilePath } from "@/lib/media";
+import { ensureMediaDir, mediaDir, trackFilePath } from "@/lib/media";
+import { s3Enabled, s3PutFile, trackKey } from "@/lib/storage";
 import { parseAudioFile } from "@/lib/audio-meta";
 import { nextTrackPosition } from "@/lib/music-queries";
 
@@ -81,9 +83,9 @@ export async function POST(req: NextRequest) {
 
   const id = crypto.randomUUID();
   ensureMediaDir();
-  const path = trackFilePath(id, diskExt);
+  const tmpPath = join(mediaDir(), `.tmp-${id}.${diskExt}`);
 
-  // Стримим тело на диск, попутно считая размер и обрывая слишком большие.
+  // Стримим тело во временный файл, считая размер и обрывая слишком большие.
   let size = 0;
   const meter = new Transform({
     transform(chunk, _enc, cb) {
@@ -97,21 +99,43 @@ export async function POST(req: NextRequest) {
   });
   try {
     const input = Readable.fromWeb(req.body as Parameters<typeof Readable.fromWeb>[0]);
-    await pipeline(input, meter, createWriteStream(path));
+    await pipeline(input, meter, createWriteStream(tmpPath));
   } catch {
-    await rm(path, { force: true }).catch(() => {});
+    await rm(tmpPath, { force: true }).catch(() => {});
     return Response.json(
       { error: "Не удалось сохранить файл." },
       { status: 400 },
     );
   }
   if (size === 0) {
-    await rm(path, { force: true }).catch(() => {});
+    await rm(tmpPath, { force: true }).catch(() => {});
     return Response.json({ error: "Пустой файл." }, { status: 400 });
   }
 
-  // Теги и обложка из файла на диске.
-  const meta = await parseAudioFile(path);
+  // Теги и обложка из временного файла.
+  const meta = await parseAudioFile(tmpPath);
+
+  // Кладём аудио в постоянное хранилище (S3 или диск). В базу пишем только
+  // после успеха — чтобы не осталось «висячих» строк без файла.
+  let storage: "disk" | "s3" = "disk";
+  let storageKey: string | null = null;
+  try {
+    if (s3Enabled()) {
+      const key = trackKey(id, diskExt);
+      await s3PutFile(key, tmpPath, mime);
+      await rm(tmpPath, { force: true }).catch(() => {});
+      storage = "s3";
+      storageKey = key;
+    } else {
+      await rename(tmpPath, trackFilePath(id, diskExt));
+    }
+  } catch {
+    await rm(tmpPath, { force: true }).catch(() => {});
+    return Response.json(
+      { error: "Не удалось сохранить в хранилище." },
+      { status: 502 },
+    );
+  }
 
   let coverImageId: string | null = null;
   if (meta.cover) {
@@ -152,6 +176,8 @@ export async function POST(req: NextRequest) {
       mime,
       ext: diskExt,
       size,
+      storage,
+      storageKey,
       coverImageId,
       position,
     })

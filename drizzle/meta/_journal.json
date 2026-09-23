@@ -148,6 +148,13 @@
       "when": 1790112793542,
       "tag": "0020_slim_roulette",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "6",
+      "when": 1790147498167,
+      "tag": "0021_salty_marten_broadcloak",
+      "breakpoints": true
     }
   ]
 }

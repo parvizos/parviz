@@ -7,6 +7,7 @@ import { rm } from "node:fs/promises";
 import { db, schemaReady } from "@/db";
 import { tracks, images } from "@/db/schema";
 import { trackFilePath } from "@/lib/media";
+import { s3Delete } from "@/lib/storage";
 import { isAuthed } from "@/lib/session";
 
 function revalidateMusic() {
@@ -47,7 +48,12 @@ export async function deleteTrack(id: string) {
   if (!(await isAuthed())) throw new Error("unauthorized");
   await schemaReady();
   const [row] = await db
-    .select({ ext: tracks.ext, coverImageId: tracks.coverImageId })
+    .select({
+      ext: tracks.ext,
+      storage: tracks.storage,
+      storageKey: tracks.storageKey,
+      coverImageId: tracks.coverImageId,
+    })
     .from(tracks)
     .where(eq(tracks.id, id))
     .limit(1);
@@ -57,8 +63,12 @@ export async function deleteTrack(id: string) {
   if (row.coverImageId) {
     await db.delete(images).where(eq(images.id, row.coverImageId));
   }
-  // Файл на диске — удаляем best-effort, отсутствие не считаем ошибкой.
-  await rm(trackFilePath(id, row.ext), { force: true }).catch(() => {});
+  // Сам файл — best-effort, отсутствие не считаем ошибкой.
+  if (row.storage === "s3" && row.storageKey) {
+    await s3Delete(row.storageKey).catch(() => {});
+  } else {
+    await rm(trackFilePath(id, row.ext), { force: true }).catch(() => {});
+  }
   revalidateMusic();
 }
 

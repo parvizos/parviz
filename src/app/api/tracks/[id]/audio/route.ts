@@ -6,6 +6,7 @@ import { db, schemaReady } from "@/db";
 import { tracks } from "@/db/schema";
 import { isAuthed } from "@/lib/session";
 import { trackFilePath } from "@/lib/media";
+import { s3Get } from "@/lib/storage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,11 +31,33 @@ export async function GET(
   await schemaReady();
 
   const [row] = await db
-    .select({ ext: tracks.ext, mime: tracks.mime })
+    .select({
+      ext: tracks.ext,
+      mime: tracks.mime,
+      storage: tracks.storage,
+      storageKey: tracks.storageKey,
+    })
     .from(tracks)
     .where(eq(tracks.id, id))
     .limit(1);
   if (!row) return new Response("not found", { status: 404 });
+
+  // Объектное хранилище: проксируем с проброшенным Range (перемотка).
+  if (row.storage === "s3" && row.storageKey) {
+    const range = req.headers.get("range");
+    const r = await s3Get(row.storageKey, range);
+    if (r.status === 404) return new Response("not found", { status: 404 });
+    if (r.status >= 400)
+      return new Response("upstream error", { status: 502 });
+    const headers: Record<string, string> = {
+      "Content-Type": row.mime,
+      "Accept-Ranges": "bytes",
+      "Cache-Control": "private, max-age=31536000, immutable",
+    };
+    if (r.contentRange) headers["Content-Range"] = r.contentRange;
+    if (r.contentLength) headers["Content-Length"] = r.contentLength;
+    return new Response(r.body, { status: r.status, headers });
+  }
 
   const path = trackFilePath(id, row.ext);
   let size: number;

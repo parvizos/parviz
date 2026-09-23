@@ -1043,6 +1043,10 @@ export const tracks = sqliteTable(
     ext: text("ext").notNull().default(""),
     /** Размер аудиофайла в байтах. */
     size: integer("size").notNull().default(0),
+    /** Где лежит аудио: 'disk' (data/media) или 's3' (объектное хранилище). */
+    storage: text("storage").notNull().default("disk"),
+    /** Ключ объекта в S3 (для storage='s3'); для диска — null. */
+    storageKey: text("storage_key"),
     /** Обложка — ссылка на images.id (null — обложки нет). */
     coverImageId: text("cover_image_id").references(() => images.id, {
       onDelete: "set null",
