@@ -1,5 +1,5 @@
 /* ParvizOS service worker — оффлайн-оболочка и кэш. */
-const VERSION = "v2";
+const VERSION = "v3";
 const CACHE = `parviz-${VERSION}`;
 const OFFLINE_URL = "/offline";
 const PRECACHE = [
@@ -15,6 +15,12 @@ self.addEventListener("install", (event) => {
     (async () => {
       const cache = await caches.open(CACHE);
       await cache.addAll(PRECACHE).catch(() => {});
+      // Страница «Музыка» — чтобы фонотека открывалась офлайн даже на холодную.
+      // Кэшируем только настоящую страницу (не редирект на /login).
+      try {
+        const res = await fetch("/muzyka", { credentials: "same-origin" });
+        if (res.ok && !res.redirected) await cache.put("/muzyka", res.clone());
+      } catch {}
       self.skipWaiting();
     })(),
   );

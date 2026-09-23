@@ -11,7 +11,7 @@ const VERSION = 1;
 const META = "meta";
 const AUDIO = "audio";
 
-export type DownloadedMeta = TrackMeta & { savedAt: number };
+export type DownloadedMeta = TrackMeta & { savedAt: number; bytes: number };
 
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -103,7 +103,7 @@ export async function totalDownloadedBytes(): Promise<number> {
 async function putDownloaded(meta: TrackMeta, blob: Blob): Promise<void> {
   const db = await openDb();
   const tx = db.transaction([META, AUDIO], "readwrite");
-  tx.objectStore(META).put({ ...meta, savedAt: Date.now() });
+  tx.objectStore(META).put({ ...meta, savedAt: Date.now(), bytes: blob.size });
   tx.objectStore(AUDIO).put({ id: meta.id, blob });
   await new Promise<void>((resolve, reject) => {
     tx.oncomplete = () => resolve();
@@ -159,6 +159,14 @@ export async function downloadTrack(
   const blob = new Blob(chunks as BlobPart[], {
     type: track.mime || res.headers.get("content-type") || "audio/mpeg",
   });
+
+  // Целостность: сверяем с известным на сервере размером (он же — байты на
+  // диске). Не совпало — это обрыв связи; битую копию не сохраняем.
+  const expected = track.size || total || 0;
+  if (expected > 0 && blob.size !== expected) {
+    throw new Error("Загрузка оборвалась — попробуй ещё раз");
+  }
+
   await putDownloaded(track, blob);
   if (track.coverImageId) {
     try {
@@ -166,8 +174,39 @@ export async function downloadTrack(
     } catch {}
   }
   // Просим не вытеснять наши данные (best-effort).
-  try {
-    await navigator.storage?.persist?.();
-  } catch {}
+  await ensurePersisted();
   onProgress?.(1);
+}
+
+/* ── Закреплённое хранилище и место ── */
+
+/**
+ * Просит браузер не вытеснять наши данные. Возвращает, закреплено ли хранилище.
+ * В установленном PWA обычно даётся автоматически.
+ */
+export async function ensurePersisted(): Promise<boolean> {
+  try {
+    if (!navigator.storage?.persist) return false;
+    if (await navigator.storage.persisted()) return true;
+    return await navigator.storage.persist();
+  } catch {
+    return false;
+  }
+}
+
+export type StorageInfo = { usage: number; quota: number; persisted: boolean };
+
+/** Сколько занято/доступно и закреплено ли хранилище. */
+export async function getStorageInfo(): Promise<StorageInfo> {
+  try {
+    const est = (await navigator.storage?.estimate?.()) ?? {};
+    const persisted = (await navigator.storage?.persisted?.()) ?? false;
+    return {
+      usage: est.usage ?? 0,
+      quota: est.quota ?? 0,
+      persisted,
+    };
+  } catch {
+    return { usage: 0, quota: 0, persisted: false };
+  }
 }

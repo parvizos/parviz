@@ -212,6 +212,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const restoredTimeRef = useRef<number | null>(null);
   const countedRef = useRef<string | null>(null);
   const objectUrlRef = useRef<string | null>(null);
+  const healedRef = useRef<string | null>(null);
 
   useEffect(() => {
     pbRef.current = pb;
@@ -457,7 +458,28 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     };
     const onError = () => {
       setLoading(false);
-      // Битый/отсутствующий файл — пропускаем дальше, но не зацикливаемся.
+      const cur = currentRef.current;
+      // Самолечение: если играли локальную копию и она подвела, но есть сеть —
+      // достримим этот же трек из сети (один раз на трек).
+      if (
+        cur &&
+        objectUrlRef.current &&
+        healedRef.current !== cur.id &&
+        navigator.onLine
+      ) {
+        healedRef.current = cur.id;
+        const bad = objectUrlRef.current;
+        objectUrlRef.current = null;
+        audio.src = `/api/tracks/${cur.id}/audio`;
+        audio.load();
+        try {
+          URL.revokeObjectURL(bad);
+        } catch {}
+        if (isPlayingRef.current || wantPlayRef.current)
+          audio.play().catch(() => {});
+        return;
+      }
+      // Иначе — пропускаем дальше, но не зацикливаемся.
       const s = pbRef.current;
       if (s.order.length > 1) controlsRef.current.next();
       else setIsPlaying(false);

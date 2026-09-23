@@ -9,7 +9,9 @@ import {
   Pause,
   Pencil,
   Play,
+  RefreshCw,
   Search,
+  ShieldCheck,
   Shuffle,
   Star,
   Trash2,
@@ -47,6 +49,9 @@ import {
   allDownloadedMeta,
   downloadTrack,
   removeDownload,
+  ensurePersisted,
+  getStorageInfo,
+  type StorageInfo,
 } from "@/lib/track-store";
 
 type UploadJob = { id: string; name: string; progress: number; error?: string };
@@ -64,6 +69,8 @@ export function MusicLibrary({ initialTracks }: { initialTracks: TrackMeta[] }) 
   const [favOnly, setFavOnly] = useState(false);
   const [downloadedOnly, setDownloadedOnly] = useState(false);
   const [bulk, setBulk] = useState<{ done: number; total: number } | null>(null);
+  const [storage, setStorage] = useState<StorageInfo | null>(null);
+  const [repairing, setRepairing] = useState(false);
   const [editing, setEditing] = useState<TrackMeta | null>(null);
   const [deleting, setDeleting] = useState<TrackMeta | null>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -86,6 +93,19 @@ export function MusicLibrary({ initialTracks }: { initialTracks: TrackMeta[] }) 
       mounted = false;
     };
   }, []);
+
+  // Закрепляем хранилище (persist) и следим за занятым местом.
+  const refreshStorage = useCallback(() => {
+    getStorageInfo()
+      .then(setStorage)
+      .catch(() => {});
+  }, []);
+  useEffect(() => {
+    ensurePersisted().finally(refreshStorage);
+  }, [refreshStorage]);
+  useEffect(() => {
+    refreshStorage();
+  }, [downloadedIds, refreshStorage]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -187,6 +207,47 @@ export function MusicLibrary({ initialTracks }: { initialTracks: TrackMeta[] }) 
     }
     setBulk(null);
     toast({ title: "Готово", body: "Треки скачаны для офлайна." });
+  };
+
+  const onPersist = async () => {
+    const okPersist = await ensurePersisted();
+    refreshStorage();
+    toast({
+      title: okPersist ? "Хранилище закреплено" : "Браузер пока не закрепил",
+      body: okPersist
+        ? "Скачанное не будет вытеснено."
+        : "Установи приложение на экран — и закрепится.",
+    });
+  };
+
+  // Проверяет целостность скачанного и до-качивает обрывки/устаревшее.
+  const repair = async () => {
+    if (repairing || !online) return;
+    setRepairing(true);
+    try {
+      const metas = await allDownloadedMeta();
+      const byId = new Map(tracks.map((t) => [t.id, t]));
+      const broken = metas.filter((m) => {
+        const t = byId.get(m.id);
+        return t && (m.bytes == null || m.bytes !== t.size);
+      });
+      let fixed = 0;
+      for (const m of broken) {
+        const t = byId.get(m.id);
+        if (!t) continue;
+        try {
+          await downloadTrack(t);
+          fixed++;
+        } catch {}
+      }
+      toast({
+        title: fixed ? `Докачано: ${fixed}` : "Все загрузки целы",
+        body: fixed ? "Повреждённые копии обновлены." : undefined,
+      });
+    } finally {
+      setRepairing(false);
+      refreshStorage();
+    }
   };
 
   const onToggleFav = async (t: TrackMeta) => {
@@ -350,33 +411,66 @@ export function MusicLibrary({ initialTracks }: { initialTracks: TrackMeta[] }) 
             </div>
           </div>
 
-          {/* Оффлайн: сколько скачано + «скачать всё» */}
-          <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[12.5px] text-muted">
-            {downloadedCount > 0 && (
-              <span>
-                Скачано для офлайна: {downloadedCount} · {formatBytes(usageBytes)}
-              </span>
-            )}
-            {online && undownloadedInView.length > 0 && (
-              <button
-                onClick={downloadAll}
-                disabled={!!bulk}
-                className="inline-flex items-center gap-1.5 font-medium text-accent transition-colors hover:text-accent-hover disabled:opacity-60"
-              >
-                {bulk ? (
-                  <>
-                    <Loader2 size={13} className="animate-spin" />
-                    Качаю {bulk.done}/{bulk.total}…
-                  </>
+          {/* Оффлайн: сколько скачано, надёжность хранилища, докачка */}
+          {(downloadedCount > 0 || (online && undownloadedInView.length > 0)) && (
+            <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[12.5px] text-muted">
+              {downloadedCount > 0 && (
+                <span>
+                  Скачано для офлайна: {downloadedCount} ·{" "}
+                  {formatBytes(usageBytes)}
+                </span>
+              )}
+              {downloadedCount > 0 &&
+                storage &&
+                (storage.persisted ? (
+                  <span
+                    className="inline-flex items-center gap-1 text-success"
+                    title="Браузер не вытеснит скачанное"
+                  >
+                    <ShieldCheck size={13} /> Хранилище закреплено
+                  </span>
                 ) : (
-                  <>
-                    <CloudDownload size={14} />
-                    Скачать всё ({undownloadedInView.length})
-                  </>
-                )}
-              </button>
-            )}
-          </div>
+                  <button
+                    onClick={onPersist}
+                    className="inline-flex items-center gap-1 font-medium text-warning transition-opacity hover:opacity-80"
+                  >
+                    <ShieldCheck size={13} /> Закрепить хранилище
+                  </button>
+                ))}
+              {downloadedCount > 0 && online && (
+                <button
+                  onClick={repair}
+                  disabled={repairing}
+                  className="inline-flex items-center gap-1 font-medium text-accent transition-colors hover:text-accent-hover disabled:opacity-60"
+                >
+                  <RefreshCw
+                    size={13}
+                    className={repairing ? "animate-spin" : ""}
+                  />
+                  {repairing ? "Проверяю…" : "Проверить и докачать"}
+                </button>
+              )}
+              {online && undownloadedInView.length > 0 && (
+                <button
+                  onClick={downloadAll}
+                  disabled={!!bulk}
+                  className="inline-flex items-center gap-1.5 font-medium text-accent transition-colors hover:text-accent-hover disabled:opacity-60"
+                >
+                  {bulk ? (
+                    <>
+                      <Loader2 size={13} className="animate-spin" />
+                      Качаю {bulk.done}/{bulk.total}…
+                    </>
+                  ) : (
+                    <>
+                      <CloudDownload size={14} />
+                      Скачать всё ({undownloadedInView.length})
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+          )}
 
           {/* Загрузки в процессе */}
           {jobs.length > 0 && (
