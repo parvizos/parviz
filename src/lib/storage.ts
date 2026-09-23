@@ -129,6 +129,16 @@ export async function s3Get(
   };
 }
 
+/** Размер объекта (HEAD) или null, если его нет. */
+export async function s3Head(key: string): Promise<number | null> {
+  const cfg = config();
+  if (!cfg) throw new Error("S3 не настроен");
+  const res = await client(cfg).fetch(urlFor(cfg, key), { method: "HEAD" });
+  if (!res.ok) return null;
+  const len = res.headers.get("content-length");
+  return len ? Number(len) : null;
+}
+
 /** Удаляет объект (404 не считаем ошибкой). */
 export async function s3Delete(key: string): Promise<void> {
   const cfg = config();

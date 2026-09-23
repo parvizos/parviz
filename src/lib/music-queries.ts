@@ -1,4 +1,4 @@
-import { asc, desc, sql } from "drizzle-orm";
+import { asc, desc, eq, sql } from "drizzle-orm";
 import { db, schemaReady } from "@/db";
 import { tracks } from "@/db/schema";
 
@@ -58,4 +58,16 @@ export async function nextTrackPosition(): Promise<number> {
     .select({ m: sql<number>`coalesce(max(${tracks.position}), -1)` })
     .from(tracks);
   return Number(row?.m ?? -1) + 1;
+}
+
+/** Треки, чьё аудио ещё лежит на диске сервера (для переноса в облако). */
+export async function getDiskStoredTracks(): Promise<
+  { id: string; title: string }[]
+> {
+  await schemaReady();
+  return db
+    .select({ id: tracks.id, title: tracks.title })
+    .from(tracks)
+    .where(eq(tracks.storage, "disk"))
+    .orderBy(asc(tracks.createdAt));
 }

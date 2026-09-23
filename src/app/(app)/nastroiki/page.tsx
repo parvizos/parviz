@@ -1,11 +1,14 @@
-import { Download, Database, Clock, Table2, FileJson } from "lucide-react";
+import { Download, Database, Clock, Table2, FileJson, Cloud } from "lucide-react";
 import { listBackups } from "@/lib/backup";
 import { getServerHealth } from "@/lib/health";
 import { appTimeZone } from "@/lib/dates";
 import { currentWorkspace, demoAvailable } from "@/db";
+import { s3Enabled } from "@/lib/storage";
+import { getDiskStoredTracks } from "@/lib/music-queries";
 import { ServerHealth } from "@/components/app/ServerHealth";
 import { DemoSettings } from "@/components/app/DemoSettings";
 import { DataRestore } from "@/components/app/DataRestore";
+import { MigrateTracks } from "@/components/app/MigrateTracks";
 import { PageHeader } from "@/components/ui/misc";
 
 export const metadata = { title: "Настройки" };
@@ -15,6 +18,8 @@ export default async function SettingsPage() {
   const backups = listBackups();
   const tz = appTimeZone();
   const health = await getServerHealth();
+  const s3On = s3Enabled();
+  const diskTracks = s3On ? await getDiskStoredTracks() : [];
 
   return (
     <div>
@@ -100,6 +105,34 @@ export default async function SettingsPage() {
         </h2>
         <DataRestore backups={backups} />
       </section>
+
+      {/* Хранилище музыки (только если подключено облако) */}
+      {s3On && (
+        <section className="mb-8">
+          <h2 className="mb-2.5 px-1 text-[13px] font-semibold uppercase tracking-wide text-muted">
+            Хранилище музыки
+          </h2>
+          <div className="rounded-2xl border border-border bg-surface p-5">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent-soft-text">
+                <Cloud size={18} />
+              </div>
+              <div className="flex-1">
+                <p className="text-[14px] font-medium text-text">
+                  Аудио хранится в облаке (S3/R2)
+                </p>
+                <p className="mt-1 text-[13px] leading-relaxed text-muted">
+                  Новые треки сразу летят в облако.{" "}
+                  {diskTracks.length > 0
+                    ? `${diskTracks.length} старых треков ещё на диске сервера — перенеси их, чтобы освободить место.`
+                    : "Всё уже перенесено."}
+                </p>
+                <MigrateTracks tracks={diskTracks} />
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Окружение */}
       <section>
