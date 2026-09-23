@@ -17,6 +17,7 @@ import {
 } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import { db, schemaReady } from "@/db";
+import { getActiveTermId } from "@/lib/term-queries";
 import { stripHtml } from "@/lib/text";
 import { tagsOf } from "@/lib/journal-tags";
 import {
@@ -395,10 +396,16 @@ export async function getLesson(id: string): Promise<LessonWithSubject | null> {
 
 export async function getSubjectsWithCounts(): Promise<SubjectWithCounts[]> {
   await schemaReady();
+  const tid = await getActiveTermId();
   const base = await db
     .select(getTableColumns(subjects))
     .from(subjects)
-    .where(isNull(subjects.archivedAt))
+    .where(
+      and(
+        isNull(subjects.archivedAt),
+        tid ? eq(subjects.termId, tid) : undefined,
+      ),
+    )
     .orderBy(asc(subjects.position), asc(subjects.createdAt));
 
   const lessonCounts = await db
@@ -430,10 +437,16 @@ export async function getSubjectsWithCounts(): Promise<SubjectWithCounts[]> {
 
 export async function getSubjectOptions() {
   await schemaReady();
+  const tid = await getActiveTermId();
   return db
     .select({ id: subjects.id, name: subjects.name, color: subjects.color, areaId: subjects.areaId })
     .from(subjects)
-    .where(isNull(subjects.archivedAt))
+    .where(
+      and(
+        isNull(subjects.archivedAt),
+        tid ? eq(subjects.termId, tid) : undefined,
+      ),
+    )
     .orderBy(asc(subjects.position), asc(subjects.createdAt));
 }
 
@@ -484,10 +497,10 @@ export type ScheduleDay = { iso: number; lessons: LessonWithSubject[] };
 
 export async function getScheduleByDay(): Promise<ScheduleDay[]> {
   await schemaReady();
-  const rows = await lessonBaseQuery().orderBy(
-    asc(lessons.dayOfWeek),
-    asc(lessons.startTime),
-  );
+  const tid = await getActiveTermId();
+  const rows = await lessonBaseQuery()
+    .where(tid ? eq(subjects.termId, tid) : undefined)
+    .orderBy(asc(lessons.dayOfWeek), asc(lessons.startTime));
   const days: ScheduleDay[] = [1, 2, 3, 4, 5, 6, 7].map((iso) => ({
     iso,
     lessons: [],
@@ -503,8 +516,14 @@ export async function getLessonsForWeekday(
   wd: number,
 ): Promise<LessonWithSubject[]> {
   await schemaReady();
+  const tid = await getActiveTermId();
   return lessonBaseQuery()
-    .where(eq(lessons.dayOfWeek, wd))
+    .where(
+      and(
+        eq(lessons.dayOfWeek, wd),
+        tid ? eq(subjects.termId, tid) : undefined,
+      ),
+    )
     .orderBy(asc(lessons.startTime));
 }
 

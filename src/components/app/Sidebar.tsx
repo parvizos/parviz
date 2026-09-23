@@ -24,6 +24,7 @@ import {
   Handshake,
   KeyRound,
   GraduationCap,
+  Library,
   NotebookPen,
   Music2,
   Award,
@@ -73,6 +74,7 @@ const MAIN: NavItem[] = [
 const STUDY: NavItem[] = [
   { href: "/raspisanie", label: "Расписание", icon: CalendarRange },
   { href: "/predmety", label: "Предметы", icon: GraduationCap },
+  { href: "/semestry", label: "Семестры", icon: Library },
   { href: "/otsenki", label: "Оценки", icon: Award },
   { href: "/sessiya", label: "Сессия", icon: AlarmClock },
   { href: "/konspekty", label: "Конспекты", icon: BookText },

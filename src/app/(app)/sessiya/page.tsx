@@ -1,15 +1,20 @@
 import { CalendarClock } from "lucide-react";
 import { getExams } from "@/lib/study-queries";
+import { getTermsForSwitcher } from "@/lib/term-queries";
 import { ruMonthDay } from "@/lib/dates";
 import { cn } from "@/lib/cn";
 import { PageHeader, EmptyState } from "@/components/ui/misc";
+import { TermSwitcher } from "@/components/app/term-items";
 import { ExamCard, NewExamButton } from "@/components/app/study2-items";
 
 export const metadata = { title: "Сессия" };
 export const dynamic = "force-dynamic";
 
 export default async function SessionPage() {
-  const exams = await getExams();
+  const [exams, terms] = await Promise.all([
+    getExams(),
+    getTermsForSwitcher(),
+  ]);
 
   if (exams.length === 0) {
     return (
@@ -17,6 +22,7 @@ export default async function SessionPage() {
         <PageHeader
           title="Сессия"
           subtitle="Экзамены и зачёты с обратным отсчётом и готовностью."
+          actions={<TermSwitcher terms={terms} />}
         />
         <EmptyState
           icon={<CalendarClock size={22} />}
@@ -34,7 +40,15 @@ export default async function SessionPage() {
 
   return (
     <div>
-      <PageHeader title="Сессия" actions={<NewExamButton />} />
+      <PageHeader
+        title="Сессия"
+        actions={
+          <>
+            <TermSwitcher terms={terms} />
+            <NewExamButton />
+          </>
+        }
+      />
 
       {next && next.daysLeft != null && (
         <div className="mb-6 rounded-2xl border border-border bg-surface p-5">

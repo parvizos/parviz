@@ -8,6 +8,7 @@ import {
   areas,
   projects,
   tasks,
+  terms,
   subjects,
   lessons,
   notes,
@@ -46,7 +47,7 @@ const ALL_TABLES = [
   transactions, debtPayments, goalContributions, planned, goals, debts,
   attendance, grades, exams, studySessions, topics, materials, files,
   entityTags, tags, links, lessons, notes, meetings, credentials, journal,
-  tasks, people, organizations, accounts, categories, subjects, projects,
+  tasks, people, organizations, accounts, categories, subjects, terms, projects,
   areas, tracks, images, exchangeRates, pages,
 ];
 
@@ -124,15 +125,25 @@ export async function seedDemo(db: DrizzleDb): Promise<void> {
     .returning({ id: areas.id });
   const [aUni, aHealth, aPersonal, aWork, aHobby] = areaRows.map((a) => a.id);
 
-  /* ── Предметы ── */
+  /* ── Семестры и предметы ── */
+  const [prevTerm, curTerm] = (
+    await db
+      .insert(terms)
+      .values([
+        { name: "1 курс · весна", active: false, position: 0 },
+        { name: "1 курс · осень", active: true, position: 1 },
+      ])
+      .returning({ id: terms.id })
+  ).map((t) => t.id);
+
   const subjRows = await db
     .insert(subjects)
     .values([
-      { name: "Матанализ", teacher: "Иванов И. И.", color: "#5b5bd6", icon: "📐", areaId: aUni, credits: 6, position: 0, body: "<h2>Формат экзамена</h2><p>Устно, два теоретических вопроса + задача.</p><ul><li>Разрешён один рукописный лист</li><li>Главные темы: пределы, ряды, интегралы</li></ul><blockquote>Иванов любит строгие определения.</blockquote>" },
-      { name: "Программирование", teacher: "Петров П. П.", color: "#0f9a8f", icon: "💻", areaId: aUni, credits: 5, position: 1, body: "<h2>Зачёт</h2><p>Защита проекта + мини-собеседование по алгоритмам.</p><ul><li>Курс на Stepik — обязателен</li><li>Сдавать через GitHub</li></ul>" },
-      { name: "История", teacher: "Сидорова А. В.", color: "#c9832a", icon: "📜", areaId: aUni, credits: 3, position: 2 },
-      { name: "Физика", teacher: "Кузнецов Д. С.", color: "#3b82c4", icon: "⚛️", areaId: aUni, credits: 5, position: 3 },
-      { name: "Английский", teacher: "Смирнова Е. Н.", color: "#c4488f", icon: "🇬🇧", areaId: aUni, credits: 3, position: 4 },
+      { name: "Матанализ", teacher: "Иванов И. И.", color: "#5b5bd6", icon: "📐", areaId: aUni, termId: curTerm, credits: 6, position: 0, body: "<h2>Формат экзамена</h2><p>Устно, два теоретических вопроса + задача.</p><ul><li>Разрешён один рукописный лист</li><li>Главные темы: пределы, ряды, интегралы</li></ul><blockquote>Иванов любит строгие определения.</blockquote>" },
+      { name: "Программирование", teacher: "Петров П. П.", color: "#0f9a8f", icon: "💻", areaId: aUni, termId: curTerm, credits: 5, position: 1, body: "<h2>Зачёт</h2><p>Защита проекта + мини-собеседование по алгоритмам.</p><ul><li>Курс на Stepik — обязателен</li><li>Сдавать через GitHub</li></ul>" },
+      { name: "История", teacher: "Сидорова А. В.", color: "#c9832a", icon: "📜", areaId: aUni, termId: curTerm, credits: 3, position: 2 },
+      { name: "Физика", teacher: "Кузнецов Д. С.", color: "#3b82c4", icon: "⚛️", areaId: aUni, termId: curTerm, credits: 5, position: 3 },
+      { name: "Английский", teacher: "Смирнова Е. Н.", color: "#c4488f", icon: "🇬🇧", areaId: aUni, termId: prevTerm, credits: 3, position: 4 },
     ])
     .returning({ id: subjects.id });
   const subj = subjRows.map((s) => s.id);

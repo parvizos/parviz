@@ -5,6 +5,7 @@ import { eq, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { db, schemaReady } from "@/db";
 import { todayISO } from "@/lib/dates";
+import { getActiveTermId } from "@/lib/term-queries";
 import {
   areas,
   projects,
@@ -296,6 +297,8 @@ export type CreateSubjectInput = z.input<typeof createSubjectSchema>;
 export async function createSubject(input: CreateSubjectInput) {
   await schemaReady();
   const data = createSubjectSchema.parse(input);
+  // Новый предмет попадает в активный семестр.
+  const termId = await getActiveTermId();
   const [row] = await db
     .insert(subjects)
     .values({
@@ -304,6 +307,7 @@ export async function createSubject(input: CreateSubjectInput) {
       color: data.color ?? null,
       icon: data.icon ?? null,
       areaId: data.areaId ?? null,
+      termId,
       credits: data.credits ?? null,
     })
     .returning({ id: subjects.id });

@@ -15,6 +15,7 @@ import {
   type SQL,
 } from "drizzle-orm";
 import { db, schemaReady } from "@/db";
+import { getActiveTermId } from "@/lib/term-queries";
 import {
   subjects,
   grades,
@@ -50,7 +51,13 @@ export async function getGrades(
 ): Promise<GradeRow[]> {
   await schemaReady();
   const conds: SQL[] = [];
-  if (opts.subjectId) conds.push(eq(grades.subjectId, opts.subjectId));
+  if (opts.subjectId) {
+    conds.push(eq(grades.subjectId, opts.subjectId));
+  } else {
+    // Список оценок без конкретного предмета — только активный семестр.
+    const tid = await getActiveTermId();
+    if (tid) conds.push(eq(subjects.termId, tid));
+  }
   let q = db
     .select({
       ...getTableColumns(grades),
@@ -101,11 +108,17 @@ export type SubjectAverage = {
 
 export async function getSubjectAverages(): Promise<SubjectAverage[]> {
   await schemaReady();
+  const tid = await getActiveTermId();
   const [subs, allGrades] = await Promise.all([
     db
       .select()
       .from(subjects)
-      .where(isNull(subjects.archivedAt))
+      .where(
+        and(
+          isNull(subjects.archivedAt),
+          tid ? eq(subjects.termId, tid) : undefined,
+        ),
+      )
       .orderBy(asc(subjects.position), asc(subjects.createdAt)),
     db.select().from(grades),
   ]);
@@ -205,6 +218,7 @@ function toExamRow(
 export async function getExams(): Promise<ExamRow[]> {
   await schemaReady();
   const today = todayISO();
+  const tid = await getActiveTermId();
   const rows = await db
     .select({
       ...getTableColumns(exams),
@@ -214,13 +228,27 @@ export async function getExams(): Promise<ExamRow[]> {
     })
     .from(exams)
     .innerJoin(subjects, eq(exams.subjectId, subjects.id))
+    .where(tid ? eq(subjects.termId, tid) : undefined)
     .orderBy(asc(exams.date), asc(exams.time));
   return rows.map((r) => toExamRow(r, today));
 }
 
+/** Экзамены конкретного предмета — без фильтра по семестру (прямой просмотр). */
 export async function getSubjectExams(subjectId: string): Promise<ExamRow[]> {
-  const all = await getExams();
-  return all.filter((e) => e.subjectId === subjectId);
+  await schemaReady();
+  const today = todayISO();
+  const rows = await db
+    .select({
+      ...getTableColumns(exams),
+      subjectName: subjects.name,
+      subjectColor: subjects.color,
+      subjectIcon: subjects.icon,
+    })
+    .from(exams)
+    .innerJoin(subjects, eq(exams.subjectId, subjects.id))
+    .where(eq(exams.subjectId, subjectId))
+    .orderBy(asc(exams.date), asc(exams.time));
+  return rows.map((r) => toExamRow(r, today));
 }
 
 /** Ближайшие несданные экзамены в окне дней — для «Сегодня». */
@@ -228,6 +256,7 @@ export async function getUpcomingExams(withinDays = 14): Promise<ExamRow[]> {
   await schemaReady();
   const today = todayISO();
   const limit = addDaysISO(today, withinDays);
+  const tid = await getActiveTermId();
   const rows = await db
     .select({
       ...getTableColumns(exams),
@@ -237,7 +266,13 @@ export async function getUpcomingExams(withinDays = 14): Promise<ExamRow[]> {
     })
     .from(exams)
     .innerJoin(subjects, eq(exams.subjectId, subjects.id))
-    .where(and(isNull(exams.passedAt), sql`${exams.date} <= ${limit}`))
+    .where(
+      and(
+        isNull(exams.passedAt),
+        sql`${exams.date} <= ${limit}`,
+        tid ? eq(subjects.termId, tid) : undefined,
+      ),
+    )
     .orderBy(asc(exams.date), asc(exams.time));
   return rows.map((r) => toExamRow(r, today));
 }

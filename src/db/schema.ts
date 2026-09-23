@@ -223,6 +223,31 @@ export const tasks = sqliteTable(
 
 /* ───────────────────────  Домен: Учёба  ─────────────────────── */
 
+/**
+ * Семестр / учебный период. Предметы привязаны к семестру; активный семестр
+ * определяет, что показывать в расписании, оценках и сессии. Прошлые семестры
+ * остаются в истории со всеми данными.
+ */
+export const terms = sqliteTable(
+  "terms",
+  {
+    id: id(),
+    name: text("name").notNull(),
+    /** Границы периода (ISO yyyy-mm-dd) — необязательно. */
+    startDate: text("start_date"),
+    endDate: text("end_date"),
+    /** Активен ли этот семестр сейчас (ровно один активный). */
+    active: integer("active", { mode: "boolean" }).notNull().default(false),
+    position: integer("position").notNull().default(0),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("terms_active_idx").on(t.active)],
+);
+
+export type Term = typeof terms.$inferSelect;
+export type NewTerm = typeof terms.$inferInsert;
+
 /** Учебный предмет/дисциплина. */
 export const subjects = sqliteTable(
   "subjects",
@@ -235,6 +260,8 @@ export const subjects = sqliteTable(
     /** База знаний: свободное описание с фото (HTML из RichEditor). */
     body: text("body"),
     areaId: text("area_id").references(() => areas.id, { onDelete: "set null" }),
+    /** Семестр, к которому относится предмет (null — вне семестров). */
+    termId: text("term_id").references(() => terms.id, { onDelete: "set null" }),
     /** Кредиты/зач. единицы — для взвешенного среднего и недельной нагрузки. */
     credits: integer("credits"),
     position: integer("position").notNull().default(0),
@@ -242,7 +269,10 @@ export const subjects = sqliteTable(
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
-  (t) => [index("subjects_position_idx").on(t.position)],
+  (t) => [
+    index("subjects_position_idx").on(t.position),
+    index("subjects_term_idx").on(t.termId),
+  ],
 );
 
 export const LESSON_KINDS = [

@@ -4,8 +4,10 @@ import {
   getAttendanceStatsBySubject,
   getGrades,
 } from "@/lib/study-queries";
+import { getTermsForSwitcher } from "@/lib/term-queries";
 import { cn } from "@/lib/cn";
 import { PageHeader, EmptyState } from "@/components/ui/misc";
+import { TermSwitcher } from "@/components/app/term-items";
 import {
   SubjectAverageCard,
   GradeRow,
@@ -16,10 +18,11 @@ export const metadata = { title: "Оценки" };
 export const dynamic = "force-dynamic";
 
 export default async function GradesPage() {
-  const [overview, attendance, recent] = await Promise.all([
+  const [overview, attendance, recent, terms] = await Promise.all([
     getAcademicOverview(),
     getAttendanceStatsBySubject(),
     getGrades({ limit: 20 }),
+    getTermsForSwitcher(),
   ]);
 
   const withGrades = overview.subjects.filter((s) => s.count > 0);
@@ -28,7 +31,11 @@ export default async function GradesPage() {
   if (overview.subjects.length === 0) {
     return (
       <div>
-        <PageHeader title="Оценки" subtitle="Средний балл и успеваемость по предметам." />
+        <PageHeader
+          title="Оценки"
+          subtitle="Средний балл и успеваемость по предметам."
+          actions={<TermSwitcher terms={terms} />}
+        />
         <EmptyState
           icon={<GraduationCap size={22} />}
           title="Сначала заведи предметы"
@@ -47,7 +54,15 @@ export default async function GradesPage() {
 
   return (
     <div>
-      <PageHeader title="Оценки" actions={<NewGradeButton />} />
+      <PageHeader
+        title="Оценки"
+        actions={
+          <>
+            <TermSwitcher terms={terms} />
+            <NewGradeButton />
+          </>
+        }
+      />
 
       {/* GPA */}
       {overview.gradeCount > 0 && (

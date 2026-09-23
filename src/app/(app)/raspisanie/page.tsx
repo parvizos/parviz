@@ -1,26 +1,33 @@
 import { GraduationCap } from "lucide-react";
 import { getScheduleByDay, getSubjectOptions } from "@/lib/queries";
+import { getTermsForSwitcher } from "@/lib/term-queries";
 import { todayISO, isoWeekday } from "@/lib/dates";
 import { WEEKDAYS } from "@/lib/study-format";
 import { cn } from "@/lib/cn";
 import { LessonRow } from "@/components/app/study-items";
 import { NewLessonButton, NewSubjectButton } from "@/components/app/study-buttons";
+import { TermSwitcher } from "@/components/app/term-items";
 import { PageHeader, EmptyState } from "@/components/ui/misc";
 
 export const metadata = { title: "Расписание" };
 export const dynamic = "force-dynamic";
 
 export default async function SchedulePage() {
-  const [days, subjects] = await Promise.all([
+  const [days, subjects, terms] = await Promise.all([
     getScheduleByDay(),
     getSubjectOptions(),
+    getTermsForSwitcher(),
   ]);
   const todayWd = isoWeekday(todayISO());
 
   if (subjects.length === 0) {
     return (
       <div>
-        <PageHeader title="Расписание" subtitle="Недельные пары по дням." />
+        <PageHeader
+          title="Расписание"
+          subtitle="Недельные пары по дням."
+          actions={<TermSwitcher terms={terms} />}
+        />
         <EmptyState
           icon={<GraduationCap size={22} />}
           title="Сначала добавь предметы"
@@ -36,7 +43,12 @@ export default async function SchedulePage() {
       <PageHeader
         title="Расписание"
         subtitle="Недельные пары по дням."
-        actions={<NewLessonButton day={todayWd}>Занятие</NewLessonButton>}
+        actions={
+          <>
+            <TermSwitcher terms={terms} />
+            <NewLessonButton day={todayWd}>Занятие</NewLessonButton>
+          </>
+        }
       />
 
       <div className="flex flex-col gap-5">
