@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  LayoutDashboard,
   CalendarDays,
   Inbox,
   CalendarClock,
@@ -62,6 +63,7 @@ type NavItem = {
 };
 
 const MAIN: NavItem[] = [
+  { href: "/obzor", label: "Обзор", icon: LayoutDashboard },
   { href: "/segodnya", label: "Сегодня", icon: CalendarDays, badge: "today" },
   { href: "/vhodyaschie", label: "Входящие", icon: Inbox, badge: "inbox" },
   { href: "/predstoyaschee", label: "Предстоящее", icon: CalendarClock },
