@@ -112,6 +112,8 @@ function ProgressRing({
   const c = 2 * Math.PI * r;
   const pct = max > 0 ? Math.max(0, Math.min(1, value / max)) : 0;
   const offset = mounted ? c * (1 - pct) : c;
+  const dotX = size / 2 + r * Math.cos(2 * Math.PI * pct);
+  const dotY = size / 2 + r * Math.sin(2 * Math.PI * pct);
   return (
     <div className="relative shrink-0" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="-rotate-90">
@@ -135,6 +137,15 @@ function ProgressRing({
           strokeDashoffset={offset}
           className="dash-ring-value"
         />
+        {pct > 0.001 && (
+          <circle
+            cx={dotX}
+            cy={dotY}
+            r={stroke * 0.6}
+            fill={color}
+            className={cn("dash-ring-dot", mounted && "on")}
+          />
+        )}
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         {children}
@@ -154,8 +165,8 @@ function MiniBars({ values }: { values: number[] }) {
           <div
             key={i}
             className={cn(
-              "dash-grow min-h-[4px] flex-1 rounded-[3px]",
-              last ? "bg-accent" : "bg-accent-soft",
+              "min-h-[4px] flex-1 rounded-[3px]",
+              last ? "dash-grow-last bg-accent" : "dash-grow bg-accent-soft",
             )}
             style={
               {
@@ -166,6 +177,37 @@ function MiniBars({ values }: { values: number[] }) {
           />
         );
       })}
+    </div>
+  );
+}
+
+/** Прогресс-бар, вырастающий от нуля на монтировании, с бегущим бликом. */
+function AnimatedBar({
+  pct,
+  color,
+  track,
+}: {
+  pct: number;
+  color: string;
+  track: string;
+}) {
+  const reduced = usePrefersReducedMotion();
+  const [w, setW] = useState(0);
+  useEffect(() => {
+    if (reduced) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setW(pct);
+      return;
+    }
+    const id = requestAnimationFrame(() => setW(pct));
+    return () => cancelAnimationFrame(id);
+  }, [pct, reduced]);
+  return (
+    <div className={cn("overflow-hidden rounded-full bg-surface-3", track)}>
+      <div
+        className="dash-barfill h-full rounded-full transition-[width] duration-[1100ms] ease-[cubic-bezier(0.16,1,0.3,1)]"
+        style={{ width: `${Math.round(w * 100)}%`, background: color }}
+      />
     </div>
   );
 }
@@ -210,17 +252,20 @@ function WidgetHead({
 }) {
   return (
     <div className="mb-4 flex items-center gap-2.5">
-      <span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-accent-soft text-accent-soft-text">
+      <span className="dash-pop flex h-8 w-8 items-center justify-center rounded-[10px] bg-accent-soft text-accent-soft-text">
         <Icon size={16} />
       </span>
       <h2 className="text-[15px] font-semibold text-text">{title}</h2>
       {hint && <span className="text-[12px] text-faint">{hint}</span>}
       <Link
         href={href}
-        className="ml-auto flex items-center gap-1 text-[12.5px] font-medium text-muted transition-colors hover:text-accent"
+        className="group ml-auto flex items-center gap-1 text-[12.5px] font-medium text-muted transition-colors hover:text-accent"
       >
         Всё
-        <ArrowRight size={13} />
+        <ArrowRight
+          size={13}
+          className="transition-transform duration-200 group-hover:translate-x-0.5"
+        />
       </Link>
     </div>
   );
@@ -294,11 +339,13 @@ export function Dashboard({
         className="dash-rise relative overflow-hidden rounded-3xl border border-border bg-surface p-6 sm:p-7"
         style={{ "--i": 0 } as CSSProperties}
       >
+        <div className="dash-aurora" />
         <div className="dash-hero-glow pointer-events-none absolute inset-0" />
+        <div className="dash-sweep" />
         <div className="relative flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
             <div className="flex items-center gap-2 text-[13px] font-medium text-accent-soft-text">
-              <Sparkles size={15} />
+              <Sparkles size={15} className="dash-pop" />
               ParvizOS
             </div>
             <h1 className="mt-2 text-[26px] font-semibold leading-tight tracking-tight text-text sm:text-[30px]">
@@ -559,12 +606,11 @@ export function Dashboard({
                 {finance.topGoal.icon ? finance.topGoal.icon + " " : ""}
                 {finance.topGoal.title}
               </span>
-              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-3">
-                <div
-                  className="h-full rounded-full bg-accent"
-                  style={{ width: `${Math.round(finance.topGoal.pct * 100)}%` }}
-                />
-              </div>
+              <AnimatedBar
+                pct={finance.topGoal.pct}
+                color="var(--accent)"
+                track="h-1.5 flex-1"
+              />
               <span className="shrink-0 text-[11.5px] tabular text-faint">
                 {Math.round(finance.topGoal.pct * 100)}%
               </span>
@@ -591,10 +637,11 @@ export function Dashboard({
                 return (
                   <div
                     key={idx}
-                    className="flex items-center gap-3 rounded-xl border border-border bg-surface-2/40 px-2.5 py-2 transition-colors hover:bg-surface-2"
+                    className="dash-row group flex items-center gap-3 rounded-xl border border-border bg-surface-2/40 px-2.5 py-2 transition-all duration-200 hover:-translate-y-0.5 hover:border-border-strong hover:bg-surface-2 hover:shadow-[var(--shadow-sm)]"
+                    style={{ "--i": idx } as CSSProperties}
                   >
                     <div
-                      className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl text-white"
+                      className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl text-white transition-transform duration-200 group-hover:scale-[1.07]"
                       style={{ background: meta.color }}
                     >
                       <span className="text-[15px] font-semibold leading-none tabular">
@@ -619,7 +666,7 @@ export function Dashboard({
                       className={cn(
                         "shrink-0 rounded-full px-2 py-0.5 text-[11.5px] font-medium tabular",
                         soon
-                          ? "bg-danger-soft text-danger"
+                          ? "dash-soon bg-danger-soft text-danger"
                           : "bg-surface-3 text-muted",
                       )}
                     >
@@ -660,15 +707,7 @@ export function Dashboard({
                       {p.done}/{p.total}
                     </span>
                   </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-surface-3">
-                    <div
-                      className="h-full rounded-full transition-[width] duration-700"
-                      style={{
-                        width: `${Math.round(p.pct * 100)}%`,
-                        background: areaColor(p.color),
-                      }}
-                    />
-                  </div>
+                  <AnimatedBar pct={p.pct} color={areaColor(p.color)} track="h-2" />
                 </Link>
               ))}
             </div>
@@ -707,14 +746,14 @@ function Kpi({
           ? "text-warning"
           : "text-faint";
   return (
-    <Card i={i} lift className="p-4">
+    <Card i={i} lift className="group p-4">
       <div className="flex items-center justify-between">
         <span className="text-[12px] text-muted">{label}</span>
-        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent-soft text-accent-soft-text">
+        <span className="dash-pop flex h-7 w-7 items-center justify-center rounded-lg bg-accent-soft text-accent-soft-text transition-transform duration-200 group-hover:-rotate-6 group-hover:scale-110">
           <Icon size={15} />
         </span>
       </div>
-      <div className="mt-2 text-[22px] font-semibold tabular leading-tight text-text">
+      <div className="dash-num mt-2 text-[22px] font-semibold tabular leading-tight text-text">
         {value}
       </div>
       <div className={cn("mt-0.5 truncate text-[12px]", tone)}>{sub}</div>
