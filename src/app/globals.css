@@ -728,3 +728,9 @@ a.mention:hover {
   .dash-ring-dot { transition: none; }
   .dash-lift { transition: none; }
 }
+
+/* ── Мобильная нижняя навигация: высота для отступов контента/плеера ── */
+:root { --nav-h: 0px; }
+@media (max-width: 1023px) {
+  :root { --nav-h: calc(3.5rem + env(safe-area-inset-bottom)); }
+}

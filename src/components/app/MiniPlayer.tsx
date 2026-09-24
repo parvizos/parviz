@@ -29,11 +29,11 @@ export function MiniPlayer() {
   return (
     <div
       className={cn(
-        "fixed bottom-0 right-0 z-30 left-0",
+        "fixed right-0 left-0 z-30 bottom-[var(--nav-h)] lg:bottom-0",
         focusMode ? "" : "lg:left-[264px]",
       )}
     >
-      <div className="border-t border-border bg-surface/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl">
+      <div className="border-t border-border bg-surface/90 backdrop-blur-xl lg:pb-[env(safe-area-inset-bottom)]">
         {/* Полоса прогресса во всю ширину */}
         <SeekBar
           thin

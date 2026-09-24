@@ -35,7 +35,7 @@ function MiniPerson({
   return (
     <Link
       href={`/lyudi/${p.id}`}
-      className="flex shrink-0 items-center gap-2.5 rounded-xl border border-border bg-surface px-3 py-2 transition-colors hover:border-border-strong hover:bg-surface-2"
+      className="flex shrink-0 snap-start items-center gap-2.5 rounded-xl border border-border bg-surface px-3 py-2 transition-colors hover:border-border-strong hover:bg-surface-2"
     >
       <Avatar name={p.name} avatar={p.avatar} icon={p.icon} color={p.color} size={30} />
       <div>
@@ -183,7 +183,7 @@ export default async function PeoplePage({
               <div className="mb-2 flex items-center gap-1.5 px-1 text-[12px] font-semibold uppercase tracking-wide text-muted">
                 <Cake size={13} /> Скоро дни рождения
               </div>
-              <div className="flex gap-2 overflow-x-auto pb-1">
+              <div className="-mx-4 flex snap-x gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
                 {birthdays.map(({ p, d }) => (
                   <MiniPerson
                     key={p.id}
@@ -204,7 +204,7 @@ export default async function PeoplePage({
               <div className="mb-2 flex items-center gap-1.5 px-1 text-[12px] font-semibold uppercase tracking-wide text-muted">
                 <Handshake size={13} /> Давно не виделись
               </div>
-              <div className="flex gap-2 overflow-x-auto pb-1">
+              <div className="-mx-4 flex snap-x gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
                 {reconnect.map(({ p, days }) => (
                   <MiniPerson
                     key={p.id}

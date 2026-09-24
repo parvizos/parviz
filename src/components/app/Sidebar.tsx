@@ -126,7 +126,7 @@ export function Sidebar({
   return (
     <div className="flex h-full flex-col bg-surface">
       {/* Бренд */}
-      <div className="flex items-center gap-2.5 px-4 pt-4">
+      <div className="flex items-center gap-2.5 px-4 pt-[calc(1rem+env(safe-area-inset-top))]">
         <div className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-accent text-[15px] font-bold text-accent-fg">
           P
         </div>

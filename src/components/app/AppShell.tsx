@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
-import { Menu, Plus, Search } from "lucide-react";
+import { useState, type CSSProperties, type ReactNode } from "react";
+import { Plus, Search } from "lucide-react";
 import { IconButton } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
 import { Sidebar } from "./Sidebar";
+import { MobileNav } from "./MobileNav";
 import { useUi } from "./ui-context";
 import { usePlayer } from "./player-context";
 import { MiniPlayer } from "./MiniPlayer";
@@ -38,7 +39,10 @@ export function AppShell({
   const { current: playing } = usePlayer();
 
   return (
-    <div className="min-h-full">
+    <div
+      className="min-h-full"
+      style={focusMode ? ({ "--nav-h": "0px" } as CSSProperties) : undefined}
+    >
       {/* Меню на десктопе */}
       <aside
         className={cn(
@@ -73,31 +77,37 @@ export function AppShell({
         {/* Верхняя панель — только на телефоне */}
         <header
           className={cn(
-            "sticky top-0 z-20 flex h-14 items-center gap-1 border-b border-border bg-surface/85 px-2 backdrop-blur lg:hidden",
+            "sticky top-0 z-20 border-b border-border bg-surface/85 pt-[env(safe-area-inset-top)] backdrop-blur lg:hidden",
             focusMode && "hidden",
           )}
         >
-          <IconButton label="Меню" onClick={() => setDrawer(true)}>
-            <Menu size={20} />
-          </IconButton>
-          <div className="flex-1 px-1 font-semibold text-text">ParvizOS</div>
-          <IconButton label="Поиск" onClick={openCommand}>
-            <Search size={19} />
-          </IconButton>
-          <IconButton label="Новая задача" onClick={() => openNewTask()}>
-            <Plus size={21} />
-          </IconButton>
+          <div className="flex h-14 items-center gap-1 px-3">
+            <div className="flex-1 font-semibold text-text">ParvizOS</div>
+            <IconButton label="Поиск" onClick={openCommand}>
+              <Search size={19} />
+            </IconButton>
+            <IconButton label="Новая задача" onClick={() => openNewTask()}>
+              <Plus size={21} />
+            </IconButton>
+          </div>
         </header>
 
         <main
           className={cn(
-            "mx-auto w-full max-w-3xl px-4 py-6 sm:px-6 sm:py-9",
-            playing && "pb-28 sm:pb-28",
+            "mx-auto w-full max-w-3xl px-4 pt-6 sm:px-6 sm:pt-9",
+            playing
+              ? "pb-[calc(var(--nav-h)+7rem)]"
+              : "pb-[calc(var(--nav-h)+2rem)]",
           )}
         >
           {children}
         </main>
       </div>
+
+      {/* Нижняя навигация на телефоне */}
+      {!focusMode && (
+        <MobileNav todayCount={counts.today} onMore={() => setDrawer(true)} />
+      )}
 
       {/* Плеер: мини-панель снизу и полноэкранный режим — живут над всем */}
       <MiniPlayer />
