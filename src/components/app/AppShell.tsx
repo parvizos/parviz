@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type CSSProperties, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import { Plus, Search } from "lucide-react";
 import { IconButton } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
@@ -37,6 +38,7 @@ export function AppShell({
   const [drawer, setDrawer] = useState(false);
   const { openNewTask, openCommand, focusMode } = useUi();
   const { current: playing } = usePlayer();
+  const pathname = usePathname();
 
   return (
     <div
@@ -100,7 +102,9 @@ export function AppShell({
               : "pb-[calc(var(--nav-h)+2rem)]",
           )}
         >
-          {children}
+          <div key={pathname} className="animate-page-in">
+            {children}
+          </div>
         </main>
       </div>
 

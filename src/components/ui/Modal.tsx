@@ -7,10 +7,12 @@ import { cn } from "@/lib/cn";
 import { IconButton } from "./Button";
 import type { ReactNode } from "react";
 
+// На телефоне модалка — «шторка» снизу во всю ширину; на десктопе —
+// центрированный диалог с ограничением ширины.
 const SIZE: Record<string, string> = {
-  sm: "max-w-sm",
-  md: "max-w-lg",
-  lg: "max-w-2xl",
+  sm: "sm:max-w-sm",
+  md: "sm:max-w-lg",
+  lg: "sm:max-w-2xl",
 };
 
 export function Modal({
@@ -47,7 +49,7 @@ export function Modal({
   if (!open || typeof document === "undefined") return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex justify-center overflow-y-auto p-4 sm:p-6">
+    <div className="fixed inset-0 z-50 flex items-end justify-center overflow-hidden sm:items-start sm:overflow-y-auto sm:p-6">
       <div
         className="fixed inset-0 animate-overlay-in bg-black/40 backdrop-blur-[2px]"
         onClick={onClose}
@@ -58,12 +60,19 @@ export function Modal({
         aria-modal="true"
         aria-label={title}
         className={cn(
-          "relative z-10 mb-8 mt-[7vh] h-fit w-full animate-panel-in rounded-2xl border border-border bg-surface shadow-[var(--shadow-lg)]",
+          "relative z-10 flex max-h-[92dvh] w-full flex-col overflow-hidden border border-border bg-surface shadow-[var(--shadow-lg)]",
+          // Телефон: шторка снизу
+          "animate-sheet-rise rounded-t-3xl",
+          // Десктоп: центрированный диалог
+          "sm:mt-[7vh] sm:mb-8 sm:max-h-[86vh] sm:animate-panel-in sm:rounded-2xl",
           SIZE[size],
         )}
       >
+        {/* Грабер (только на телефоне) */}
+        <div className="mx-auto mt-2.5 h-1.5 w-10 shrink-0 rounded-full bg-border-strong sm:hidden" />
+
         {title && (
-          <div className="flex items-start justify-between gap-4 px-5 pt-5">
+          <div className="flex shrink-0 items-start justify-between gap-4 px-5 pt-4 sm:pt-5">
             <div>
               <h2 className="text-[15px] font-semibold text-text">{title}</h2>
               {description && (
@@ -79,9 +88,13 @@ export function Modal({
             </IconButton>
           </div>
         )}
-        <div className="px-5 py-4">{children}</div>
+
+        <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-4">
+          {children}
+        </div>
+
         {footer && (
-          <div className="flex items-center justify-end gap-2 border-t border-border px-5 py-3.5">
+          <div className="flex shrink-0 items-center justify-end gap-2 border-t border-border px-5 py-3.5 pb-[calc(0.875rem+env(safe-area-inset-bottom))] sm:pb-3.5">
             {footer}
           </div>
         )}

@@ -734,3 +734,27 @@ a.mention:hover {
 @media (max-width: 1023px) {
   :root { --nav-h: calc(3.5rem + env(safe-area-inset-bottom)); }
 }
+
+/* ─────────────────────────  Мобильная полировка  ───────────────────────── */
+
+/* Без серой вспышки по тапу и без случайного pull-to-refresh (как в приложении). */
+html { -webkit-tap-highlight-color: transparent; }
+body { overscroll-behavior-y: none; touch-action: manipulation; }
+
+/* Модалка-«шторка», выезжающая снизу на телефоне. */
+@keyframes sheet-rise {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+.animate-sheet-rise { animation: sheet-rise 0.34s cubic-bezier(0.16, 1, 0.3, 1); }
+
+/* Плавная смена страниц. */
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(7px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-page-in { animation: page-in 0.32s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-sheet-rise, .animate-page-in { animation: none; }
+}

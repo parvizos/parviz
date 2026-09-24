@@ -70,28 +70,32 @@ export function MobileNav({
             <Link
               key={it.href}
               href={it.href}
-              className="group relative flex flex-1 flex-col items-center justify-center gap-0.5 transition-transform active:scale-90"
+              className="group flex flex-1 flex-col items-center justify-center gap-1 transition-transform active:scale-90"
             >
-              {active && (
-                <span className="absolute top-0 h-[3px] w-9 rounded-full bg-accent" />
-              )}
-              <span className="relative">
-                <Icon
-                  size={22}
-                  className={cn(
-                    "transition-colors",
-                    active ? "text-accent" : "text-muted",
-                  )}
-                />
-                {it.badge && it.badge > 0 ? (
-                  <span className="absolute -right-2.5 -top-1.5 min-w-[16px] rounded-full bg-accent px-1 text-center text-[10px] font-semibold leading-4 text-accent-fg">
-                    {it.badge > 99 ? "99+" : it.badge}
-                  </span>
-                ) : null}
+              <span
+                className={cn(
+                  "flex h-8 items-center justify-center rounded-full px-5 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
+                  active ? "bg-accent-soft" : "bg-transparent",
+                )}
+              >
+                <span className="relative">
+                  <Icon
+                    size={21}
+                    className={cn(
+                      "transition-colors",
+                      active ? "text-accent" : "text-muted",
+                    )}
+                  />
+                  {it.badge && it.badge > 0 ? (
+                    <span className="absolute -right-2.5 -top-1.5 min-w-[16px] rounded-full bg-accent px-1 text-center text-[10px] font-semibold leading-4 text-accent-fg">
+                      {it.badge > 99 ? "99+" : it.badge}
+                    </span>
+                  ) : null}
+                </span>
               </span>
               <span
                 className={cn(
-                  "text-[10.5px] font-medium",
+                  "text-[10.5px] font-medium transition-colors",
                   active ? "text-accent" : "text-faint",
                 )}
               >
@@ -104,9 +108,11 @@ export function MobileNav({
           type="button"
           onClick={onMore}
           aria-label="Ещё"
-          className="flex flex-1 flex-col items-center justify-center gap-0.5 transition-transform active:scale-90"
+          className="group flex flex-1 flex-col items-center justify-center gap-1 transition-transform active:scale-90"
         >
-          <Menu size={22} className="text-muted" />
+          <span className="flex h-8 items-center justify-center rounded-full px-5">
+            <Menu size={21} className="text-muted" />
+          </span>
           <span className="text-[10.5px] font-medium text-faint">Ещё</span>
         </button>
       </div>
