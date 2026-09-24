@@ -15,7 +15,7 @@ import {
 import { cn } from "@/lib/cn";
 import { stripHtml } from "@/lib/text";
 import { autosaveNote, updateNote, toggleNotePin, deleteNote } from "@/lib/actions";
-import { RichEditor } from "./RichEditor";
+import { RichEditor } from "./RichEditorLazy";
 import { useUi } from "./ui-context";
 import type { SubjectOption } from "./types";
 

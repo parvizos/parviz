@@ -5,7 +5,7 @@ import { BookText, Check, Loader2, Maximize2, Minimize2 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { stripHtml } from "@/lib/text";
 import { autosaveEntityBody, type NotableKind } from "@/lib/actions";
-import { RichEditor } from "./RichEditor";
+import { RichEditor } from "./RichEditorLazy";
 
 function countWords(text: string): number {
   const t = text.trim();

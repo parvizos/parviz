@@ -38,13 +38,24 @@ function withFallbackSymbol(
   return hadStyle ? formatted : `${formatted} ${currencySymbol(currency)}`;
 }
 
+const knownCache = new Map<string, boolean>();
+
 function isKnown(currency: string): boolean {
+  // Раньше на каждый formatMoney мы конструировали пробный Intl.NumberFormat
+  // только чтобы проверить код валюты — а это одна из самых дорогих операций в
+  // JS. На странице операций (десятки строк × formatMoney) это выливалось в
+  // сотни лишних конструкций. Теперь результат запоминаем по коду валюты.
+  const cached = knownCache.get(currency);
+  if (cached !== undefined) return cached;
+  let known: boolean;
   try {
     new Intl.NumberFormat("ru-RU", { style: "currency", currency });
-    return true;
+    known = true;
   } catch {
-    return false;
+    known = false;
   }
+  knownCache.set(currency, known);
+  return known;
 }
 
 /** Полный формат с копейками (для валют, где они есть — по правилам самой валюты). */

@@ -4,6 +4,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useRef,
   useState,
   type ReactNode,
@@ -72,7 +73,15 @@ function ToastViewport({
   toasts: Toast[];
   dismiss: (id: number) => void;
 }) {
-  if (typeof document === "undefined") return null;
+  // Портал монтируем только после гидрации: на сервере вьюпорта нет, поэтому и
+  // на первом клиентском рендере его быть не должно — иначе React ловит
+  // расхождение (портал в document.body накладывался на оверлей заставки) и
+  // перерисовывает всё дерево страницы заново. Через mounted первый рендер
+  // совпадает с сервером (null), а тосты появляются следующим кадром.
+  const [mounted, setMounted] = useState(false);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- одноразовый флаг «после гидрации» для безопасного портала
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return null;
   return createPortal(
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[80] flex flex-col items-center gap-2 p-3 sm:items-end sm:p-4">
       {toasts.map((t) => (

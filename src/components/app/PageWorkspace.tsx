@@ -25,7 +25,7 @@ import {
   deletePage,
   togglePageFavorite,
 } from "@/lib/actions";
-import { RichEditor } from "./RichEditor";
+import { RichEditor } from "./RichEditorLazy";
 import { EmojiPicker } from "./EmojiPicker";
 import { CoverPicker } from "./CoverPicker";
 import { Backlinks } from "./Backlinks";

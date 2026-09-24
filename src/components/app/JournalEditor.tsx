@@ -14,7 +14,7 @@ import { cn } from "@/lib/cn";
 import { autosaveJournal } from "@/lib/actions";
 import { MOODS } from "@/lib/journal-format";
 import { parseTags, dedupeTags } from "@/lib/journal-tags";
-import { RichEditor } from "./RichEditor";
+import { RichEditor } from "./RichEditorLazy";
 
 export function JournalEditor({
   date,
