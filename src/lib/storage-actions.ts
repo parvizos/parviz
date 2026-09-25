@@ -1,9 +1,18 @@
 "use server";
 
+import { statSync } from "node:fs";
 import { revalidatePath } from "next/cache";
 import { isAuthed } from "@/lib/session";
+import { databaseFilePath } from "@/db";
 import { getSetting, setSetting, deleteSetting, SETTING_KEYS } from "@/lib/settings";
-import { s3TestConfig, type S3Config } from "@/lib/storage";
+import {
+  s3TestConfig,
+  getStorageConfig,
+  s3ListUsage,
+  litestreamConfig,
+  type S3Config,
+  type UsageResult,
+} from "@/lib/storage";
 
 async function guard() {
   if (!(await isAuthed())) throw new Error("unauthorized");
@@ -82,4 +91,54 @@ export async function setCloudUploads(enabled: boolean): Promise<ActionResult> {
   await setSetting(SETTING_KEYS.s3Uploads, enabled ? "on" : "off");
   revalidatePath("/nastroiki");
   return { ok: true };
+}
+
+export type CloudStatus = {
+  available: boolean;
+  error?: string;
+  /** Настроено ли облако для медиа (загрузки идут в R2). */
+  mediaConfigured: boolean;
+  /** Включена ли непрерывная репликация базы (Litestream). */
+  replication: boolean;
+  usage?: UsageResult;
+  /** Размер локального файла базы (для сравнения с копией в облаке). */
+  localDbBytes?: number;
+};
+
+/**
+ * Полное состояние облака для панели в настройках: сколько всего в R2 с
+ * разбивкой по типам (фото/вложения/музыка/база), количество объектов и
+ * когда последний раз что-то менялось. Считаем реальным листингом бакета.
+ */
+export async function getCloudStatus(): Promise<CloudStatus> {
+  await guard();
+  const media = await getStorageConfig();
+  const ls = litestreamConfig();
+  const mediaConfigured = !!media;
+  const replication = !!ls;
+
+  let localDbBytes: number | undefined;
+  try {
+    const p = databaseFilePath();
+    if (p) localDbBytes = statSync(p).size;
+  } catch {}
+
+  // Листим тем конфигом, что есть: медиа-ключи или ключи репликации — бакет
+  // один и тот же, объём считается целиком.
+  const listCfg: S3Config | null = media ?? ls;
+  if (!listCfg) {
+    return { available: false, mediaConfigured, replication, localDbBytes };
+  }
+  try {
+    const usage = await s3ListUsage(listCfg);
+    return { available: true, mediaConfigured, replication, usage, localDbBytes };
+  } catch (e) {
+    return {
+      available: false,
+      mediaConfigured,
+      replication,
+      localDbBytes,
+      error: e instanceof Error ? e.message : "не удалось получить состояние",
+    };
+  }
 }

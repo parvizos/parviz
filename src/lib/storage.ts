@@ -245,6 +245,99 @@ export async function s3TestConfig(
   }
 }
 
+export type UsageGroup = {
+  prefix: string;
+  count: number;
+  bytes: number;
+  lastModified: string | null;
+};
+export type UsageResult = {
+  total: { count: number; bytes: number };
+  groups: UsageGroup[];
+  lastModified: string | null;
+};
+
+/**
+ * Считает, сколько всего лежит в бакете, с разбивкой по «папкам» верхнего
+ * уровня (images/, files/, tracks/, litestream/…). Проходит все страницы
+ * листинга. Клиент строим под переданный конфиг — так можно смотреть объём и
+ * media-ключами, и ключами репликации.
+ */
+export async function s3ListUsage(cfg: S3Config): Promise<UsageResult> {
+  const client = new AwsClient({
+    accessKeyId: cfg.accessKeyId,
+    secretAccessKey: cfg.secretAccessKey,
+    region: cfg.region,
+    service: "s3",
+  });
+  const base = cfg.prefix ? cfg.prefix.replace(/\/?$/, "/") : "";
+  const groups = new Map<string, { count: number; bytes: number; last: string | null }>();
+  const total = { count: 0, bytes: 0 };
+  let overallLast: string | null = null;
+  let token: string | undefined;
+
+  do {
+    const u = new URL(`${cfg.endpoint}/${cfg.bucket}`);
+    u.searchParams.set("list-type", "2");
+    u.searchParams.set("max-keys", "1000");
+    if (base) u.searchParams.set("prefix", base);
+    if (token) u.searchParams.set("continuation-token", token);
+    const res = await client.fetch(u.toString(), { method: "GET" });
+    if (!res.ok) throw new Error(`S3 LIST ${res.status}`);
+    const xml = await res.text();
+
+    for (const m of xml.matchAll(/<Contents>([\s\S]*?)<\/Contents>/g)) {
+      const b = m[1];
+      const key = b.match(/<Key>([\s\S]*?)<\/Key>/)?.[1] ?? "";
+      const size = Number(b.match(/<Size>(\d+)<\/Size>/)?.[1] ?? 0);
+      const lm = b.match(/<LastModified>([\s\S]*?)<\/LastModified>/)?.[1] ?? null;
+      const rel = key.slice(base.length);
+      const seg = rel.split("/")[0] || "other";
+      const g = groups.get(seg) ?? { count: 0, bytes: 0, last: null };
+      g.count += 1;
+      g.bytes += size;
+      if (lm && (!g.last || lm > g.last)) g.last = lm;
+      groups.set(seg, g);
+      total.count += 1;
+      total.bytes += size;
+      if (lm && (!overallLast || lm > overallLast)) overallLast = lm;
+    }
+
+    const truncated = /<IsTruncated>\s*true\s*<\/IsTruncated>/.test(xml);
+    token = truncated
+      ? xml.match(/<NextContinuationToken>([\s\S]*?)<\/NextContinuationToken>/)?.[1]
+      : undefined;
+  } while (token);
+
+  return {
+    total,
+    groups: [...groups.entries()].map(([prefix, g]) => ({
+      prefix,
+      count: g.count,
+      bytes: g.bytes,
+      lastModified: g.last,
+    })),
+    lastModified: overallLast,
+  };
+}
+
+/** Конфиг репликации базы (Litestream) из окружения — для панели состояния. */
+export function litestreamConfig(): S3Config | null {
+  const endpoint = (process.env.LITESTREAM_ENDPOINT || "").trim().replace(/\/+$/, "");
+  const bucket = (process.env.LITESTREAM_BUCKET || "").trim();
+  const accessKeyId = (process.env.LITESTREAM_ACCESS_KEY_ID || "").trim();
+  const secretAccessKey = (process.env.LITESTREAM_SECRET_ACCESS_KEY || "").trim();
+  if (!endpoint || !bucket || !accessKeyId || !secretAccessKey) return null;
+  return {
+    endpoint,
+    bucket,
+    accessKeyId,
+    secretAccessKey,
+    region: (process.env.LITESTREAM_REGION || "auto").trim(),
+    prefix: "",
+  };
+}
+
 function putError(status: number): string {
   if (status === 403) return "Доступ запрещён — проверь ключи и права токена";
   if (status === 404) return "Бакет не найден — проверь имя бакета и endpoint";

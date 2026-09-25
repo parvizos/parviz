@@ -11,6 +11,7 @@ import { DemoSettings } from "@/components/app/DemoSettings";
 import { DataRestore } from "@/components/app/DataRestore";
 import { MigrateTracks } from "@/components/app/MigrateTracks";
 import { StorageSettings } from "@/components/app/storage-settings";
+import { CloudStatus } from "@/components/app/cloud-status";
 import { PageHeader } from "@/components/ui/misc";
 
 export const metadata = { title: "Настройки" };
@@ -120,15 +121,18 @@ export default async function SettingsPage() {
         <h2 className="mb-2.5 px-1 text-[13px] font-semibold uppercase tracking-wide text-muted">
           Облачное хранилище
         </h2>
-        <StorageSettings
-          configured={s3On}
-          uploadsOn={uploadsOn}
-          source={storageSource}
-          endpoint={storageCfg?.endpoint ?? null}
-          bucket={storageCfg?.bucket ?? null}
-          region={storageCfg?.region ?? null}
-          prefix={storageCfg?.prefix ?? null}
-        />
+        <div className="space-y-3">
+          <StorageSettings
+            configured={s3On}
+            uploadsOn={uploadsOn}
+            source={storageSource}
+            endpoint={storageCfg?.endpoint ?? null}
+            bucket={storageCfg?.bucket ?? null}
+            region={storageCfg?.region ?? null}
+            prefix={storageCfg?.prefix ?? null}
+          />
+          <CloudStatus />
+        </div>
       </section>
 
       {/* Хранилище музыки (только если подключено облако) */}
