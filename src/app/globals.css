@@ -502,6 +502,33 @@ body {
   border-color: var(--border-strong);
   background: var(--surface-2);
 }
+
+/* Закладка/встраивание ссылки */
+.ProseMirror .pv-bookmark-view {
+  margin: 0.5em 0;
+}
+.ProseMirror a.pv-bookmark {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin: 0.5em 0;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13.5px;
+  font-weight: 500;
+  text-decoration: none;
+}
+.ProseMirror a.pv-bookmark::before {
+  content: "🔗";
+  font-size: 15px;
+}
+.ProseMirror a.pv-bookmark:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-2);
+}
 /* Плейсхолдер пустого редактора */
 .ProseMirror .is-empty::before,
 .ProseMirror .is-editor-empty:first-child::before {

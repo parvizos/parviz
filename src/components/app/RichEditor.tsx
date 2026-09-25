@@ -12,6 +12,8 @@ import { ResizableImage } from "./image-node";
 import { ImageGallery } from "./gallery-node";
 import { VideoEmbed } from "./video-node";
 import { FileAttachment } from "./file-node";
+import { LinkEmbed } from "./bookmark-node";
+import { normalizeUrl, parseLink } from "@/lib/link-embed";
 import {
   useEffect,
   useReducer,
@@ -34,6 +36,7 @@ import {
   Images,
   Video,
   Paperclip,
+  Link2,
   Camera,
   Pen,
   Type,
@@ -110,6 +113,7 @@ function Toolbar({
   onGallery,
   onVideo,
   onFile,
+  onLink,
   onCamera,
   onSketch,
 }: {
@@ -118,6 +122,7 @@ function Toolbar({
   onGallery: () => void;
   onVideo: () => void;
   onFile: () => void;
+  onLink: () => void;
   onCamera: () => void;
   onSketch: () => void;
 }) {
@@ -180,6 +185,9 @@ function Toolbar({
       </Btn>
       <Btn label="Файл" onClick={onFile}>
         <Paperclip size={16} />
+      </Btn>
+      <Btn label="Ссылка / Google Диск" onClick={onLink}>
+        <Link2 size={16} />
       </Btn>
       <Btn label="Сфоткать доску" onClick={onCamera}>
         <Camera size={16} />
@@ -253,6 +261,8 @@ export function RichEditor({
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const [sketchOpen, setSketchOpen] = useState(false);
   const [cropQueue, setCropQueue] = useState<File[]>([]);
+  const [linkOpen, setLinkOpen] = useState(false);
+  const [linkUrl, setLinkUrl] = useState("");
 
   // Состояние слэш-меню.
   const [slash, setSlash] = useState<SlashState | null>(null);
@@ -290,6 +300,7 @@ export function RichEditor({
     { title: "Галерея фото", icon: <Images size={16} />, keywords: ["gallery", "галерея", "фото", "ряд", "коллаж", "альбом"], run: (e, r) => { e.chain().focus().deleteRange(r).run(); galleryInputRef.current?.click(); } },
     { title: "Видео", icon: <Video size={16} />, keywords: ["video", "видео", "ролик", "клип"], run: (e, r) => { e.chain().focus().deleteRange(r).run(); videoInputRef.current?.click(); } },
     { title: "Файл", icon: <Paperclip size={16} />, keywords: ["file", "файл", "вложение", "документ", "pdf", "attach"], run: (e, r) => { e.chain().focus().deleteRange(r).run(); attachInputRef.current?.click(); } },
+    { title: "Ссылка / Google Диск", icon: <Link2 size={16} />, keywords: ["link", "ссылка", "google", "диск", "drive", "закладка", "youtube", "embed", "вставить"], run: (e, r) => { e.chain().focus().deleteRange(r).run(); setLinkUrl(""); setLinkOpen(true); } },
     { title: "Камера", icon: <Camera size={16} />, keywords: ["camera", "фото", "доска", "снимок"], run: (e, r) => { e.chain().focus().deleteRange(r).run(); cameraInputRef.current?.click(); } },
     { title: "Рисунок", icon: <Pen size={16} />, keywords: ["draw", "рисовать", "формула", "схема", "sketch"], run: (e, r) => { e.chain().focus().deleteRange(r).run(); setSketchOpen(true); } },
   ];
@@ -372,6 +383,7 @@ export function RichEditor({
       ImageGallery,
       VideoEmbed,
       FileAttachment,
+      LinkEmbed,
       Callout,
       // Новые тогглы создаём раскрытыми (курсор сразу в теле), но HTML
       // с `<details>` без `open` уважаем — parseHTML читает атрибут.
@@ -446,12 +458,24 @@ export function RichEditor({
     content: initialHTML || "",
     editorProps: {
       attributes: { class: cn("outline-none", minHeightClass) },
-      handlePaste: (_view, event) => {
+      handlePaste: (view, event) => {
         const files = Array.from(event.clipboardData?.files ?? []);
-        if (files.length === 0) return false;
-        event.preventDefault();
-        files.forEach((file) => routeFile(file));
-        return true;
+        if (files.length > 0) {
+          event.preventDefault();
+          files.forEach((file) => routeFile(file));
+          return true;
+        }
+        // Одинокая ссылка на Google Диск/YouTube на пустом месте → карточка.
+        const text = event.clipboardData?.getData("text/plain")?.trim() ?? "";
+        if (text && !/\s/.test(text) && view.state.selection.empty) {
+          const url = normalizeUrl(text);
+          if (url && parseLink(url).embedUrl) {
+            event.preventDefault();
+            insertBookmark(url);
+            return true;
+          }
+        }
+        return false;
       },
       handleDrop: (view, event) => {
         const files = Array.from(event.dataTransfer?.files ?? []);
@@ -576,6 +600,17 @@ export function RichEditor({
     files.forEach((f) => void uploadAndInsertFile(f));
   }
 
+  function insertBookmark(url: string, pos?: number) {
+    insertNodeAt("linkEmbed", { url, preview: true }, pos);
+  }
+  function submitLink() {
+    const url = normalizeUrl(linkUrl);
+    if (!url) return;
+    setLinkOpen(false);
+    setLinkUrl("");
+    insertBookmark(url);
+  }
+
   return (
     <div>
       {toolbar && editor && (
@@ -591,6 +626,10 @@ export function RichEditor({
             onGallery={() => galleryInputRef.current?.click()}
             onVideo={() => videoInputRef.current?.click()}
             onFile={() => attachInputRef.current?.click()}
+            onLink={() => {
+              setLinkUrl("");
+              setLinkOpen(true);
+            }}
             onCamera={() => cameraInputRef.current?.click()}
             onSketch={() => setSketchOpen(true)}
           />
@@ -676,6 +715,56 @@ export function RichEditor({
             void uploadAndInsert(cropped);
           }}
         />
+      )}
+
+      {linkOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-4 pt-[18vh] backdrop-blur-sm"
+          onClick={() => setLinkOpen(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl border border-border bg-surface p-4 shadow-[var(--shadow-lg)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="mb-1 text-[14px] font-medium text-text">Вставить ссылку</p>
+            <p className="mb-3 text-[12.5px] text-faint">
+              Google Диск, Документы, YouTube или любой сайт — покажу карточку и
+              живое превью.
+            </p>
+            <input
+              autoFocus
+              value={linkUrl}
+              onChange={(e) => setLinkUrl(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  submitLink();
+                } else if (e.key === "Escape") {
+                  setLinkOpen(false);
+                }
+              }}
+              placeholder="https://drive.google.com/…"
+              className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-[14px] text-text outline-none transition-colors focus:border-accent"
+            />
+            <div className="mt-3 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setLinkOpen(false)}
+                className="rounded-lg px-3 py-1.5 text-[13px] font-medium text-muted transition-colors hover:bg-surface-2 hover:text-text"
+              >
+                Отмена
+              </button>
+              <button
+                type="button"
+                onClick={submitLink}
+                disabled={!normalizeUrl(linkUrl)}
+                className="rounded-lg bg-accent px-3 py-1.5 text-[13px] font-medium text-accent-fg transition-opacity hover:opacity-90 disabled:opacity-40"
+              >
+                Вставить
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {slash && slash.rect && slash.items.length > 0 && (
