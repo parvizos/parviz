@@ -9,6 +9,7 @@ import { TableKit } from "@tiptap/extension-table";
 import { Details, DetailsSummary, DetailsContent } from "@tiptap/extension-details";
 import { Callout } from "./callout";
 import { ResizableImage } from "./image-node";
+import { ImageGallery } from "./gallery-node";
 import {
   useEffect,
   useReducer,
@@ -28,6 +29,7 @@ import {
   Quote,
   Code2,
   ImagePlus,
+  Images,
   Camera,
   Pen,
   Type,
@@ -100,11 +102,13 @@ function Btn({
 function Toolbar({
   editor,
   onImage,
+  onGallery,
   onCamera,
   onSketch,
 }: {
   editor: Editor;
   onImage: () => void;
+  onGallery: () => void;
   onCamera: () => void;
   onSketch: () => void;
 }) {
@@ -158,6 +162,9 @@ function Toolbar({
       {sep}
       <Btn label="Картинка" onClick={onImage}>
         <ImagePlus size={16} />
+      </Btn>
+      <Btn label="Галерея фото" onClick={onGallery}>
+        <Images size={16} />
       </Btn>
       <Btn label="Сфоткать доску" onClick={onCamera}>
         <Camera size={16} />
@@ -225,6 +232,7 @@ export function RichEditor({
   const [, force] = useReducer((x: number) => x + 1, 0);
   const editorRef = useRef<Editor | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const galleryInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const [sketchOpen, setSketchOpen] = useState(false);
   const [cropQueue, setCropQueue] = useState<File[]>([]);
@@ -262,6 +270,7 @@ export function RichEditor({
     { title: "Выноска: успех", hint: "✅", icon: <CheckCircle2 size={16} />, keywords: ["callout", "выноска", "успех", "готово", "success"], run: (e, r) => e.chain().focus().deleteRange(r).setCallout("success").run() },
     { title: "Выноска: заметка", hint: "📝", icon: <StickyNote size={16} />, keywords: ["callout", "выноска", "заметка", "note"], run: (e, r) => e.chain().focus().deleteRange(r).setCallout("note").run() },
     { title: "Картинка", icon: <ImagePlus size={16} />, keywords: ["image", "картинка"], run: (e, r) => { e.chain().focus().deleteRange(r).run(); fileInputRef.current?.click(); } },
+    { title: "Галерея фото", icon: <Images size={16} />, keywords: ["gallery", "галерея", "фото", "ряд", "коллаж", "альбом"], run: (e, r) => { e.chain().focus().deleteRange(r).run(); galleryInputRef.current?.click(); } },
     { title: "Камера", icon: <Camera size={16} />, keywords: ["camera", "фото", "доска", "снимок"], run: (e, r) => { e.chain().focus().deleteRange(r).run(); cameraInputRef.current?.click(); } },
     { title: "Рисунок", icon: <Pen size={16} />, keywords: ["draw", "рисовать", "формула", "схема", "sketch"], run: (e, r) => { e.chain().focus().deleteRange(r).run(); setSketchOpen(true); } },
   ];
@@ -341,6 +350,7 @@ export function RichEditor({
       TaskList,
       TaskItem.configure({ nested: true }),
       ResizableImage.configure({ inline: false, allowBase64: false }),
+      ImageGallery,
       Callout,
       // Новые тогглы создаём раскрытыми (курсор сразу в теле), но HTML
       // с `<details>` без `open` уважаем — parseHTML читает атрибут.
@@ -474,6 +484,34 @@ export function RichEditor({
     if (url && editorRef.current) insertImage(editorRef.current, url);
   }
 
+  // Галерея: несколько фото сразу — грузим без обрезки и вставляем сеткой.
+  async function onGalleryPick(e: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []).filter((f) =>
+      f.type.startsWith("image/"),
+    );
+    e.target.value = "";
+    if (!files.length) return;
+    const urls: string[] = [];
+    for (const file of files) {
+      const url = await uploadImage(file);
+      if (url) urls.push(url);
+    }
+    const ed = editorRef.current;
+    if (!ed || urls.length === 0) return;
+    if (urls.length === 1) {
+      insertImage(ed, urls[0]);
+      return;
+    }
+    ed
+      .chain()
+      .focus()
+      .insertContent({
+        type: "imageGallery",
+        attrs: { images: urls.map((src) => ({ src })) },
+      })
+      .run();
+  }
+
   return (
     <div>
       {toolbar && editor && (
@@ -486,6 +524,7 @@ export function RichEditor({
           <Toolbar
             editor={editor}
             onImage={() => fileInputRef.current?.click()}
+            onGallery={() => galleryInputRef.current?.click()}
             onCamera={() => cameraInputRef.current?.click()}
             onSketch={() => setSketchOpen(true)}
           />
@@ -517,6 +556,14 @@ export function RichEditor({
         multiple
         hidden
         onChange={onFilePick}
+      />
+      <input
+        ref={galleryInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        hidden
+        onChange={onGalleryPick}
       />
       <input
         ref={cameraInputRef}

@@ -373,6 +373,86 @@ body {
   float: right;
   margin: 0.2em 0 0.6em 1.1em;
 }
+/* Подпись к фото */
+.ProseMirror figure.pv-figure {
+  margin: 0.5em 0;
+}
+.ProseMirror figure.pv-figure[data-align="left"] {
+  margin-right: auto;
+}
+.ProseMirror figure.pv-figure[data-align="center"] {
+  margin-left: auto;
+  margin-right: auto;
+  width: fit-content;
+}
+.ProseMirror figure.pv-figure[data-align="right"] {
+  margin-left: auto;
+}
+.ProseMirror figure.pv-figure[data-wrap="true"][data-align="left"] {
+  float: left;
+  margin: 0.2em 1.1em 0.6em 0;
+}
+.ProseMirror figure.pv-figure[data-wrap="true"][data-align="right"] {
+  float: right;
+  margin: 0.2em 0 0.6em 1.1em;
+}
+.ProseMirror figcaption {
+  margin-top: 0.4em;
+  text-align: center;
+  font-size: 13px;
+  font-style: italic;
+  color: var(--muted);
+}
+/* Галерея (несколько фото в ряд) — раскладка для сохранённого HTML */
+.ProseMirror .pv-gallery {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0.5em 0;
+}
+.ProseMirror .pv-gallery[data-cols="2"] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.ProseMirror .pv-gallery[data-cols="4"] {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.ProseMirror .pv-gallery img {
+  margin: 0;
+  aspect-ratio: 1 / 1;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 12px;
+}
+.ProseMirror .pv-gallery figcaption {
+  grid-column: 1 / -1;
+}
+
+/* Лайтбокс: полноэкранный просмотр фото */
+@keyframes pvLightboxIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes pvLightboxZoom {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.pv-lightbox {
+  animation: pvLightboxIn 0.16s ease-out;
+}
+.pv-lightbox-img {
+  animation: pvLightboxZoom 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
 /* Плейсхолдер пустого редактора */
 .ProseMirror .is-empty::before,
 .ProseMirror .is-editor-empty:first-child::before {
