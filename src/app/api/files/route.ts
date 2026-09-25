@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db, schemaReady } from "@/db";
 import { files } from "@/db/schema";
 import { isAuthed } from "@/lib/session";
-import { driveUploadsEnabled, drivePutBytes } from "@/lib/gdrive";
+import { cloudUploadsEnabled, s3PutBytes, fileKey } from "@/lib/storage";
 
 export const runtime = "nodejs";
 
@@ -30,18 +30,21 @@ export async function POST(req: Request) {
 
   await schemaReady();
   const buf = Buffer.from(await file.arrayBuffer());
+  const id = crypto.randomUUID();
   const name = file.name || "файл";
   const mime = file.type || "application/octet-stream";
 
-  // Подключён Drive → файл летит туда, в БД лишь ссылка; иначе blob в базе.
+  // Настроено облако → файл летит в R2/S3, в БД лишь ссылка; иначе blob в базе.
   // Ошибка облака не роняет загрузку — файл всё равно сохраним в БД.
-  let storage: "db" | "gdrive" = "db";
+  let storage: "db" | "s3" = "db";
   let storageKey: string | null = null;
   let data: Buffer = buf;
-  if (await driveUploadsEnabled().catch(() => false)) {
+  if (await cloudUploadsEnabled().catch(() => false)) {
     try {
-      storageKey = await drivePutBytes(name, mime, buf);
-      storage = "gdrive";
+      const key = fileKey(id);
+      await s3PutBytes(key, buf, mime);
+      storage = "s3";
+      storageKey = key;
       data = Buffer.alloc(0);
     } catch {
       storage = "db";
@@ -52,7 +55,7 @@ export async function POST(req: Request) {
 
   const [row] = await db
     .insert(files)
-    .values({ name, mime, data, size: buf.length, storage, storageKey })
+    .values({ id, name, mime, data, size: buf.length, storage, storageKey })
     .returning({ id: files.id });
 
   return NextResponse.json({ id: row.id, name: file.name, size: buf.length });

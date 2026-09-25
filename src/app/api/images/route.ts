@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db, schemaReady } from "@/db";
 import { images } from "@/db/schema";
 import { isAuthed } from "@/lib/session";
-import { driveUploadsEnabled, drivePutBytes } from "@/lib/gdrive";
+import { cloudUploadsEnabled, s3PutBytes, imageKey } from "@/lib/storage";
 
 export const runtime = "nodejs";
 
@@ -41,22 +41,20 @@ export async function POST(req: Request) {
 
   await schemaReady();
   const buf = Buffer.from(await file.arrayBuffer());
+  const id = crypto.randomUUID();
 
-  // Подключён Google Drive → новая картинка летит туда, в БД остаётся только
+  // Настроено облако → новая картинка летит в R2/S3, в БД остаётся только
   // ссылка (пустой blob, т.к. колонка NOT NULL). Не вышло залить — не теряем
   // файл: спокойно кладём его blob'ом в базу, как раньше.
-  let storage: "db" | "gdrive" = "db";
+  let storage: "db" | "s3" = "db";
   let storageKey: string | null = null;
   let data: Buffer = buf;
-  if (await driveUploadsEnabled().catch(() => false)) {
+  if (await cloudUploadsEnabled().catch(() => false)) {
     try {
-      const ext = IMG_EXT[file.type] || "bin";
-      storageKey = await drivePutBytes(
-        `image-${crypto.randomUUID()}.${ext}`,
-        file.type,
-        buf,
-      );
-      storage = "gdrive";
+      const key = imageKey(id, IMG_EXT[file.type] || "bin");
+      await s3PutBytes(key, buf, file.type);
+      storage = "s3";
+      storageKey = key;
       data = Buffer.alloc(0);
     } catch {
       storage = "db";
@@ -67,7 +65,7 @@ export async function POST(req: Request) {
 
   const [row] = await db
     .insert(images)
-    .values({ mime: file.type, data, size: buf.length, storage, storageKey })
+    .values({ id, mime: file.type, data, size: buf.length, storage, storageKey })
     .returning({ id: images.id });
 
   return NextResponse.json({ id: row.id, url: `/api/images/${row.id}` });

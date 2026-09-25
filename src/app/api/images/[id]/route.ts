@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { db, schemaReady } from "@/db";
 import { images } from "@/db/schema";
 import { isAuthed } from "@/lib/session";
-import { driveGetById } from "@/lib/gdrive";
+import { s3Get } from "@/lib/storage";
 
 export const runtime = "nodejs";
 
@@ -22,9 +22,9 @@ export async function GET(
     .limit(1);
   if (!row) return new Response("not found", { status: 404 });
 
-  // Картинка в Google Drive — проксируем её байты (ключи Drive не светим клиенту).
-  if (row.storage === "gdrive" && row.storageKey) {
-    const r = await driveGetById(row.storageKey);
+  // Картинка в облаке (R2/S3) — проксируем её байты через сервер.
+  if (row.storage === "s3" && row.storageKey) {
+    const r = await s3Get(row.storageKey);
     if (r.status === 404) return new Response("not found", { status: 404 });
     if (r.status >= 400) return new Response("upstream error", { status: 502 });
     const headers: Record<string, string> = {

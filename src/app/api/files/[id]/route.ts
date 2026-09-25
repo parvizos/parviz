@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { db, schemaReady } from "@/db";
 import { files } from "@/db/schema";
 import { isAuthed } from "@/lib/session";
-import { driveGetById } from "@/lib/gdrive";
+import { s3Get } from "@/lib/storage";
 
 export const runtime = "nodejs";
 
@@ -21,9 +21,9 @@ export async function GET(
   // filename* — RFC 5987, чтобы кириллица в имени не ломалась.
   const encoded = encodeURIComponent(row.name);
 
-  // Файл в Google Drive — проксируем его байты через сервер (ключи не светим).
-  if (row.storage === "gdrive" && row.storageKey) {
-    const r = await driveGetById(row.storageKey);
+  // Файл в облаке (R2/S3) — проксируем его байты через сервер.
+  if (row.storage === "s3" && row.storageKey) {
+    const r = await s3Get(row.storageKey);
     if (r.status === 404) return new Response("not found", { status: 404 });
     if (r.status >= 400) return new Response("upstream error", { status: 502 });
     const headers: Record<string, string> = {

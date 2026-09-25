@@ -17,14 +17,17 @@ export const SETTING_KEYS = {
   baseCurrency: "base_currency",
   ratesUpdatedAt: "rates_updated_at",
   ratesSource: "rates_source",
-  // Google Drive как облачное хранилище новых файлов (настраивается в UI).
-  gdriveClientId: "gdrive_client_id",
-  gdriveClientSecret: "gdrive_client_secret",
-  gdriveRefreshToken: "gdrive_refresh_token",
-  gdriveFolderId: "gdrive_folder_id",
-  gdriveEmail: "gdrive_email",
-  /** 'off' — подключение есть, но новые загрузки временно не льём в Drive. */
-  gdriveUploads: "gdrive_uploads",
+  // Облачное хранилище файлов — S3-совместимое (Cloudflare R2, Oracle,
+  // Backblaze…). Настраивается прямо в интерфейсе; при пустых значениях
+  // storage.ts падает на переменные окружения S3_*, а затем на диск/БД.
+  s3Endpoint: "s3_endpoint",
+  s3Region: "s3_region",
+  s3Bucket: "s3_bucket",
+  s3AccessKey: "s3_access_key",
+  s3Secret: "s3_secret",
+  s3Prefix: "s3_prefix",
+  /** 'off' — хранилище настроено, но новые загрузки временно не льём в облако. */
+  s3Uploads: "s3_uploads",
 } as const;
 
 /** Удалить настройку (по ключу). Нет строки — тихо ок. */

@@ -109,7 +109,7 @@ export async function migrateTrackToS3(
   id: string,
 ): Promise<{ ok: boolean; error?: string }> {
   if (!(await isAuthed())) throw new Error("unauthorized");
-  if (!s3Enabled()) return { ok: false, error: "Облако не настроено" };
+  if (!(await s3Enabled())) return { ok: false, error: "Облако не настроено" };
   await schemaReady();
 
   const [row] = await db
