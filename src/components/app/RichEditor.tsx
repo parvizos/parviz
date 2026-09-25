@@ -5,10 +5,10 @@ import { StarterKit } from "@tiptap/starter-kit";
 import { Placeholder } from "@tiptap/extension-placeholder";
 import { TaskList } from "@tiptap/extension-task-list";
 import { TaskItem } from "@tiptap/extension-task-item";
-import { Image } from "@tiptap/extension-image";
 import { TableKit } from "@tiptap/extension-table";
 import { Details, DetailsSummary, DetailsContent } from "@tiptap/extension-details";
 import { Callout } from "./callout";
+import { ResizableImage } from "./image-node";
 import {
   useEffect,
   useReducer,
@@ -340,7 +340,7 @@ export function RichEditor({
       }),
       TaskList,
       TaskItem.configure({ nested: true }),
-      Image.configure({ inline: false, allowBase64: false }),
+      ResizableImage.configure({ inline: false, allowBase64: false }),
       Callout,
       // Новые тогглы создаём раскрытыми (курсор сразу в теле), но HTML
       // с `<details>` без `open` уважаем — parseHTML читает атрибут.

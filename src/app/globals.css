@@ -339,12 +339,39 @@ body {
   max-width: 100%;
   height: auto;
   border-radius: 12px;
-  margin: 0.5em 0;
   display: block;
 }
-.ProseMirror img.ProseMirror-selectednode {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+/* Обёртка ноды-картинки (node view) сама раскладывает и отбивает картинку. */
+.pv-image {
+  margin: 0.5em 0;
+}
+/* Плавающие картинки должны обтекаться текстом, но не вылезать из блока. */
+.ProseMirror::after {
+  content: "";
+  display: block;
+  clear: both;
+}
+/* Резервная раскладка для «сырого» <img> (до монтирования node view или
+   при простом рендере HTML): выравнивание и обтекание по data-атрибутам. */
+.ProseMirror img[data-align="left"] {
+  margin-right: auto;
+  margin-left: 0;
+}
+.ProseMirror img[data-align="center"] {
+  margin-left: auto;
+  margin-right: auto;
+}
+.ProseMirror img[data-align="right"] {
+  margin-left: auto;
+  margin-right: 0;
+}
+.ProseMirror img[data-wrap="true"][data-align="left"] {
+  float: left;
+  margin: 0.2em 1.1em 0.6em 0;
+}
+.ProseMirror img[data-wrap="true"][data-align="right"] {
+  float: right;
+  margin: 0.2em 0 0.6em 1.1em;
 }
 /* Плейсхолдер пустого редактора */
 .ProseMirror .is-empty::before,
