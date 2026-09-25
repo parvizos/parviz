@@ -14,6 +14,12 @@ import { VideoEmbed } from "./video-node";
 import { FileAttachment } from "./file-node";
 import { LinkEmbed } from "./bookmark-node";
 import { normalizeUrl, parseLink } from "@/lib/link-embed";
+import { getGooglePickerConfig } from "@/lib/google-actions";
+import {
+  pickFromGoogleDrive,
+  downloadDriveFile,
+  isGoogleNativeDoc,
+} from "@/lib/google-picker";
 import {
   useEffect,
   useReducer,
@@ -37,6 +43,7 @@ import {
   Video,
   Paperclip,
   Link2,
+  HardDrive,
   Camera,
   Pen,
   Type,
@@ -114,6 +121,7 @@ function Toolbar({
   onVideo,
   onFile,
   onLink,
+  onGoogleDrive,
   onCamera,
   onSketch,
 }: {
@@ -123,6 +131,7 @@ function Toolbar({
   onVideo: () => void;
   onFile: () => void;
   onLink: () => void;
+  onGoogleDrive: () => void;
   onCamera: () => void;
   onSketch: () => void;
 }) {
@@ -188,6 +197,9 @@ function Toolbar({
       </Btn>
       <Btn label="Ссылка / Google Диск" onClick={onLink}>
         <Link2 size={16} />
+      </Btn>
+      <Btn label="С Google Диска" onClick={onGoogleDrive}>
+        <HardDrive size={16} />
       </Btn>
       <Btn label="Сфоткать доску" onClick={onCamera}>
         <Camera size={16} />
@@ -263,6 +275,8 @@ export function RichEditor({
   const [cropQueue, setCropQueue] = useState<File[]>([]);
   const [linkOpen, setLinkOpen] = useState(false);
   const [linkUrl, setLinkUrl] = useState("");
+  const [gdriveBusy, setGdriveBusy] = useState(false);
+  const [gdriveNotice, setGdriveNotice] = useState<{ text: string; settings: boolean } | null>(null);
 
   // Состояние слэш-меню.
   const [slash, setSlash] = useState<SlashState | null>(null);
@@ -301,6 +315,7 @@ export function RichEditor({
     { title: "Видео", icon: <Video size={16} />, keywords: ["video", "видео", "ролик", "клип"], run: (e, r) => { e.chain().focus().deleteRange(r).run(); videoInputRef.current?.click(); } },
     { title: "Файл", icon: <Paperclip size={16} />, keywords: ["file", "файл", "вложение", "документ", "pdf", "attach"], run: (e, r) => { e.chain().focus().deleteRange(r).run(); attachInputRef.current?.click(); } },
     { title: "Ссылка / Google Диск", icon: <Link2 size={16} />, keywords: ["link", "ссылка", "google", "диск", "drive", "закладка", "youtube", "embed", "вставить"], run: (e, r) => { e.chain().focus().deleteRange(r).run(); setLinkUrl(""); setLinkOpen(true); } },
+    { title: "С Google Диска", icon: <HardDrive size={16} />, keywords: ["google", "диск", "drive", "гугл", "picker", "выбрать", "файл"], run: (e, r) => { e.chain().focus().deleteRange(r).run(); void onGoogleDrive(); } },
     { title: "Камера", icon: <Camera size={16} />, keywords: ["camera", "фото", "доска", "снимок"], run: (e, r) => { e.chain().focus().deleteRange(r).run(); cameraInputRef.current?.click(); } },
     { title: "Рисунок", icon: <Pen size={16} />, keywords: ["draw", "рисовать", "формула", "схема", "sketch"], run: (e, r) => { e.chain().focus().deleteRange(r).run(); setSketchOpen(true); } },
   ];
@@ -611,6 +626,42 @@ export function RichEditor({
     insertBookmark(url);
   }
 
+  // Google Диск: выбрать файлы из Диска → скачать байты → положить в R2.
+  // Google-нативные документы байтами не качаются — вставляем живым превью.
+  async function onGoogleDrive() {
+    if (gdriveBusy) return;
+    const cfg = await getGooglePickerConfig();
+    if (!cfg) {
+      setGdriveNotice({
+        text: "Сначала подключи Google Диск в Настройках → Google Диск (нужны Client ID и API-ключ, это разово).",
+        settings: true,
+      });
+      return;
+    }
+    setGdriveBusy(true);
+    try {
+      const res = await pickFromGoogleDrive(cfg);
+      if (res) {
+        for (const f of res.files) {
+          if (isGoogleNativeDoc(f.mimeType)) {
+            insertBookmark(f.url);
+          } else {
+            const file = await downloadDriveFile(f, res.token);
+            if (file) routeFile(file);
+            else insertBookmark(f.url);
+          }
+        }
+      }
+    } catch {
+      setGdriveNotice({
+        text: "Не удалось открыть Google Диск. Проверь Client ID и API-ключ, а в настройках Google — что адрес приложения добавлен в разрешённые источники.",
+        settings: false,
+      });
+    } finally {
+      setGdriveBusy(false);
+    }
+  }
+
   return (
     <div>
       {toolbar && editor && (
@@ -630,6 +681,7 @@ export function RichEditor({
               setLinkUrl("");
               setLinkOpen(true);
             }}
+            onGoogleDrive={onGoogleDrive}
             onCamera={() => cameraInputRef.current?.click()}
             onSketch={() => setSketchOpen(true)}
           />
@@ -762,6 +814,44 @@ export function RichEditor({
               >
                 Вставить
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {gdriveNotice && (
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-4 pt-[18vh] backdrop-blur-sm"
+          onClick={() => setGdriveNotice(null)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl border border-border bg-surface p-4 shadow-[var(--shadow-lg)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="mb-1 text-[14px] font-medium text-text">Google Диск</p>
+            <p className="mb-3 text-[13px] leading-relaxed text-muted">
+              {gdriveNotice.text}
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setGdriveNotice(null)}
+                className="rounded-lg px-3 py-1.5 text-[13px] font-medium text-muted transition-colors hover:bg-surface-2 hover:text-text"
+              >
+                Понятно
+              </button>
+              {gdriveNotice.settings && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setGdriveNotice(null);
+                    router.push("/nastroiki");
+                  }}
+                  className="rounded-lg bg-accent px-3 py-1.5 text-[13px] font-medium text-accent-fg transition-opacity hover:opacity-90"
+                >
+                  Открыть настройки
+                </button>
+              )}
             </div>
           </div>
         </div>

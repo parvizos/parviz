@@ -28,6 +28,10 @@ export const SETTING_KEYS = {
   s3Prefix: "s3_prefix",
   /** 'off' — хранилище настроено, но новые загрузки временно не льём в облако. */
   s3Uploads: "s3_uploads",
+  // Google Диск (Picker) — выбор файлов прямо из Диска в редакторе.
+  // Это публичные значения (используются в браузере), не секреты.
+  googleClientId: "google_client_id",
+  googleApiKey: "google_api_key",
 } as const;
 
 /** Удалить настройку (по ключу). Нет строки — тихо ок. */

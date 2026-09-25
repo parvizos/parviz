@@ -12,6 +12,8 @@ import { DataRestore } from "@/components/app/DataRestore";
 import { MigrateTracks } from "@/components/app/MigrateTracks";
 import { StorageSettings } from "@/components/app/storage-settings";
 import { CloudStatus } from "@/components/app/cloud-status";
+import { GoogleDriveSettings } from "@/components/app/google-drive-settings";
+import { getGoogleDriveStatus } from "@/lib/google-actions";
 import { PageHeader } from "@/components/ui/misc";
 
 export const metadata = { title: "Настройки" };
@@ -30,6 +32,7 @@ export default async function SettingsPage() {
     ? (await getSetting(SETTING_KEYS.s3Endpoint)) ? "ui" : "env"
     : null;
   const uploadsOn = (await getSetting(SETTING_KEYS.s3Uploads)) !== "off";
+  const gdrive = await getGoogleDriveStatus();
 
   return (
     <div>
@@ -133,6 +136,14 @@ export default async function SettingsPage() {
           />
           <CloudStatus />
         </div>
+      </section>
+
+      {/* Google Диск — выбор файлов прямо в редакторе */}
+      <section className="mb-8">
+        <h2 className="mb-2.5 px-1 text-[13px] font-semibold uppercase tracking-wide text-muted">
+          Google Диск
+        </h2>
+        <GoogleDriveSettings configured={gdrive.configured} clientId={gdrive.clientId} />
       </section>
 
       {/* Хранилище музыки (только если подключено облако) */}
