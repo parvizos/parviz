@@ -318,6 +318,9 @@ export const notes = sqliteTable(
     id: id(),
     title: text("title").notNull(),
     body: text("body"),
+    /** Эмодзи-иконка и обложка — как у страниц блокнота. */
+    icon: text("icon"),
+    cover: text("cover"),
     subjectId: text("subject_id").references(() => subjects.id, {
       onDelete: "set null",
     }),

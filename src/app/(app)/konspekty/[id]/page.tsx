@@ -32,7 +32,11 @@ export default async function NotePage({
         id: note.id,
         title: note.title,
         body: note.body,
+        icon: note.icon,
+        cover: note.cover,
         subjectId: note.subjectId,
+        subjectName: note.subjectName,
+        subjectColor: note.subjectColor,
         pinned: note.pinned,
       }}
       subjectOptions={subjectOptions}

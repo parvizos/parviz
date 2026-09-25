@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { useState, useTransition, type MouseEvent } from "react";
-import { Pin, MapPin, ChevronRight } from "lucide-react";
+import { Pin, MapPin, ChevronRight, FileText } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { toggleNotePin } from "@/lib/actions";
 import { LESSON_KIND_META } from "@/lib/study-format";
 import { areaColor } from "@/lib/task-format";
 import { excerpt } from "@/lib/text";
+import { coverStyle } from "@/lib/cover";
 import { useUi } from "./ui-context";
 import { NoteFromLessonButton } from "./study-buttons";
 import type {
@@ -91,25 +92,40 @@ export function NoteCard({ note }: { note: NoteWithSubject }) {
   }
 
   return (
-    <div className="group relative flex flex-col rounded-2xl border border-border bg-surface p-4 transition-colors hover:border-border-strong hover:bg-surface-2">
-      <Link href={`/konspekty/${note.id}`} className="min-w-0">
-        <h3 className="truncate pr-7 text-[15px] font-medium text-text">
-          {note.title || "Без названия"}
-        </h3>
-        {snippet && (
-          <p className="mt-1.5 line-clamp-3 text-[13px] leading-relaxed text-muted">
-            {snippet}
-          </p>
-        )}
-        {note.subjectName && (
-          <div className="mt-3 inline-flex items-center gap-1.5 text-[12.5px] text-muted">
-            <span
-              className="h-2 w-2 rounded-full"
-              style={{ background: areaColor(note.subjectColor) }}
-            />
-            {note.subjectName}
-          </div>
-        )}
+    <div className="group relative flex flex-col overflow-hidden rounded-2xl border border-border bg-surface transition-colors hover:border-border-strong hover:bg-surface-2">
+      {note.cover && (
+        <div className="h-20 w-full" style={coverStyle(note.cover)} />
+      )}
+      <Link href={`/konspekty/${note.id}`} className="flex min-w-0 gap-3 p-4">
+        <span
+          className={cn(
+            "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[22px] leading-none",
+            note.cover
+              ? "-mt-9 bg-surface shadow-[var(--shadow-sm)] ring-4 ring-surface"
+              : "bg-surface-2",
+          )}
+        >
+          {note.icon || <FileText size={18} className="text-faint" />}
+        </span>
+        <div className="min-w-0 flex-1">
+          <h3 className="truncate pr-7 text-[15px] font-medium text-text">
+            {note.title || "Без названия"}
+          </h3>
+          {snippet && (
+            <p className="mt-1 line-clamp-3 text-[13px] leading-relaxed text-muted">
+              {snippet}
+            </p>
+          )}
+          {note.subjectName && (
+            <div className="mt-2.5 inline-flex items-center gap-1.5 text-[12.5px] text-muted">
+              <span
+                className="h-2 w-2 rounded-full"
+                style={{ background: areaColor(note.subjectColor) }}
+              />
+              {note.subjectName}
+            </div>
+          )}
+        </div>
       </Link>
       <button
         onClick={togglePin}
@@ -120,6 +136,7 @@ export function NoteCard({ note }: { note: NoteWithSubject }) {
           pinned
             ? "text-accent"
             : "text-faint opacity-0 hover:bg-surface-2 group-hover:opacity-100",
+          note.cover && "bg-black/25 text-white/90 opacity-100 backdrop-blur hover:bg-black/40 hover:text-white",
         )}
       >
         <Pin size={15} className={pinned ? "fill-current" : ""} />

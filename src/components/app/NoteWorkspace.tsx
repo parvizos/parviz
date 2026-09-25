@@ -11,11 +11,23 @@ import {
   Loader2,
   Maximize2,
   Minimize2,
+  FileText,
+  Image as ImageIcon,
+  GraduationCap,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { stripHtml } from "@/lib/text";
-import { autosaveNote, updateNote, toggleNotePin, deleteNote } from "@/lib/actions";
+import { areaColor } from "@/lib/task-format";
+import { coverStyle } from "@/lib/cover";
+import {
+  autosaveNote,
+  updateNote,
+  toggleNotePin,
+  deleteNote,
+} from "@/lib/actions";
 import { RichEditor } from "./RichEditorLazy";
+import { EmojiPicker } from "./EmojiPicker";
+import { CoverPicker } from "./CoverPicker";
 import { useUi } from "./ui-context";
 import type { SubjectOption } from "./types";
 
@@ -39,7 +51,11 @@ export function NoteWorkspace({
     id: string;
     title: string;
     body: string | null;
+    icon: string | null;
+    cover: string | null;
     subjectId: string | null;
+    subjectName: string | null;
+    subjectColor: string | null;
     pinned: boolean;
   };
   subjectOptions: SubjectOption[];
@@ -47,21 +63,29 @@ export function NoteWorkspace({
   const router = useRouter();
   const { focusMode, setFocusMode } = useUi();
   const [title, setTitle] = useState(note.title);
+  const [icon, setIcon] = useState<string | null>(note.icon);
+  const [cover, setCover] = useState<string | null>(note.cover);
   const [subjectId, setSubjectId] = useState(note.subjectId ?? "");
   const [pinned, setPinned] = useState(note.pinned);
-  const [words, setWords] = useState(() =>
-    countWords(stripHtml(note.body)),
-  );
+  const [words, setWords] = useState(() => countWords(stripHtml(note.body)));
   const [status, setStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [pending, startTransition] = useTransition();
 
   const titleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bodyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Выходим из режима фокуса, когда покидаем конспект.
+  // Чип предмета: берём из опций активного семестра, иначе — из самого
+  // конспекта (предмет может быть из другого семестра).
+  const optSubject = subjectOptions.find((s) => s.id === subjectId);
+  const subject: { id: string; name: string; color: string | null } | null =
+    optSubject
+      ? { id: optSubject.id, name: optSubject.name, color: optSubject.color }
+      : subjectId && subjectId === note.subjectId && note.subjectName
+        ? { id: subjectId, name: note.subjectName, color: note.subjectColor }
+        : null;
+
   useEffect(() => () => setFocusMode(false), [setFocusMode]);
 
-  // В полноэкранном режиме: Esc — свернуть, блокируем прокрутку страницы.
   useEffect(() => {
     if (!focusMode) return;
     const onKey = (e: globalThis.KeyboardEvent) => {
@@ -93,6 +117,32 @@ export function NoteWorkspace({
         setStatus("idle");
       }
     }, 700);
+  }
+
+  function onIcon(next: string | null) {
+    setIcon(next);
+    setStatus("saving");
+    startTransition(async () => {
+      try {
+        await updateNote(note.id, { icon: next });
+        markSaved();
+      } catch {
+        setStatus("idle");
+      }
+    });
+  }
+
+  function onCover(next: string | null) {
+    setCover(next);
+    setStatus("saving");
+    startTransition(async () => {
+      try {
+        await updateNote(note.id, { cover: next });
+        markSaved();
+      } catch {
+        setStatus("idle");
+      }
+    });
   }
 
   function onBody(html: string, text: string) {
@@ -206,22 +256,99 @@ export function NoteWorkspace({
     </>
   );
 
-  const content = (
+  const head = (
     <>
-      <input
-        value={title}
-        onChange={(e) => onTitle(e.target.value)}
-        placeholder="Заголовок"
-        autoFocus={!title}
-        className="mb-4 w-full bg-transparent text-[30px] font-semibold leading-tight tracking-tight text-text outline-none placeholder:text-faint/60"
-      />
-      <RichEditor
-        initialHTML={note.body ?? ""}
-        placeholder="Пиши как в статье: заголовки, списки, цитаты, чек-боксы…"
-        onChange={onBody}
-        toolbarStickyClass={focusMode ? "top-0" : undefined}
-      />
+      {cover && (
+        <div
+          className="group/cover relative mb-3 h-40 overflow-hidden rounded-2xl sm:h-52"
+          style={coverStyle(cover)}
+        >
+          <div className="absolute right-2 top-2 opacity-0 transition-opacity group-hover/cover:opacity-100">
+            <CoverPicker
+              value={cover}
+              onPick={onCover}
+              align="right"
+              triggerClassName="flex h-7 items-center gap-1.5 rounded-lg bg-black/35 px-2.5 text-[12px] font-medium text-white backdrop-blur transition-colors hover:bg-black/55"
+              trigger={
+                <>
+                  <ImageIcon size={13} /> Изменить обложку
+                </>
+              }
+            />
+          </div>
+        </div>
+      )}
+      <div className={cn("mb-2", cover && icon && "relative z-10 -mt-10")}>
+        {!cover && (
+          <div className="mb-1">
+            <CoverPicker
+              value={cover}
+              onPick={onCover}
+              triggerClassName="flex h-7 items-center gap-1.5 rounded-lg px-2 text-[12.5px] text-faint transition-colors hover:bg-surface-2 hover:text-muted"
+              trigger={
+                <>
+                  <ImageIcon size={14} /> Добавить обложку
+                </>
+              }
+            />
+          </div>
+        )}
+        <EmojiPicker
+          value={icon}
+          onPick={onIcon}
+          triggerClassName={cn(
+            "flex items-center justify-center transition-colors",
+            icon
+              ? cn(
+                  "h-16 w-16 rounded-2xl text-[48px] leading-none",
+                  cover
+                    ? "bg-surface shadow-[var(--shadow-sm)] ring-4 ring-bg"
+                    : "hover:bg-surface-2",
+                )
+              : "h-9 gap-1.5 rounded-xl px-2 text-[13px] text-faint hover:bg-surface-2",
+          )}
+          trigger={
+            icon ? (
+              icon
+            ) : (
+              <>
+                <FileText size={16} /> Добавить иконку
+              </>
+            )
+          }
+        />
+        <input
+          value={title}
+          onChange={(e) => onTitle(e.target.value)}
+          placeholder="Без названия"
+          autoFocus={!title}
+          className="mt-2 w-full bg-transparent text-[34px] font-bold leading-tight tracking-tight text-text outline-none placeholder:text-faint/50"
+        />
+        {subject && (
+          <Link
+            href={`/predmety/${subject.id}`}
+            className="mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12.5px] font-medium transition-opacity hover:opacity-80"
+            style={{
+              background: `color-mix(in oklab, ${areaColor(subject.color)} 15%, transparent)`,
+              color: areaColor(subject.color),
+            }}
+          >
+            <GraduationCap size={13} />
+            {subject.name}
+          </Link>
+        )}
+      </div>
     </>
+  );
+
+  const editor = (
+    <RichEditor
+      initialHTML={note.body ?? ""}
+      placeholder="Пиши конспект: заголовки, списки, выноски, фото, видео и файлы. Жми «/» для команд."
+      onChange={onBody}
+      minHeightClass="min-h-[40vh]"
+      toolbarStickyClass={focusMode ? "top-0" : undefined}
+    />
   );
 
   if (focusMode) {
@@ -231,16 +358,20 @@ export function NoteWorkspace({
           {topBar}
         </div>
         <div className="flex-1 overflow-y-auto">
-          <div className="mx-auto max-w-[720px] px-4 py-6 sm:px-6">{content}</div>
+          <div className="mx-auto max-w-[760px] px-4 py-8 sm:px-6">
+            {head}
+            {editor}
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-[720px]">
-      <div className="mb-6 flex items-center gap-2">{topBar}</div>
-      {content}
+    <div className="mx-auto max-w-[760px]">
+      <div className="mb-5 flex items-center gap-2">{topBar}</div>
+      {head}
+      {editor}
     </div>
   );
 }

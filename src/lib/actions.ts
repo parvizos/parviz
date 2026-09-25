@@ -409,6 +409,8 @@ export async function deleteLesson(id: string) {
 const createNoteSchema = z.object({
   title: z.string().trim().max(300).optional(),
   body: z.string().max(200_000).nullable().optional(),
+  icon: z.string().max(32).nullable().optional(),
+  cover: z.string().max(300).nullable().optional(),
   subjectId: nullableId,
   pinned: z.boolean().optional(),
 });
@@ -423,6 +425,8 @@ export async function createNote(input: CreateNoteInput) {
     .values({
       title: data.title ?? "",
       body: data.body ?? null,
+      icon: data.icon ?? null,
+      cover: data.cover ?? null,
       subjectId: data.subjectId ?? null,
       pinned: data.pinned ?? false,
     })
@@ -448,6 +452,8 @@ export async function autosaveNote(
 const updateNoteSchema = z.object({
   title: z.string().trim().min(1).max(300).optional(),
   body: z.string().max(50_000).nullable().optional(),
+  icon: z.string().max(32).nullable().optional(),
+  cover: z.string().max(300).nullable().optional(),
   subjectId: nullableId,
   pinned: z.boolean().optional(),
 });

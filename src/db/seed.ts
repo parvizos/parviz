@@ -172,12 +172,15 @@ async function main() {
   await db.insert(notes).values([
     {
       title: "Пределы и непрерывность",
+      icon: "📐",
+      cover: "linear-gradient(135deg,#4facfe,#00f2fe)",
       body: "<h2>Основное</h2><p>Определение предела по Коши: для любого ε&gt;0 найдётся δ&gt;0…</p><ul><li>Теоремы о непрерывных функциях</li><li>Замечательные пределы</li></ul><blockquote>Проверить на семинаре в среду.</blockquote>",
       subjectId: ma.id,
       pinned: true,
     },
     {
       title: "Рекурсия и мемоизация",
+      icon: "🔁",
       body: "<p>База и шаг рекурсии.</p><p>Примеры: факториал, Фибоначчи.</p><p>Мемоизация — кэшируем результаты повторных вызовов.</p>",
       subjectId: prog.id,
     },
