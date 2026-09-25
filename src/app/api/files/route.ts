@@ -6,7 +6,7 @@ import { cloudUploadsEnabled, s3PutBytes, fileKey } from "@/lib/storage";
 
 export const runtime = "nodejs";
 
-const MAX_BYTES = 25 * 1024 * 1024;
+const MAX_BYTES = 200 * 1024 * 1024; // до 200 МБ — под видео
 
 export async function POST(req: Request) {
   if (!(await isAuthed())) {

@@ -10,6 +10,8 @@ import { Details, DetailsSummary, DetailsContent } from "@tiptap/extension-detai
 import { Callout } from "./callout";
 import { ResizableImage } from "./image-node";
 import { ImageGallery } from "./gallery-node";
+import { VideoEmbed } from "./video-node";
+import { FileAttachment } from "./file-node";
 import {
   useEffect,
   useReducer,
@@ -30,6 +32,8 @@ import {
   Code2,
   ImagePlus,
   Images,
+  Video,
+  Paperclip,
   Camera,
   Pen,
   Type,
@@ -60,6 +64,7 @@ import { useMentionOptions } from "./mention-context";
 import { SketchPad } from "./SketchPad";
 import { ImageCropper } from "./ImageCropper";
 import { uploadImage } from "@/lib/image-upload";
+import { uploadFile } from "@/lib/file-upload";
 
 function insertImage(editor: Editor, url: string, pos?: number) {
   if (pos != null) {
@@ -103,12 +108,16 @@ function Toolbar({
   editor,
   onImage,
   onGallery,
+  onVideo,
+  onFile,
   onCamera,
   onSketch,
 }: {
   editor: Editor;
   onImage: () => void;
   onGallery: () => void;
+  onVideo: () => void;
+  onFile: () => void;
   onCamera: () => void;
   onSketch: () => void;
 }) {
@@ -165,6 +174,12 @@ function Toolbar({
       </Btn>
       <Btn label="Галерея фото" onClick={onGallery}>
         <Images size={16} />
+      </Btn>
+      <Btn label="Видео" onClick={onVideo}>
+        <Video size={16} />
+      </Btn>
+      <Btn label="Файл" onClick={onFile}>
+        <Paperclip size={16} />
       </Btn>
       <Btn label="Сфоткать доску" onClick={onCamera}>
         <Camera size={16} />
@@ -233,6 +248,8 @@ export function RichEditor({
   const editorRef = useRef<Editor | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const galleryInputRef = useRef<HTMLInputElement | null>(null);
+  const videoInputRef = useRef<HTMLInputElement | null>(null);
+  const attachInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const [sketchOpen, setSketchOpen] = useState(false);
   const [cropQueue, setCropQueue] = useState<File[]>([]);
@@ -271,6 +288,8 @@ export function RichEditor({
     { title: "Выноска: заметка", hint: "📝", icon: <StickyNote size={16} />, keywords: ["callout", "выноска", "заметка", "note"], run: (e, r) => e.chain().focus().deleteRange(r).setCallout("note").run() },
     { title: "Картинка", icon: <ImagePlus size={16} />, keywords: ["image", "картинка"], run: (e, r) => { e.chain().focus().deleteRange(r).run(); fileInputRef.current?.click(); } },
     { title: "Галерея фото", icon: <Images size={16} />, keywords: ["gallery", "галерея", "фото", "ряд", "коллаж", "альбом"], run: (e, r) => { e.chain().focus().deleteRange(r).run(); galleryInputRef.current?.click(); } },
+    { title: "Видео", icon: <Video size={16} />, keywords: ["video", "видео", "ролик", "клип"], run: (e, r) => { e.chain().focus().deleteRange(r).run(); videoInputRef.current?.click(); } },
+    { title: "Файл", icon: <Paperclip size={16} />, keywords: ["file", "файл", "вложение", "документ", "pdf", "attach"], run: (e, r) => { e.chain().focus().deleteRange(r).run(); attachInputRef.current?.click(); } },
     { title: "Камера", icon: <Camera size={16} />, keywords: ["camera", "фото", "доска", "снимок"], run: (e, r) => { e.chain().focus().deleteRange(r).run(); cameraInputRef.current?.click(); } },
     { title: "Рисунок", icon: <Pen size={16} />, keywords: ["draw", "рисовать", "формула", "схема", "sketch"], run: (e, r) => { e.chain().focus().deleteRange(r).run(); setSketchOpen(true); } },
   ];
@@ -351,6 +370,8 @@ export function RichEditor({
       TaskItem.configure({ nested: true }),
       ResizableImage.configure({ inline: false, allowBase64: false }),
       ImageGallery,
+      VideoEmbed,
+      FileAttachment,
       Callout,
       // Новые тогглы создаём раскрытыми (курсор сразу в теле), но HTML
       // с `<details>` без `open` уважаем — parseHTML читает атрибут.
@@ -426,31 +447,21 @@ export function RichEditor({
     editorProps: {
       attributes: { class: cn("outline-none", minHeightClass) },
       handlePaste: (_view, event) => {
-        const files = Array.from(event.clipboardData?.files ?? []).filter((f) =>
-          f.type.startsWith("image/"),
-        );
+        const files = Array.from(event.clipboardData?.files ?? []);
         if (files.length === 0) return false;
         event.preventDefault();
-        files.forEach(async (file) => {
-          const url = await uploadImage(file);
-          if (url && editorRef.current) insertImage(editorRef.current, url);
-        });
+        files.forEach((file) => routeFile(file));
         return true;
       },
       handleDrop: (view, event) => {
-        const files = Array.from(event.dataTransfer?.files ?? []).filter((f) =>
-          f.type.startsWith("image/"),
-        );
+        const files = Array.from(event.dataTransfer?.files ?? []);
         if (files.length === 0) return false;
         event.preventDefault();
         const pos = view.posAtCoords({
           left: event.clientX,
           top: event.clientY,
         })?.pos;
-        files.forEach(async (file) => {
-          const url = await uploadImage(file);
-          if (url && editorRef.current) insertImage(editorRef.current, url, pos);
-        });
+        files.forEach((file) => routeFile(file, pos));
         return true;
       },
     },
@@ -512,6 +523,59 @@ export function RichEditor({
       .run();
   }
 
+  // Вставка ноды видео/файла (в позицию перетаскивания, если задана).
+  function insertNodeAt(
+    type: string,
+    attrs: Record<string, unknown>,
+    pos?: number,
+  ) {
+    const ed = editorRef.current;
+    if (!ed) return;
+    if (pos != null)
+      ed.chain().focus().insertContentAt(pos, { type, attrs }).run();
+    else ed.chain().focus().insertContent({ type, attrs }).run();
+  }
+
+  async function uploadAndInsertVideo(file: File, pos?: number) {
+    const up = await uploadFile(file);
+    if (up) insertNodeAt("videoEmbed", { src: up.href }, pos);
+  }
+  async function uploadAndInsertFile(file: File, pos?: number) {
+    const up = await uploadFile(file);
+    if (up)
+      insertNodeAt(
+        "fileAttachment",
+        { href: up.href, name: up.name, size: up.size, mime: up.mime },
+        pos,
+      );
+  }
+
+  // Маршрутизация по типу: картинка → фото, видео → плеер, остальное → файл.
+  function routeFile(file: File, pos?: number) {
+    if (file.type.startsWith("image/")) {
+      void uploadImage(file).then((url) => {
+        if (url && editorRef.current) insertImage(editorRef.current, url, pos);
+      });
+    } else if (file.type.startsWith("video/")) {
+      void uploadAndInsertVideo(file, pos);
+    } else {
+      void uploadAndInsertFile(file, pos);
+    }
+  }
+
+  function onVideoPick(e: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []).filter((f) =>
+      f.type.startsWith("video/"),
+    );
+    e.target.value = "";
+    files.forEach((f) => void uploadAndInsertVideo(f));
+  }
+  function onAttachPick(e: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    files.forEach((f) => void uploadAndInsertFile(f));
+  }
+
   return (
     <div>
       {toolbar && editor && (
@@ -525,6 +589,8 @@ export function RichEditor({
             editor={editor}
             onImage={() => fileInputRef.current?.click()}
             onGallery={() => galleryInputRef.current?.click()}
+            onVideo={() => videoInputRef.current?.click()}
+            onFile={() => attachInputRef.current?.click()}
             onCamera={() => cameraInputRef.current?.click()}
             onSketch={() => setSketchOpen(true)}
           />
@@ -564,6 +630,20 @@ export function RichEditor({
         multiple
         hidden
         onChange={onGalleryPick}
+      />
+      <input
+        ref={videoInputRef}
+        type="file"
+        accept="video/*"
+        hidden
+        onChange={onVideoPick}
+      />
+      <input
+        ref={attachInputRef}
+        type="file"
+        multiple
+        hidden
+        onChange={onAttachPick}
       />
       <input
         ref={cameraInputRef}
