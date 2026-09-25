@@ -408,6 +408,9 @@ export type OrganizationForEdit = {
   url: string | null;
   color: string | null;
   icon: string | null;
+  email: string | null;
+  phone: string | null;
+  location: string | null;
 };
 
 export function OrganizationDialog({
@@ -422,6 +425,9 @@ export function OrganizationDialog({
   const [kind, setKind] = useState<OrgKind>(organization?.kind ?? "university");
   const [note, setNote] = useState(organization?.note ?? "");
   const [url, setUrl] = useState(organization?.url ?? "");
+  const [email, setEmail] = useState(organization?.email ?? "");
+  const [phone, setPhone] = useState(organization?.phone ?? "");
+  const [location, setLocation] = useState(organization?.location ?? "");
   const [color, setColor] = useState(
     organization?.color ?? AREA_PALETTE[0].value,
   );
@@ -442,6 +448,9 @@ export function OrganizationDialog({
           kind,
           note: note.trim() || null,
           url: url.trim() || null,
+          email: email.trim() || null,
+          phone: phone.trim() || null,
+          location: location.trim() || null,
           color,
           icon: icon || null,
         };
@@ -531,6 +540,30 @@ export function OrganizationDialog({
             />
           </Field>
         </div>
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Почта">
+            <Input
+              type="email"
+              placeholder="info@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </Field>
+          <Field label="Телефон">
+            <Input
+              placeholder="+7 900 000-00-00"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+            />
+          </Field>
+        </div>
+        <Field label="Адрес">
+          <Input
+            placeholder="Город, улица…"
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+          />
+        </Field>
         <Field label="Заметка">
           <Textarea
             placeholder="Что за организация, чем связаны…"

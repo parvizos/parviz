@@ -1033,7 +1033,11 @@ export function getPersonTransactions(
   return getTransactions({ personId: id, limit: 50 });
 }
 
-export type OrgWithCount = Organization & { peopleCount: number };
+export type OrgWithCount = Organization & {
+  peopleCount: number;
+  /** Дата последней встречи с кем-то из организации (YYYY-MM-DD) — «активность». */
+  lastMeetingDate: string | null;
+};
 
 export async function getOrganizationsWithCounts(): Promise<OrgWithCount[]> {
   await schemaReady();
@@ -1051,7 +1055,22 @@ export async function getOrganizationsWithCounts(): Promise<OrgWithCount[]> {
     .where(and(isNotNull(people.organizationId), isNull(people.archivedAt)))
     .groupBy(people.organizationId);
   const m = new Map(counts.map((r) => [r.organizationId, r.c]));
-  return base.map((o) => ({ ...o, peopleCount: m.get(o.id) ?? 0 }));
+  // Последняя встреча с людьми организации — для «активности».
+  const lastMeet = await db
+    .select({
+      organizationId: people.organizationId,
+      last: sql<string>`max(${meetings.date})`,
+    })
+    .from(meetings)
+    .innerJoin(people, eq(meetings.personId, people.id))
+    .where(isNotNull(people.organizationId))
+    .groupBy(people.organizationId);
+  const lm = new Map(lastMeet.map((r) => [r.organizationId, r.last]));
+  return base.map((o) => ({
+    ...o,
+    peopleCount: m.get(o.id) ?? 0,
+    lastMeetingDate: lm.get(o.id) ?? null,
+  }));
 }
 
 export async function getOrganization(
@@ -1126,6 +1145,21 @@ export async function getPersonMeetings(
     .leftJoin(people, eq(meetings.personId, people.id))
     .where(eq(meetings.personId, personId))
     .orderBy(desc(meetings.date), desc(meetings.updatedAt));
+}
+
+/** Лента взаимодействий организации — встречи со всеми её людьми, свежие сверху. */
+export async function getOrganizationMeetings(
+  orgId: string,
+  limit = 8,
+): Promise<MeetingWithPerson[]> {
+  await schemaReady();
+  return db
+    .select({ ...getTableColumns(meetings), ...meetingPersonCols })
+    .from(meetings)
+    .innerJoin(people, eq(meetings.personId, people.id))
+    .where(eq(people.organizationId, orgId))
+    .orderBy(desc(meetings.date), desc(meetings.updatedAt))
+    .limit(limit);
 }
 
 /** Встречи с фильтром: по человеку (SQL) и по тексту заголовка/тела/места (JS). */

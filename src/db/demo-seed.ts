@@ -183,10 +183,10 @@ export async function seedDemo(db: DrizzleDb): Promise<void> {
   const orgRows = await db
     .insert(organizations)
     .values([
-      { name: "МГУ", kind: "university", color: "#5b5bd6", icon: "🎓", body: "<h2>Мой вуз</h2><p>Факультет ВМК, 3 курс. Корпус на Ленинских горах.</p><ul><li>Деканат — ауд. 605</li><li>Стипендия приходит 25-го</li><li>Библиотека работает до 20:00</li></ul>" },
-      { name: "Кофейня «Бариста»", kind: "company", color: "#c9832a", icon: "☕", note: "Подработка по выходным.", body: "<h2>Подработка</h2><p>Смены сб-вс, ставка почасовая. Управляющий — Марк.</p><blockquote>Форма — чёрная футболка, приходить за 10 минут.</blockquote>" },
-      { name: "IT-стартап «Кодзилла»", kind: "company", color: "#0f9a8f", icon: "🚀" },
-      { name: "Спортзал «Титан»", kind: "other", color: "#d64545", icon: "🏋️" },
+      { name: "МГУ", kind: "university", color: "#5b5bd6", icon: "🎓", favorite: true, url: "msu.ru", email: "dekanat@cs.msu.ru", phone: "+7 495 939-10-00", location: "Москва, Ленинские горы, д. 1", body: "<h2>Мой вуз</h2><p>Факультет ВМК, 3 курс. Корпус на Ленинских горах.</p><ul><li>Деканат — ауд. 605</li><li>Стипендия приходит 25-го</li><li>Библиотека работает до 20:00</li></ul>" },
+      { name: "Кофейня «Бариста»", kind: "company", color: "#c9832a", icon: "☕", favorite: true, phone: "+7 999 214-88-01", location: "Москва, ул. Профсоюзная, 12", note: "Подработка по выходным.", body: "<h2>Подработка</h2><p>Смены сб-вс, ставка почасовая. Управляющий — Марк.</p><blockquote>Форма — чёрная футболка, приходить за 10 минут.</blockquote>" },
+      { name: "IT-стартап «Кодзилла»", kind: "company", color: "#0f9a8f", icon: "🚀", url: "kodzilla.dev", email: "hi@kodzilla.dev", location: "Москва, Цветной бульвар, 2" },
+      { name: "Спортзал «Титан»", kind: "other", color: "#d64545", icon: "🏋️", phone: "+7 999 700-12-34", location: "Москва, ул. Строителей, 8" },
     ])
     .returning({ id: organizations.id });
   const [univ, cafe, startup, gym] = orgRows.map((o) => o.id);

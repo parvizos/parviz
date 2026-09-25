@@ -5,6 +5,7 @@ import {
   getPeopleWithStats,
 } from "@/lib/queries";
 import { ORG_KIND_META, ORG_KINDS_ORDER } from "@/lib/person-format";
+import { todayISO } from "@/lib/dates";
 import { cn } from "@/lib/cn";
 import { OrgCard, type OrgMemberPreview } from "@/components/app/crm-items";
 import { OrgSearchBox } from "@/components/app/OrgSearchBox";
@@ -27,6 +28,7 @@ function plOrgs(n: number): string {
 }
 
 const SORTS: { key: string; label: string }[] = [
+  { key: "activity", label: "По активности" },
   { key: "people", label: "По людям" },
   { key: "name", label: "Имя" },
 ];
@@ -39,7 +41,13 @@ export default async function OrganizationsPage({
   const sp = await searchParams;
   const q = sp.q?.trim() ?? "";
   const kind = ORG_KINDS_ORDER.some((k) => k === sp.kind) ? sp.kind! : undefined;
-  const sort = sp.sort === "name" ? "name" : "people";
+  const sort =
+    sp.sort === "name"
+      ? "name"
+      : sp.sort === "activity"
+        ? "activity"
+        : "people";
+  const today = todayISO();
 
   const [orgs, people] = await Promise.all([
     getOrganizationsWithCounts(),
@@ -63,10 +71,19 @@ export default async function OrganizationsPage({
     if (ql && !`${o.name} ${o.note ?? ""}`.toLowerCase().includes(ql)) return false;
     return true;
   });
-  const sorted = [...filtered].sort((a, b) =>
-    sort === "name"
-      ? a.name.localeCompare(b.name)
-      : b.peopleCount - a.peopleCount || a.name.localeCompare(b.name),
+  function cmp(a: (typeof filtered)[number], b: (typeof filtered)[number]) {
+    if (sort === "name") return a.name.localeCompare(b.name);
+    if (sort === "activity")
+      return (
+        (b.lastMeetingDate ?? "").localeCompare(a.lastMeetingDate ?? "") ||
+        b.peopleCount - a.peopleCount ||
+        a.name.localeCompare(b.name)
+      );
+    return b.peopleCount - a.peopleCount || a.name.localeCompare(b.name);
+  }
+  // Избранные всегда сверху, затем — выбранная сортировка.
+  const sorted = [...filtered].sort(
+    (a, b) => Number(b.favorite) - Number(a.favorite) || cmp(a, b),
   );
 
   function kindHref(nextKind?: string) {
@@ -157,7 +174,12 @@ export default async function OrganizationsPage({
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {sorted.map((o) => (
-                  <OrgCard key={o.id} org={o} members={membersByOrg.get(o.id) ?? []} />
+                  <OrgCard
+                    key={o.id}
+                    org={o}
+                    members={membersByOrg.get(o.id) ?? []}
+                    today={today}
+                  />
                 ))}
               </div>
             </>

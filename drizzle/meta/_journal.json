@@ -176,6 +176,13 @@
       "when": 1790329278533,
       "tag": "0024_fixed_norman_osborn",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "6",
+      "when": 1790346006982,
+      "tag": "0025_rich_flatman",
+      "breakpoints": true
     }
   ]
 }

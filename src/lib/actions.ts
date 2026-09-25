@@ -757,8 +757,12 @@ const createOrganizationSchema = z.object({
   kind: z.enum(ORG_KINDS).optional(),
   note: z.string().max(2000).nullable().optional(),
   url: z.string().max(300).nullable().optional(),
+  email: z.string().max(200).nullable().optional(),
+  phone: z.string().max(60).nullable().optional(),
+  location: z.string().max(300).nullable().optional(),
   color: z.string().max(32).nullable().optional(),
   icon: z.string().max(32).nullable().optional(),
+  favorite: z.boolean().optional(),
 });
 
 export type CreateOrganizationInput = z.input<typeof createOrganizationSchema>;
@@ -773,12 +777,24 @@ export async function createOrganization(input: CreateOrganizationInput) {
       kind: data.kind ?? "other",
       note: data.note ?? null,
       url: data.url ?? null,
+      email: data.email ?? null,
+      phone: data.phone ?? null,
+      location: data.location ?? null,
       color: data.color ?? null,
       icon: data.icon ?? null,
     })
     .returning({ id: organizations.id });
   revalidateAll();
   return row;
+}
+
+export async function toggleOrganizationFavorite(id: string, favorite: boolean) {
+  await schemaReady();
+  await db
+    .update(organizations)
+    .set({ favorite })
+    .where(eq(organizations.id, id));
+  revalidateAll();
 }
 
 const updateOrganizationSchema = createOrganizationSchema.partial();

@@ -333,11 +333,11 @@ async function main() {
   // Люди и организации.
   const [univ] = await db
     .insert(organizations)
-    .values({ name: "МГУ", kind: "university", color: "#5b5bd6", icon: "🎓", note: "Мой университет." })
+    .values({ name: "МГУ", kind: "university", color: "#5b5bd6", icon: "🎓", favorite: true, url: "msu.ru", email: "dekanat@cs.msu.ru", phone: "+7 495 939-10-00", location: "Москва, Ленинские горы, д. 1", note: "Мой университет." })
     .returning();
   const [cafe] = await db
     .insert(organizations)
-    .values({ name: "Кофейня «Бариста»", kind: "company", color: "#c9832a", icon: "☕", note: "Подработка по выходным." })
+    .values({ name: "Кофейня «Бариста»", kind: "company", color: "#c9832a", icon: "☕", phone: "+7 999 214-88-01", location: "Москва, ул. Профсоюзная, 12", note: "Подработка по выходным." })
     .returning();
 
   const [supervisor] = await db

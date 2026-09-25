@@ -927,16 +927,26 @@ export const organizations = sqliteTable(
     kind: text("kind").$type<OrgKind>().notNull().default("other"),
     note: text("note"),
     url: text("url"),
+    /** Контакты организации. */
+    email: text("email"),
+    phone: text("phone"),
+    /** Адрес/город — показываем и даём ссылку на карты. */
+    location: text("location"),
     /** База знаний: свободное описание с фото (HTML из RichEditor). */
     body: text("body"),
     color: text("color"),
     icon: text("icon"),
+    /** Закреплённая — наверху списка. */
+    favorite: integer("favorite", { mode: "boolean" }).notNull().default(false),
     position: integer("position").notNull().default(0),
     archivedAt: integer("archived_at", { mode: "timestamp_ms" }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
-  (t) => [index("organizations_position_idx").on(t.position)],
+  (t) => [
+    index("organizations_position_idx").on(t.position),
+    index("organizations_favorite_idx").on(t.favorite),
+  ],
 );
 
 /** Человек: контакт с ролью, организацией, днём рождения и заметкой. */
