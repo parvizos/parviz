@@ -234,6 +234,58 @@ docker compose -f docker-compose.prod.yml up -d --build
 
 ---
 
+## База целиком в облаке (Litestream)
+
+Медиа (фото, файлы, музыка) уходят в R2 через саму программу (Настройки →
+Облачное хранилище). А **сама база SQLite может непрерывно реплицироваться в
+R2** через Litestream: файл остаётся локальным (приложение быстрое), но каждое
+изменение тут же уходит в облако, а при старте на новом сервере база
+автоматически восстанавливается оттуда. Так все данные всегда на Cloudflare.
+
+Включается переменными в `.env` (нет их — репликация просто выключена):
+
+```ini
+LITESTREAM_BUCKET=parviz-media
+LITESTREAM_ENDPOINT=https://<account_id>.r2.cloudflarestorage.com
+LITESTREAM_ACCESS_KEY_ID=<ключ R2>
+LITESTREAM_SECRET_ACCESS_KEY=<секрет R2>
+# LITESTREAM_PATH=litestream/parviz.db   # префикс в бакете (по умолчанию такой)
+# LITESTREAM_REGION=auto                  # для R2 — auto
+```
+
+Ключи — тот же R2 API Token (Object Read & Write), что и для медиа; можно тот
+же бакет. После `docker compose -f docker-compose.prod.yml up -d --build` в
+логах появятся строки Litestream:
+
+```bash
+docker compose -f docker-compose.prod.yml logs parviz | grep -i litestream
+# [litestream] Приложение под непрерывной репликацией в R2 ...
+# level=INFO msg="snapshot written" ...
+```
+
+**Проверь, что копия реально есть** (в R2 появится папка `litestream/`):
+
+```bash
+docker compose -f docker-compose.prod.yml exec parviz \
+  litestream snapshots -config /etc/litestream.yml /app/data/parviz.db
+```
+
+**Восстановление на новом сервере.** После `git clone` + заполнения `.env` (с
+теми же `LITESTREAM_*`) просто запусти стек — если локальной базы нет,
+entrypoint сам восстановит её из R2 перед стартом. Проверить вручную, не трогая
+рабочую базу:
+
+```bash
+docker compose -f docker-compose.prod.yml exec parviz \
+  litestream restore -config /etc/litestream.yml -o /tmp/check.db /app/data/parviz.db
+```
+
+> Litestream и штатные снапшоты (`data/backups/`, `offsite-backup.sh`) друг другу
+> не мешают — держи оба: репликация даёт мгновенное восстановление, снапшоты —
+> историю на случай «удалил не то и заметил через день».
+
+---
+
 ## Бэкапы
 
 Вся система — один файл `data/parviz.db` (задачи, конспекты с

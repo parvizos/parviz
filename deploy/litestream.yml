@@ -1,0 +1,19 @@
+# ── ParvizOS · непрерывная репликация базы в облако (Litestream) ──────
+# База остаётся быстрым локальным файлом SQLite, а Litestream в реальном
+# времени отправляет её изменения в R2/S3. Умрёт сервер — новый сам
+# восстановит базу из облака (см. deploy/docker-entrypoint.sh).
+#
+# Значения подставляются из окружения (.env). Ключи Litestream читает сам
+# из LITESTREAM_ACCESS_KEY_ID / LITESTREAM_SECRET_ACCESS_KEY.
+# Пустые LITESTREAM_* → entrypoint просто не включает репликацию.
+
+dbs:
+  - path: ${DB_PATH}
+    replicas:
+      - type: s3
+        bucket: ${LITESTREAM_BUCKET}
+        path: ${LITESTREAM_PATH}
+        endpoint: ${LITESTREAM_ENDPOINT}
+        region: ${LITESTREAM_REGION}
+        # R2 работает по path-style на account-эндпоинте.
+        force-path-style: true

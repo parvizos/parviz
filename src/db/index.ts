@@ -70,10 +70,23 @@ export function databaseFilePath(): string | null {
 /* ── Миграции: кэшируем готовность отдельно для каждой базы ── */
 
 const ready = new WeakMap<object, Promise<void>>();
+
+function clientOf(d: DrizzleDb) {
+  return d === real.db ? real.client : (demo?.client ?? real.client);
+}
+
 function migrateOnce(d: DrizzleDb): Promise<void> {
   let p = ready.get(d as object);
   if (!p) {
-    p = migrate(d, { migrationsFolder: "drizzle" }).catch((err) => {
+    p = (async () => {
+      // WAL обязателен для непрерывной репликации базы в облако (Litestream)
+      // и заодно даёт конкурентные чтения. Для файловой БД; на удалённой
+      // (Turso) просто не применится — ошибку глушим.
+      try {
+        await clientOf(d).execute("PRAGMA journal_mode=WAL");
+      } catch {}
+      await migrate(d, { migrationsFolder: "drizzle" });
+    })().catch((err) => {
       ready.delete(d as object);
       throw err;
     });
