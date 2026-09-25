@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { db, schemaReady } from "@/db";
 import { images } from "@/db/schema";
 import { isAuthed } from "@/lib/session";
+import { driveGetById } from "@/lib/gdrive";
 
 export const runtime = "nodejs";
 
@@ -20,6 +21,19 @@ export async function GET(
     .where(eq(images.id, id))
     .limit(1);
   if (!row) return new Response("not found", { status: 404 });
+
+  // Картинка в Google Drive — проксируем её байты (ключи Drive не светим клиенту).
+  if (row.storage === "gdrive" && row.storageKey) {
+    const r = await driveGetById(row.storageKey);
+    if (r.status === 404) return new Response("not found", { status: 404 });
+    if (r.status >= 400) return new Response("upstream error", { status: 502 });
+    const headers: Record<string, string> = {
+      "Content-Type": row.mime,
+      "Cache-Control": "private, max-age=31536000, immutable",
+    };
+    if (r.contentLength) headers["Content-Length"] = r.contentLength;
+    return new Response(r.body, { status: 200, headers });
+  }
 
   const bytes = new Uint8Array(row.data as Uint8Array);
   return new Response(bytes, {

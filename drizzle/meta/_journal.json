@@ -169,6 +169,13 @@
       "when": 1790171977408,
       "tag": "0023_curvy_lady_vermin",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1790329278533,
+      "tag": "0024_fixed_norman_osborn",
+      "breakpoints": true
     }
   ]
 }

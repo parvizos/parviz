@@ -1,25 +1,47 @@
 import { Download, Database, Clock, Table2, FileJson, Cloud } from "lucide-react";
+import { headers } from "next/headers";
 import { listBackups } from "@/lib/backup";
 import { getServerHealth } from "@/lib/health";
 import { appTimeZone } from "@/lib/dates";
 import { currentWorkspace, demoAvailable } from "@/db";
 import { s3Enabled } from "@/lib/storage";
+import {
+  getDriveConfig,
+  hasCredentials,
+  isConnected,
+  redirectUriFromHeaders,
+} from "@/lib/gdrive";
 import { getDiskStoredTracks } from "@/lib/music-queries";
 import { ServerHealth } from "@/components/app/ServerHealth";
 import { DemoSettings } from "@/components/app/DemoSettings";
 import { DataRestore } from "@/components/app/DataRestore";
 import { MigrateTracks } from "@/components/app/MigrateTracks";
+import { GDriveSettings } from "@/components/app/gdrive-settings";
 import { PageHeader } from "@/components/ui/misc";
 
 export const metadata = { title: "Настройки" };
 export const dynamic = "force-dynamic";
 
-export default async function SettingsPage() {
+const GDRIVE_NOTICES = ["connected", "denied", "badstate", "error", "nocreds"] as const;
+type GDriveNotice = (typeof GDRIVE_NOTICES)[number];
+
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ gdrive?: string }>;
+}) {
   const backups = listBackups();
   const tz = appTimeZone();
   const health = await getServerHealth();
   const s3On = s3Enabled();
   const diskTracks = s3On ? await getDiskStoredTracks() : [];
+
+  const driveCfg = await getDriveConfig();
+  const redirectUri = redirectUriFromHeaders(await headers());
+  const { gdrive } = await searchParams;
+  const driveNotice = (GDRIVE_NOTICES as readonly string[]).includes(gdrive ?? "")
+    ? (gdrive as GDriveNotice)
+    : null;
 
   return (
     <div>
@@ -104,6 +126,21 @@ export default async function SettingsPage() {
           Автобэкапы и восстановление
         </h2>
         <DataRestore backups={backups} />
+      </section>
+
+      {/* Облачное хранилище файлов — Google Drive */}
+      <section className="mb-8">
+        <h2 className="mb-2.5 px-1 text-[13px] font-semibold uppercase tracking-wide text-muted">
+          Облачное хранилище
+        </h2>
+        <GDriveSettings
+          hasCredentials={hasCredentials(driveCfg)}
+          connected={isConnected(driveCfg)}
+          email={driveCfg.email}
+          uploadsOn={!driveCfg.uploadsOff}
+          redirectUri={redirectUri}
+          notice={driveNotice}
+        />
       </section>
 
       {/* Хранилище музыки (только если подключено облако) */}

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db, schemaReady } from "@/db";
 import { files } from "@/db/schema";
 import { isAuthed } from "@/lib/session";
+import { driveUploadsEnabled, drivePutBytes } from "@/lib/gdrive";
 
 export const runtime = "nodejs";
 
@@ -29,14 +30,29 @@ export async function POST(req: Request) {
 
   await schemaReady();
   const buf = Buffer.from(await file.arrayBuffer());
+  const name = file.name || "файл";
+  const mime = file.type || "application/octet-stream";
+
+  // Подключён Drive → файл летит туда, в БД лишь ссылка; иначе blob в базе.
+  // Ошибка облака не роняет загрузку — файл всё равно сохраним в БД.
+  let storage: "db" | "gdrive" = "db";
+  let storageKey: string | null = null;
+  let data: Buffer = buf;
+  if (await driveUploadsEnabled().catch(() => false)) {
+    try {
+      storageKey = await drivePutBytes(name, mime, buf);
+      storage = "gdrive";
+      data = Buffer.alloc(0);
+    } catch {
+      storage = "db";
+      storageKey = null;
+      data = buf;
+    }
+  }
+
   const [row] = await db
     .insert(files)
-    .values({
-      name: file.name || "файл",
-      mime: file.type || "application/octet-stream",
-      data: buf,
-      size: buf.length,
-    })
+    .values({ name, mime, data, size: buf.length, storage, storageKey })
     .returning({ id: files.id });
 
   return NextResponse.json({ id: row.id, name: file.name, size: buf.length });

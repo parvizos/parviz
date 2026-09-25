@@ -10,6 +10,7 @@ import { tracks, images } from "@/db/schema";
 import { isAuthed } from "@/lib/session";
 import { ensureMediaDir, mediaDir, trackFilePath } from "@/lib/media";
 import { s3Enabled, s3PutFile, trackKey } from "@/lib/storage";
+import { driveUploadsEnabled, drivePutFile } from "@/lib/gdrive";
 import { parseAudioFile } from "@/lib/audio-meta";
 import { nextTrackPosition } from "@/lib/music-queries";
 
@@ -115,12 +116,17 @@ export async function POST(req: NextRequest) {
   // Теги и обложка из временного файла.
   const meta = await parseAudioFile(tmpPath);
 
-  // Кладём аудио в постоянное хранилище (S3 или диск). В базу пишем только
-  // после успеха — чтобы не осталось «висячих» строк без файла.
-  let storage: "disk" | "s3" = "disk";
+  // Кладём аудио в постоянное хранилище. Приоритет: Google Drive (если
+  // подключён) → S3 → локальный диск. В базу пишем только после успеха —
+  // чтобы не осталось «висячих» строк без файла.
+  let storage: "disk" | "s3" | "gdrive" = "disk";
   let storageKey: string | null = null;
   try {
-    if (s3Enabled()) {
+    if (await driveUploadsEnabled().catch(() => false)) {
+      storageKey = await drivePutFile(`${id}.${diskExt}`, mime, tmpPath, size);
+      await rm(tmpPath, { force: true }).catch(() => {});
+      storage = "gdrive";
+    } else if (s3Enabled()) {
       const key = trackKey(id, diskExt);
       await s3PutFile(key, tmpPath, mime);
       await rm(tmpPath, { force: true }).catch(() => {});

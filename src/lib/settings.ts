@@ -17,7 +17,21 @@ export const SETTING_KEYS = {
   baseCurrency: "base_currency",
   ratesUpdatedAt: "rates_updated_at",
   ratesSource: "rates_source",
+  // Google Drive как облачное хранилище новых файлов (настраивается в UI).
+  gdriveClientId: "gdrive_client_id",
+  gdriveClientSecret: "gdrive_client_secret",
+  gdriveRefreshToken: "gdrive_refresh_token",
+  gdriveFolderId: "gdrive_folder_id",
+  gdriveEmail: "gdrive_email",
+  /** 'off' — подключение есть, но новые загрузки временно не льём в Drive. */
+  gdriveUploads: "gdrive_uploads",
 } as const;
+
+/** Удалить настройку (по ключу). Нет строки — тихо ок. */
+export async function deleteSetting(key: string): Promise<void> {
+  await schemaReady();
+  await db.delete(settings).where(eq(settings.key, key));
+}
 
 export async function getSetting(key: string): Promise<string | null> {
   await schemaReady();

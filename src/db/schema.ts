@@ -507,6 +507,10 @@ export const files = sqliteTable("files", {
   mime: text("mime").notNull(),
   data: blob("data", { mode: "buffer" }).notNull(),
   size: integer("size").notNull().default(0),
+  /** Где лежат байты: 'db' (blob в этой строке) или 'gdrive' (Google Drive). */
+  storage: text("storage").notNull().default("db"),
+  /** Для storage='gdrive' — id файла в Google Drive; для 'db' — null. */
+  storageKey: text("storage_key"),
   createdAt: createdAt(),
 });
 
@@ -1055,6 +1059,10 @@ export const images = sqliteTable("images", {
   mime: text("mime").notNull(),
   data: blob("data", { mode: "buffer" }).notNull(),
   size: integer("size").notNull().default(0),
+  /** Где лежат байты: 'db' (blob в этой строке) или 'gdrive' (Google Drive). */
+  storage: text("storage").notNull().default("db"),
+  /** Для storage='gdrive' — id файла в Google Drive; для 'db' — null. */
+  storageKey: text("storage_key"),
   createdAt: createdAt(),
 });
 
