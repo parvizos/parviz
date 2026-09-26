@@ -237,6 +237,12 @@ body {
   line-height: 1.75;
   -webkit-font-smoothing: antialiased;
 }
+/* Общий :focus-visible рисует рамку вокруг самого поля (по его min-height) —
+   получается «маленькое окошко». У редактора есть каретка, ринг лишний. */
+.ProseMirror:focus,
+.ProseMirror:focus-visible {
+  box-shadow: none;
+}
 .ProseMirror > * + * {
   margin-top: 0.85em;
 }
@@ -931,12 +937,17 @@ body { overscroll-behavior-y: none; touch-action: manipulation; }
 }
 .animate-sheet-rise { animation: sheet-rise 0.34s cubic-bezier(0.16, 1, 0.3, 1); }
 
-/* Плавная смена страниц. */
+/* Плавная смена страниц.
+   fill-mode: backwards (а не both) — после анимации элемент возвращается к
+   базовому стилю без transform. Иначе застывший `transform: translateY(0)`
+   делает страницу «containing block» для position:fixed, и полноэкранные
+   оверлеи (развёрнутый редактор, плеер, модалки) схлопываются в размер
+   страницы вместо всего экрана. Конечный кадр = базовый вид, скачка нет. */
 @keyframes page-in {
   from { opacity: 0; transform: translateY(7px); }
   to { opacity: 1; transform: translateY(0); }
 }
-.animate-page-in { animation: page-in 0.32s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.animate-page-in { animation: page-in 0.32s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
 
 @media (prefers-reduced-motion: reduce) {
   .animate-sheet-rise, .animate-page-in { animation: none; }
