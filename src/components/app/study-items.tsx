@@ -5,6 +5,7 @@ import { useState, useTransition, type MouseEvent } from "react";
 import { Pin, MapPin, ChevronRight, FileText } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { toggleNotePin } from "@/lib/actions";
+import { EntityAvatar } from "./EntityAvatar";
 import { LESSON_KIND_META } from "@/lib/study-format";
 import { areaColor } from "@/lib/task-format";
 import { excerpt } from "@/lib/text";
@@ -48,9 +49,12 @@ export function LessonRow({
           <div className="font-semibold text-text">{lesson.startTime || "—"}</div>
           {lesson.endTime && <div className="text-faint">{lesson.endTime}</div>}
         </div>
-        <span
-          className="h-8 w-1 shrink-0 rounded-full"
-          style={{ background: areaColor(lesson.subjectColor) }}
+        <EntityAvatar
+          image={lesson.subjectImage}
+          emoji={lesson.subjectIcon}
+          color={lesson.subjectColor}
+          name={lesson.subjectName}
+          size={34}
         />
         <div className="min-w-0 flex-1">
           <div className="truncate text-[14px] text-text">
@@ -157,15 +161,13 @@ export function SubjectCard({ subject }: { subject: SubjectWithCounts }) {
       href={`/predmety/${subject.id}`}
       className="group flex items-center gap-3.5 rounded-2xl border border-border bg-surface p-4 transition-colors hover:border-border-strong hover:bg-surface-2"
     >
-      <div
-        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[18px]"
-        style={{
-          background: `color-mix(in oklab, ${areaColor(subject.color)} 16%, transparent)`,
-          color: areaColor(subject.color),
-        }}
-      >
-        {subject.icon || subject.name.charAt(0).toUpperCase()}
-      </div>
+      <EntityAvatar
+        image={subject.image}
+        emoji={subject.icon}
+        color={subject.color}
+        name={subject.name}
+        size={44}
+      />
       <div className="min-w-0 flex-1">
         <h3 className="truncate text-[15px] font-medium text-text">
           {subject.name}

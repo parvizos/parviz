@@ -122,6 +122,8 @@ export const areas = sqliteTable(
     name: text("name").notNull(),
     color: text("color"),
     icon: text("icon"),
+    /** Фото/логотип аватарки (URL из /api/images). Приоритетнее эмодзи. */
+    image: text("image"),
     /** База знаний: свободное описание с фото (HTML из RichEditor). */
     body: text("body"),
     position: integer("position").notNull().default(0),
@@ -153,6 +155,8 @@ export const projects = sqliteTable(
     areaId: text("area_id").references(() => areas.id, {
       onDelete: "set null",
     }),
+    /** Фото/логотип аватарки проекта (URL из /api/images). */
+    image: text("image"),
     status: text("status").$type<ProjectStatus>().notNull().default("active"),
     /** Дата дедлайна, только дата: YYYY-MM-DD. */
     dueDate: text("due_date"),
@@ -257,6 +261,8 @@ export const subjects = sqliteTable(
     teacher: text("teacher"),
     color: text("color"),
     icon: text("icon"),
+    /** Фото/логотип аватарки предмета (URL из /api/images). */
+    image: text("image"),
     /** База знаний: свободное описание с фото (HTML из RichEditor). */
     body: text("body"),
     areaId: text("area_id").references(() => areas.id, { onDelete: "set null" }),
@@ -625,6 +631,8 @@ export const accounts = sqliteTable(
     openingBalance: integer("opening_balance").notNull().default(0),
     color: text("color"),
     icon: text("icon"),
+    /** Фото/логотип аватарки счёта (URL из /api/images). */
+    image: text("image"),
     position: integer("position").notNull().default(0),
     archivedAt: integer("archived_at", { mode: "timestamp_ms" }),
     createdAt: createdAt(),
@@ -645,6 +653,8 @@ export const categories = sqliteTable(
     kind: text("kind").$type<CategoryKind>().notNull().default("expense"),
     color: text("color"),
     icon: text("icon"),
+    /** Фото/логотип аватарки категории (URL из /api/images). */
+    image: text("image"),
     /** Месячный лимит в копейках (null — без бюджета). */
     monthlyBudget: integer("monthly_budget"),
     position: integer("position").notNull().default(0),
@@ -882,6 +892,8 @@ export const goals = sqliteTable(
     dueDate: text("due_date"),
     color: text("color"),
     icon: text("icon"),
+    /** Фото/логотип аватарки цели (URL из /api/images). */
+    image: text("image"),
     note: text("note"),
     achievedAt: integer("achieved_at", { mode: "timestamp_ms" }),
     position: integer("position").notNull().default(0),

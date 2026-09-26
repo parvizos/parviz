@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/Button";
 import { Field, Input, Select } from "@/components/ui/Field";
 import { cn } from "@/lib/cn";
 import { AREA_PALETTE } from "@/lib/task-format";
-import { TX_KINDS_ORDER, TX_KIND_META } from "@/lib/finance-format";
+import { TX_KINDS_ORDER, TX_KIND_META, financeColor } from "@/lib/finance-format";
+import { AvatarUpload } from "./EntityAvatar";
 import { parseAmount, minorToInput } from "@/lib/money";
 import { CURRENCIES, currencySymbol } from "@/lib/currency";
 import { ColorPicker } from "./finance-dialogs";
@@ -657,6 +658,7 @@ export type GoalForEdit = {
   dueDate: string | null;
   color: string | null;
   icon: string | null;
+  image: string | null;
   note: string | null;
 };
 
@@ -681,6 +683,7 @@ export function GoalDialog({
   const [dueDate, setDueDate] = useState(goal?.dueDate ?? "");
   const [color, setColor] = useState(goal?.color ?? AREA_PALETTE[0].value);
   const [icon, setIcon] = useState(goal?.icon ?? "");
+  const [image, setImage] = useState<string | null>(goal?.image ?? null);
   const [note, setNote] = useState(goal?.note ?? "");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -705,6 +708,7 @@ export function GoalDialog({
           dueDate: dueDate || null,
           color,
           icon: icon || null,
+          image,
           note: note.trim() || null,
         };
         if (editing && goal) await updateGoal(goal.id, payload);
@@ -751,12 +755,20 @@ export function GoalDialog({
       }
     >
       <div className="flex flex-col gap-4">
-        <div className="flex gap-2">
+        <div className="flex items-start gap-2.5">
+          <AvatarUpload
+            value={image}
+            onChange={setImage}
+            emoji={icon || "🎯"}
+            tone={financeColor(color)}
+            name={title}
+            size={52}
+          />
           <Input
             value={icon}
             onChange={(e) => setIcon(e.target.value.slice(0, 2))}
             placeholder="🎯"
-            className="w-14 text-center text-lg"
+            className="w-12 text-center text-lg"
             aria-label="Эмодзи"
           />
           <div className="flex-1">

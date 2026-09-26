@@ -77,12 +77,14 @@ type ProjectForEdit = {
   areaId: string | null;
   dueDate: string | null;
   status: ProjectStatus;
+  image: string | null;
 };
 type AreaForEdit = {
   id: string;
   name: string;
   color: string | null;
   icon: string | null;
+  image: string | null;
 };
 
 interface UiValue {

@@ -67,6 +67,7 @@ export function EditProjectButton({
     areaId: string | null;
     dueDate: string | null;
     status: ProjectStatus;
+    image: string | null;
   };
 }) {
   const { openEditProject } = useUi();
@@ -81,7 +82,13 @@ export function EditProjectButton({
 export function EditAreaButton({
   area,
 }: {
-  area: { id: string; name: string; color: string | null; icon: string | null };
+  area: {
+    id: string;
+    name: string;
+    color: string | null;
+    icon: string | null;
+    image: string | null;
+  };
 }) {
   const { openEditArea } = useUi();
   return (

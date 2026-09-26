@@ -17,7 +17,7 @@ import {
   getSubjectMaterials,
 } from "@/lib/study-queries";
 import { todayISO, ruMonthDayShort } from "@/lib/dates";
-import { areaColor } from "@/lib/task-format";
+import { EntityAvatar } from "@/components/app/EntityAvatar";
 import { weekdayFull, ATTENDANCE_META } from "@/lib/study-format";
 import { cn } from "@/lib/cn";
 import { TaskGroup } from "@/components/app/TaskGroup";
@@ -107,15 +107,13 @@ export default async function SubjectDetailPage({
 
       <div className="mb-6 flex items-start justify-between gap-3">
         <div className="flex items-center gap-3.5">
-          <div
-            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-[20px]"
-            style={{
-              background: `color-mix(in oklab, ${areaColor(subject.color)} 16%, transparent)`,
-              color: areaColor(subject.color),
-            }}
-          >
-            {subject.icon || subject.name.charAt(0).toUpperCase()}
-          </div>
+          <EntityAvatar
+            image={subject.image}
+            emoji={subject.icon}
+            color={subject.color}
+            name={subject.name}
+            size={52}
+          />
           <div>
             <h1 className="text-[22px] font-semibold tracking-tight text-text">
               {subject.name}
@@ -132,6 +130,7 @@ export default async function SubjectDetailPage({
             teacher: subject.teacher,
             color: subject.color,
             icon: subject.icon,
+            image: subject.image,
             areaId: subject.areaId,
             credits: subject.credits,
           }}

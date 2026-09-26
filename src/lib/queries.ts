@@ -217,6 +217,7 @@ export type ProjectWithCounts = {
   areaName: string | null;
   areaColor: string | null;
   dueDate: string | null;
+  image: string | null;
   position: number;
   openCount: number;
   totalCount: number;
@@ -234,6 +235,7 @@ export async function getProjectsWithCounts(): Promise<ProjectWithCounts[]> {
       areaName: areas.name,
       areaColor: areas.color,
       dueDate: projects.dueDate,
+      image: projects.image,
       position: projects.position,
       openCount: sql<number>`sum(case when ${tasks.status} = 'open' then 1 else 0 end)`,
       totalCount: sql<number>`count(${tasks.id})`,
@@ -367,6 +369,7 @@ export type LessonWithSubject = Lesson & {
   subjectName: string;
   subjectColor: string | null;
   subjectIcon: string | null;
+  subjectImage: string | null;
 };
 
 export type NoteWithSubject = Note & {
@@ -379,6 +382,7 @@ const lessonSelection = {
   subjectName: subjects.name,
   subjectColor: subjects.color,
   subjectIcon: subjects.icon,
+  subjectImage: subjects.image,
 };
 
 function lessonBaseQuery() {

@@ -352,6 +352,7 @@ const goalSchema = z.object({
   dueDate: isoDateOpt,
   color: z.string().max(32).nullable().optional(),
   icon: z.string().max(32).nullable().optional(),
+  image: z.string().max(512).nullable().optional(),
   note: z.string().max(500).nullable().optional(),
 });
 
@@ -371,6 +372,7 @@ export async function createGoal(input: GoalInput) {
       dueDate: data.dueDate ?? null,
       color: data.color ?? null,
       icon: data.icon ?? null,
+      image: data.image ?? null,
       note: data.note ?? null,
     })
     .returning({ id: goals.id });

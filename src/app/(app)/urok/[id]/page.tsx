@@ -2,8 +2,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { MapPin, GraduationCap } from "lucide-react";
 import { getLesson } from "@/lib/queries";
-import { areaColor } from "@/lib/task-format";
 import { weekdayFull, LESSON_KIND_META } from "@/lib/study-format";
+import { EntityAvatar } from "@/components/app/EntityAvatar";
 import { BackLink } from "@/components/app/BackLink";
 import { EditLessonButton } from "@/components/app/study-buttons";
 import { EntityNotes } from "@/components/app/EntityNotes";
@@ -41,15 +41,13 @@ export default async function LessonDetailPage({
 
       <div className="mb-5 flex items-start justify-between gap-3">
         <div className="flex items-center gap-3.5">
-          <div
-            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-[20px]"
-            style={{
-              background: `color-mix(in oklab, ${areaColor(lesson.subjectColor)} 16%, transparent)`,
-              color: areaColor(lesson.subjectColor),
-            }}
-          >
-            {lesson.subjectIcon || lesson.subjectName.charAt(0).toUpperCase()}
-          </div>
+          <EntityAvatar
+            image={lesson.subjectImage}
+            emoji={lesson.subjectIcon}
+            color={lesson.subjectColor}
+            name={lesson.subjectName}
+            size={52}
+          />
           <div>
             <h1 className="text-[22px] font-semibold tracking-tight text-text">
               {lesson.subjectName}

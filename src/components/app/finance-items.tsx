@@ -14,6 +14,7 @@ import { currencySymbol } from "@/lib/currency";
 import { financeColor, ACCOUNT_KIND_META } from "@/lib/finance-format";
 import { ruMonthDayShort } from "@/lib/dates";
 import { areaColor } from "@/lib/task-format";
+import { EntityAvatar } from "./EntityAvatar";
 import { useUi } from "./ui-context";
 import type {
   TransactionWithContext,
@@ -160,19 +161,17 @@ export function AccountCard({ account }: { account: AccountWithBalance }) {
           openingBalance: account.openingBalance,
           color: account.color,
           icon: account.icon,
+          image: account.image,
         })
       }
       className="flex items-center gap-3 rounded-2xl border border-border bg-surface p-4 text-left transition-colors hover:border-border-strong hover:bg-surface-2"
     >
-      <div
-        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[18px]"
-        style={{
-          background: `color-mix(in oklab, ${financeColor(account.color)} 16%, transparent)`,
-          color: financeColor(account.color),
-        }}
-      >
-        {account.icon || meta.icon}
-      </div>
+      <EntityAvatar
+        image={account.image}
+        emoji={account.icon || meta.icon}
+        tone={financeColor(account.color)}
+        size={44}
+      />
       <div className="min-w-0 flex-1">
         <div className="truncate text-[14px] font-medium text-text">
           {account.name}
@@ -218,21 +217,19 @@ export function CategoryCard({
           kind: category.kind,
           color: category.color,
           icon: category.icon,
+          image: category.image,
           monthlyBudget: category.monthlyBudget,
         })
       }
       className="flex flex-col gap-2.5 rounded-2xl border border-border bg-surface p-4 text-left transition-colors hover:border-border-strong hover:bg-surface-2"
     >
       <div className="flex items-center gap-3">
-        <div
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[15px]"
-          style={{
-            background: `color-mix(in oklab, ${financeColor(category.color)} 16%, transparent)`,
-            color: financeColor(category.color),
-          }}
-        >
-          {category.icon || (isExpense ? "－" : "＋")}
-        </div>
+        <EntityAvatar
+          image={category.image}
+          emoji={category.icon || (isExpense ? "－" : "＋")}
+          tone={financeColor(category.color)}
+          size={36}
+        />
         <div className="min-w-0 flex-1">
           <div className="truncate text-[14px] font-medium text-text">
             {category.name}

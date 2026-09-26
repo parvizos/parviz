@@ -7,7 +7,7 @@ import {
   getAreaLooseTasks,
 } from "@/lib/queries";
 import { todayISO } from "@/lib/dates";
-import { areaColor } from "@/lib/task-format";
+import { EntityAvatar } from "@/components/app/EntityAvatar";
 import { ProjectCard } from "@/components/app/cards";
 import { TaskGroup } from "@/components/app/TaskGroup";
 import { QuickAdd } from "@/components/app/QuickAdd";
@@ -56,15 +56,13 @@ export default async function AreaDetailPage({
 
       <div className="mb-6 flex items-start justify-between gap-3">
         <div className="flex items-center gap-3.5">
-          <div
-            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-[20px]"
-            style={{
-              background: `color-mix(in oklab, ${areaColor(area.color)} 16%, transparent)`,
-              color: areaColor(area.color),
-            }}
-          >
-            {area.icon || area.name.charAt(0).toUpperCase()}
-          </div>
+          <EntityAvatar
+            image={area.image}
+            emoji={area.icon}
+            color={area.color}
+            name={area.name}
+            size={52}
+          />
           <h1 className="text-[22px] font-semibold tracking-tight text-text">
             {area.name}
           </h1>
@@ -75,6 +73,7 @@ export default async function AreaDetailPage({
             name: area.name,
             color: area.color,
             icon: area.icon,
+            image: area.image,
           }}
         />
       </div>

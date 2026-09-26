@@ -43,6 +43,7 @@ import { cn } from "@/lib/cn";
 import { logout } from "@/lib/auth-actions";
 import { areaColor } from "@/lib/task-format";
 import { useUi } from "./ui-context";
+import { EntityAvatar } from "./EntityAvatar";
 import { PageTree } from "./PageTree";
 import type { PageTreeNode } from "@/lib/queries";
 
@@ -52,6 +53,7 @@ type AreaLink = {
   name: string;
   color: string | null;
   icon: string | null;
+  image: string | null;
   openTaskCount: number;
 };
 
@@ -243,7 +245,9 @@ export function Sidebar({
                       : "text-muted hover:bg-surface-2 hover:text-text",
                   )}
                 >
-                  {a.icon ? (
+                  {a.image ? (
+                    <EntityAvatar image={a.image} size={20} className="shrink-0" />
+                  ) : a.icon ? (
                     <span className="text-[15px] leading-none">{a.icon}</span>
                   ) : (
                     <span

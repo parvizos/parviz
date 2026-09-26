@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Field, Input, Textarea, Select } from "@/components/ui/Field";
 import { cn } from "@/lib/cn";
 import { AREA_PALETTE } from "@/lib/task-format";
+import { AvatarUpload } from "./EntityAvatar";
 import { WEEKDAYS, LESSON_KINDS_ORDER, LESSON_KIND_META } from "@/lib/study-format";
 import {
   createSubject,
@@ -29,6 +30,7 @@ export type SubjectForEdit = {
   teacher: string | null;
   color: string | null;
   icon: string | null;
+  image: string | null;
   areaId: string | null;
   credits: number | null;
 };
@@ -66,6 +68,7 @@ export function SubjectDialog({
   const [teacher, setTeacher] = useState(subject?.teacher ?? "");
   const [color, setColor] = useState(subject?.color ?? AREA_PALETTE[0].value);
   const [icon, setIcon] = useState(subject?.icon ?? "");
+  const [image, setImage] = useState<string | null>(subject?.image ?? null);
   const [areaId, setAreaId] = useState(subject?.areaId ?? "");
   const [credits, setCredits] = useState(
     subject?.credits != null ? String(subject.credits) : "",
@@ -86,6 +89,7 @@ export function SubjectDialog({
           teacher: teacher.trim() || null,
           color,
           icon: icon || null,
+          image,
           areaId: areaId || null,
           credits: credits.trim() ? Number(credits) : null,
         };
@@ -134,12 +138,20 @@ export function SubjectDialog({
       }
     >
       <div className="flex flex-col gap-4">
-        <div className="flex gap-2">
+        <div className="flex items-start gap-2.5">
+          <AvatarUpload
+            value={image}
+            onChange={setImage}
+            emoji={icon || "📐"}
+            color={color}
+            name={name}
+            size={52}
+          />
           <Input
             value={icon}
             onChange={(e) => setIcon(e.target.value.slice(0, 2))}
             placeholder="📐"
-            className="w-14 text-center text-lg"
+            className="w-12 text-center text-lg"
             aria-label="Эмодзи"
           />
           <div className="flex-1">

@@ -179,6 +179,7 @@ const createProjectSchema = z.object({
   notes: z.string().max(10_000).nullable().optional(),
   areaId: nullableId,
   dueDate: isoDate,
+  image: z.string().max(512).nullable().optional(),
 });
 
 export type CreateProjectInput = z.input<typeof createProjectSchema>;
@@ -193,6 +194,7 @@ export async function createProject(input: CreateProjectInput) {
       notes: data.notes ?? null,
       areaId: data.areaId ?? null,
       dueDate: data.dueDate ?? null,
+      image: data.image ?? null,
     })
     .returning({ id: projects.id });
   revalidateAll();
@@ -205,6 +207,7 @@ const updateProjectSchema = z.object({
   areaId: nullableId,
   dueDate: isoDate,
   status: z.enum(PROJECT_STATUSES).optional(),
+  image: z.string().max(512).nullable().optional(),
 });
 
 export type UpdateProjectInput = z.input<typeof updateProjectSchema>;
@@ -233,6 +236,7 @@ const createAreaSchema = z.object({
   name: z.string().trim().min(1, "Введите название").max(200),
   color: z.string().max(32).nullable().optional(),
   icon: z.string().max(32).nullable().optional(),
+  image: z.string().max(512).nullable().optional(),
 });
 
 export type CreateAreaInput = z.input<typeof createAreaSchema>;
@@ -246,6 +250,7 @@ export async function createArea(input: CreateAreaInput) {
       name: data.name,
       color: data.color ?? null,
       icon: data.icon ?? null,
+      image: data.image ?? null,
     })
     .returning({ id: areas.id });
   revalidateAll();
@@ -256,6 +261,7 @@ const updateAreaSchema = z.object({
   name: z.string().trim().min(1).max(200).optional(),
   color: z.string().max(32).nullable().optional(),
   icon: z.string().max(32).nullable().optional(),
+  image: z.string().max(512).nullable().optional(),
 });
 
 export type UpdateAreaInput = z.input<typeof updateAreaSchema>;
@@ -289,6 +295,7 @@ const createSubjectSchema = z.object({
   teacher: z.string().max(200).nullable().optional(),
   color: z.string().max(32).nullable().optional(),
   icon: z.string().max(32).nullable().optional(),
+  image: z.string().max(512).nullable().optional(),
   areaId: nullableId,
   credits: z.coerce.number().int().min(0).max(100).nullable().optional(),
 });
@@ -307,6 +314,7 @@ export async function createSubject(input: CreateSubjectInput) {
       teacher: data.teacher ?? null,
       color: data.color ?? null,
       icon: data.icon ?? null,
+      image: data.image ?? null,
       areaId: data.areaId ?? null,
       termId,
       credits: data.credits ?? null,
@@ -321,6 +329,7 @@ const updateSubjectSchema = z.object({
   teacher: z.string().max(200).nullable().optional(),
   color: z.string().max(32).nullable().optional(),
   icon: z.string().max(32).nullable().optional(),
+  image: z.string().max(512).nullable().optional(),
   areaId: nullableId,
   credits: z.coerce.number().int().min(0).max(100).nullable().optional(),
 });
@@ -551,6 +560,7 @@ const createAccountSchema = z.object({
   openingBalance: z.coerce.number().int().optional(),
   color: z.string().max(32).nullable().optional(),
   icon: z.string().max(32).nullable().optional(),
+  image: z.string().max(512).nullable().optional(),
 });
 
 export type CreateAccountInput = z.input<typeof createAccountSchema>;
@@ -568,6 +578,7 @@ export async function createAccount(input: CreateAccountInput) {
       openingBalance: data.openingBalance ?? 0,
       color: data.color ?? null,
       icon: data.icon ?? null,
+      image: data.image ?? null,
     })
     .returning({ id: accounts.id });
   revalidateAll();
@@ -581,6 +592,7 @@ const updateAccountSchema = z.object({
   openingBalance: z.coerce.number().int().optional(),
   color: z.string().max(32).nullable().optional(),
   icon: z.string().max(32).nullable().optional(),
+  image: z.string().max(512).nullable().optional(),
 });
 
 export type UpdateAccountInput = z.input<typeof updateAccountSchema>;
@@ -606,6 +618,7 @@ const createCategorySchema = z.object({
   kind: z.enum(CATEGORY_KINDS).optional(),
   color: z.string().max(32).nullable().optional(),
   icon: z.string().max(32).nullable().optional(),
+  image: z.string().max(512).nullable().optional(),
   monthlyBudget: z.coerce.number().int().min(0).nullable().optional(),
 });
 
@@ -621,6 +634,7 @@ export async function createCategory(input: CreateCategoryInput) {
       kind: data.kind ?? "expense",
       color: data.color ?? null,
       icon: data.icon ?? null,
+      image: data.image ?? null,
       monthlyBudget: data.monthlyBudget ?? null,
     })
     .returning({ id: categories.id });
@@ -633,6 +647,7 @@ const updateCategorySchema = z.object({
   kind: z.enum(CATEGORY_KINDS).optional(),
   color: z.string().max(32).nullable().optional(),
   icon: z.string().max(32).nullable().optional(),
+  image: z.string().max(512).nullable().optional(),
   monthlyBudget: z.coerce.number().int().min(0).nullable().optional(),
 });
 

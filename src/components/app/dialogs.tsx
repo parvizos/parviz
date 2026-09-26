@@ -26,6 +26,7 @@ import {
 } from "@/lib/actions";
 import type { TaskPriority, ProjectStatus } from "@/db/schema";
 import type { TaskWithContext } from "@/lib/queries";
+import { AvatarUpload } from "./EntityAvatar";
 import {
   clientToday,
   clientAddDays,
@@ -415,6 +416,7 @@ export function ProjectDialog({
     areaId: string | null;
     dueDate: string | null;
     status: ProjectStatus;
+    image: string | null;
   } | null;
   areaOptions: AreaOption[];
   defaultAreaId?: string | null;
@@ -427,8 +429,12 @@ export function ProjectDialog({
   const [status, setStatus] = useState<ProjectStatus>(
     project?.status ?? "active",
   );
+  const [image, setImage] = useState<string | null>(project?.image ?? null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+
+  const areaTone =
+    areaOptions.find((a) => a.id === areaId)?.color ?? null;
 
   function submit() {
     const n = name.trim();
@@ -445,6 +451,7 @@ export function ProjectDialog({
             areaId: areaId || null,
             dueDate: dueDate || null,
             status,
+            image,
           });
         } else {
           await createProject({
@@ -452,6 +459,7 @@ export function ProjectDialog({
             notes: notes.trim() || null,
             areaId: areaId || null,
             dueDate: dueDate || null,
+            image,
           });
         }
         onClose();
@@ -497,15 +505,27 @@ export function ProjectDialog({
       }
     >
       <div className="flex flex-col gap-4">
-        <Field error={error ?? undefined}>
-          <Input
-            autoFocus
-            placeholder="Название проекта"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="h-11 text-[15px]"
+        <div className="flex items-start gap-3">
+          <AvatarUpload
+            value={image}
+            onChange={setImage}
+            color={areaTone}
+            name={name}
+            size={52}
+            label="Логотип проекта"
           />
-        </Field>
+          <div className="flex-1">
+            <Field error={error ?? undefined}>
+              <Input
+                autoFocus
+                placeholder="Название проекта"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="h-11 text-[15px]"
+              />
+            </Field>
+          </div>
+        </div>
         <Field label="Описание">
           <Textarea
             placeholder="Цель, результат, заметки…"
@@ -563,12 +583,14 @@ export function AreaDialog({
     name: string;
     color: string | null;
     icon: string | null;
+    image: string | null;
   } | null;
 }) {
   const editing = !!area;
   const [name, setName] = useState(area?.name ?? "");
   const [color, setColor] = useState(area?.color ?? AREA_PALETTE[0].value);
   const [icon, setIcon] = useState(area?.icon ?? "");
+  const [image, setImage] = useState<string | null>(area?.image ?? null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -581,9 +603,9 @@ export function AreaDialog({
     startTransition(async () => {
       try {
         if (editing && area) {
-          await updateArea(area.id, { name: n, color, icon: icon || null });
+          await updateArea(area.id, { name: n, color, icon: icon || null, image });
         } else {
-          await createArea({ name: n, color, icon: icon || null });
+          await createArea({ name: n, color, icon: icon || null, image });
         }
         onClose();
       } catch {
@@ -629,12 +651,20 @@ export function AreaDialog({
       }
     >
       <div className="flex flex-col gap-4">
-        <div className="flex gap-2">
+        <div className="flex items-start gap-2.5">
+          <AvatarUpload
+            value={image}
+            onChange={setImage}
+            emoji={icon || "🎓"}
+            color={color}
+            name={name}
+            size={52}
+          />
           <Input
             value={icon}
             onChange={(e) => setIcon(e.target.value.slice(0, 2))}
             placeholder="🎓"
-            className="w-14 text-center text-lg"
+            className="w-12 text-center text-lg"
             aria-label="Эмодзи"
           />
           <div className="flex-1">

@@ -5,6 +5,7 @@ import { relativeLabel, dateTone } from "@/lib/dates";
 import { PROJECT_STATUS_META, areaColor } from "@/lib/task-format";
 import type { ProjectWithCounts, AreaWithCounts } from "@/lib/queries";
 import type { ProjectStatus } from "@/db/schema";
+import { EntityAvatar } from "./EntityAvatar";
 
 const DATE_TONE: Record<string, string> = {
   overdue: "text-danger",
@@ -33,21 +34,30 @@ export function ProjectCard({
       className="group flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4 transition-colors hover:border-border-strong hover:bg-surface-2"
     >
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <h3 className="truncate text-[15px] font-medium text-text">
-              {project.name}
-            </h3>
-          </div>
-          {showArea && project.areaName && (
-            <div className="mt-1 flex items-center gap-1.5 text-[12.5px] text-muted">
-              <span
-                className="h-2 w-2 rounded-full"
-                style={{ background: areaColor(project.areaColor) }}
-              />
-              {project.areaName}
+        <div className="flex min-w-0 items-start gap-3">
+          <EntityAvatar
+            image={project.image}
+            color={project.areaColor}
+            name={project.name}
+            size={40}
+            className="mt-0.5"
+          />
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h3 className="truncate text-[15px] font-medium text-text">
+                {project.name}
+              </h3>
             </div>
-          )}
+            {showArea && project.areaName && (
+              <div className="mt-1 flex items-center gap-1.5 text-[12.5px] text-muted">
+                <span
+                  className="h-2 w-2 rounded-full"
+                  style={{ background: areaColor(project.areaColor) }}
+                />
+                {project.areaName}
+              </div>
+            )}
+          </div>
         </div>
         <ChevronRight
           size={18}
@@ -106,15 +116,13 @@ export function AreaCard({ area }: { area: AreaWithCounts }) {
       href={`/sfery/${area.id}`}
       className="group flex items-center gap-3.5 rounded-2xl border border-border bg-surface p-4 transition-colors hover:border-border-strong hover:bg-surface-2"
     >
-      <div
-        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[18px]"
-        style={{
-          background: `color-mix(in oklab, ${areaColor(area.color)} 16%, transparent)`,
-          color: areaColor(area.color),
-        }}
-      >
-        {area.icon || area.name.charAt(0).toUpperCase()}
-      </div>
+      <EntityAvatar
+        image={area.image}
+        emoji={area.icon}
+        color={area.color}
+        name={area.name}
+        size={44}
+      />
       <div className="min-w-0 flex-1">
         <h3 className="truncate text-[15px] font-medium text-text">
           {area.name}

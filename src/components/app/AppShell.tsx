@@ -19,6 +19,7 @@ type AreaLink = {
   name: string;
   color: string | null;
   icon: string | null;
+  image: string | null;
   openTaskCount: number;
 };
 

@@ -199,12 +199,18 @@ export type ExamRow = Exam & {
   subjectName: string;
   subjectColor: string | null;
   subjectIcon: string | null;
+  subjectImage: string | null;
   done: boolean;
   daysLeft: number | null;
 };
 
 function toExamRow(
-  r: Exam & { subjectName: string; subjectColor: string | null; subjectIcon: string | null },
+  r: Exam & {
+    subjectName: string;
+    subjectColor: string | null;
+    subjectIcon: string | null;
+    subjectImage: string | null;
+  },
   today: string,
 ): ExamRow {
   const done = r.passedAt != null;
@@ -225,6 +231,7 @@ export async function getExams(): Promise<ExamRow[]> {
       subjectName: subjects.name,
       subjectColor: subjects.color,
       subjectIcon: subjects.icon,
+      subjectImage: subjects.image,
     })
     .from(exams)
     .innerJoin(subjects, eq(exams.subjectId, subjects.id))
@@ -243,6 +250,7 @@ export async function getSubjectExams(subjectId: string): Promise<ExamRow[]> {
       subjectName: subjects.name,
       subjectColor: subjects.color,
       subjectIcon: subjects.icon,
+      subjectImage: subjects.image,
     })
     .from(exams)
     .innerJoin(subjects, eq(exams.subjectId, subjects.id))
@@ -263,6 +271,7 @@ export async function getUpcomingExams(withinDays = 14): Promise<ExamRow[]> {
       subjectName: subjects.name,
       subjectColor: subjects.color,
       subjectIcon: subjects.icon,
+      subjectImage: subjects.image,
     })
     .from(exams)
     .innerJoin(subjects, eq(exams.subjectId, subjects.id))

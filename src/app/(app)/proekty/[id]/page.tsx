@@ -7,6 +7,7 @@ import { cn } from "@/lib/cn";
 import { areaColor, PROJECT_STATUS_META } from "@/lib/task-format";
 import { TaskGroup } from "@/components/app/TaskGroup";
 import { QuickAdd } from "@/components/app/QuickAdd";
+import { EntityAvatar } from "@/components/app/EntityAvatar";
 import { EditProjectButton } from "@/components/app/buttons";
 import { EntityNotes } from "@/components/app/EntityNotes";
 import { Backlinks } from "@/components/app/Backlinks";
@@ -61,7 +62,14 @@ export default async function ProjectDetailPage({
       </Link>
 
       <div className="mb-5 flex items-start justify-between gap-3">
-        <div className="min-w-0">
+        <div className="flex min-w-0 items-center gap-3.5">
+          <EntityAvatar
+            image={project.image}
+            color={project.areaColor}
+            name={project.name}
+            size={52}
+          />
+          <div className="min-w-0">
           <h1 className="text-[22px] font-semibold tracking-tight text-text">
             {project.name}
           </h1>
@@ -102,6 +110,7 @@ export default async function ProjectDetailPage({
               </span>
             )}
           </div>
+          </div>
         </div>
         <EditProjectButton
           project={{
@@ -111,6 +120,7 @@ export default async function ProjectDetailPage({
             areaId: project.areaId,
             dueDate: project.dueDate,
             status: project.status,
+            image: project.image,
           }}
         />
       </div>

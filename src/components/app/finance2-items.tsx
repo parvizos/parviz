@@ -13,7 +13,6 @@ import {
   CalendarClock,
   Pencil,
   Repeat,
-  Target,
   ArrowLeftRight,
 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
@@ -24,6 +23,7 @@ import { formatMoney, formatMoneyShort, parseAmount, minorToInput } from "@/lib/
 import { currencySymbol, currencyMeta } from "@/lib/currency";
 import { ruMonthDayShort } from "@/lib/dates";
 import { financeColor } from "@/lib/finance-format";
+import { EntityAvatar } from "./EntityAvatar";
 import {
   addDebtPayment,
   setDebtSettled,
@@ -734,20 +734,19 @@ export function GoalCard({ goal }: { goal: GoalWithProgress }) {
               dueDate: goal.dueDate,
               color: goal.color,
               icon: goal.icon,
+              image: goal.image,
               note: goal.note,
             })
           }
           className="flex min-w-0 flex-1 items-start gap-3 text-left"
         >
-          <span
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[18px]"
-            style={{
-              background: `color-mix(in oklab, ${color} 16%, transparent)`,
-              color,
-            }}
-          >
-            {goal.icon || <Target size={18} />}
-          </span>
+          <EntityAvatar
+            image={goal.image}
+            emoji={goal.icon}
+            tone={color}
+            name={goal.title}
+            size={40}
+          />
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <span className="truncate text-[14.5px] font-medium text-text">

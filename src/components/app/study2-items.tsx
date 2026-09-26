@@ -17,6 +17,7 @@ import { Field, Input } from "@/components/ui/Field";
 import { cn } from "@/lib/cn";
 import { ruMonthDayShort } from "@/lib/dates";
 import { areaColor } from "@/lib/task-format";
+import { EntityAvatar } from "./EntityAvatar";
 import {
   GRADE_KIND_META,
   EXAM_KIND_META,
@@ -332,15 +333,12 @@ export function ExamCard({ exam }: { exam: ExamRow }) {
           }
           className="flex min-w-0 flex-1 items-start gap-3 text-left"
         >
-          <span
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[16px]"
-            style={{
-              background: `color-mix(in oklab, ${color} 16%, transparent)`,
-              color,
-            }}
-          >
-            {exam.subjectIcon || meta.short.charAt(0)}
-          </span>
+          <EntityAvatar
+            image={exam.subjectImage}
+            emoji={exam.subjectIcon || meta.short.charAt(0)}
+            tone={color}
+            size={40}
+          />
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
               <span className="truncate text-[14.5px] font-medium text-text">

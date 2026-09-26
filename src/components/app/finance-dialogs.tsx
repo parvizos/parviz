@@ -12,7 +12,9 @@ import {
   ACCOUNT_KIND_META,
   TX_KINDS_ORDER,
   TX_KIND_META,
+  financeColor,
 } from "@/lib/finance-format";
+import { AvatarUpload } from "./EntityAvatar";
 import { parseAmount, minorToInput } from "@/lib/money";
 import { CURRENCIES, currencySymbol } from "@/lib/currency";
 import {
@@ -76,6 +78,7 @@ export type AccountForEdit = {
   openingBalance: number;
   color: string | null;
   icon: string | null;
+  image: string | null;
 };
 
 export function AccountDialog({
@@ -96,6 +99,7 @@ export function AccountDialog({
   );
   const [color, setColor] = useState(account?.color ?? AREA_PALETTE[0].value);
   const [icon, setIcon] = useState(account?.icon ?? "");
+  const [image, setImage] = useState<string | null>(account?.image ?? null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -119,6 +123,7 @@ export function AccountDialog({
           openingBalance: openingMinor,
           color,
           icon: icon || null,
+          image,
         };
         if (editing && account) await updateAccount(account.id, payload);
         else await createAccount(payload);
@@ -164,12 +169,20 @@ export function AccountDialog({
       }
     >
       <div className="flex flex-col gap-4">
-        <div className="flex gap-2">
+        <div className="flex items-start gap-2.5">
+          <AvatarUpload
+            value={image}
+            onChange={setImage}
+            emoji={icon || ACCOUNT_KIND_META[kind].icon}
+            tone={financeColor(color)}
+            name={name}
+            size={52}
+          />
           <Input
             value={icon}
             onChange={(e) => setIcon(e.target.value.slice(0, 2))}
             placeholder={ACCOUNT_KIND_META[kind].icon}
-            className="w-14 text-center text-lg"
+            className="w-12 text-center text-lg"
             aria-label="Эмодзи"
           />
           <div className="flex-1">
@@ -235,6 +248,7 @@ export type CategoryForEdit = {
   kind: CategoryKind;
   color: string | null;
   icon: string | null;
+  image: string | null;
   monthlyBudget: number | null;
 };
 
@@ -254,6 +268,7 @@ export function CategoryDialog({
   );
   const [color, setColor] = useState(category?.color ?? AREA_PALETTE[0].value);
   const [icon, setIcon] = useState(category?.icon ?? "");
+  const [image, setImage] = useState<string | null>(category?.image ?? null);
   const [budget, setBudget] = useState(
     category?.monthlyBudget != null ? minorToInput(category.monthlyBudget) : "",
   );
@@ -279,6 +294,7 @@ export function CategoryDialog({
           kind,
           color,
           icon: icon || null,
+          image,
           monthlyBudget: budgetMinor,
         };
         if (editing && category) await updateCategory(category.id, payload);
@@ -325,12 +341,20 @@ export function CategoryDialog({
       }
     >
       <div className="flex flex-col gap-4">
-        <div className="flex gap-2">
+        <div className="flex items-start gap-2.5">
+          <AvatarUpload
+            value={image}
+            onChange={setImage}
+            emoji={icon || "🍔"}
+            tone={financeColor(color)}
+            name={name}
+            size={52}
+          />
           <Input
             value={icon}
             onChange={(e) => setIcon(e.target.value.slice(0, 2))}
             placeholder="🍔"
-            className="w-14 text-center text-lg"
+            className="w-12 text-center text-lg"
             aria-label="Эмодзи"
           />
           <div className="flex-1">

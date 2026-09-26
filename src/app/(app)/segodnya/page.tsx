@@ -4,8 +4,8 @@ import { getTodayTasks, getTodayLessons, getAccountOptions } from "@/lib/queries
 import { getDuePlanned, getDueDebts } from "@/lib/finance-queries";
 import { getUpcomingExams, getAttendanceForDate } from "@/lib/study-queries";
 import { todayISO, ruFull } from "@/lib/dates";
-import { areaColor } from "@/lib/task-format";
 import { TaskGroup } from "@/components/app/TaskGroup";
+import { EntityAvatar } from "@/components/app/EntityAvatar";
 import { QuickAdd } from "@/components/app/QuickAdd";
 import { PlannedRow, DebtCard } from "@/components/app/finance2-items";
 import { ExamCard, AttendanceControls } from "@/components/app/study2-items";
@@ -60,9 +60,12 @@ export default async function TodayPage() {
                 key={l.id}
                 className="flex items-center gap-3 rounded-xl border border-border bg-surface px-3 py-2"
               >
-                <span
-                  className="h-9 w-1 shrink-0 rounded-full"
-                  style={{ background: areaColor(l.subjectColor) }}
+                <EntityAvatar
+                  image={l.subjectImage}
+                  emoji={l.subjectIcon}
+                  color={l.subjectColor}
+                  name={l.subjectName}
+                  size={34}
                 />
                 <Link
                   href={`/predmety/${l.subjectId}`}

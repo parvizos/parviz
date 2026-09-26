@@ -66,6 +66,7 @@ export default async function AppLayout({
     name: a.name,
     color: a.color,
     icon: a.icon,
+    image: a.image,
     openTaskCount: a.openTaskCount,
   }));
 
