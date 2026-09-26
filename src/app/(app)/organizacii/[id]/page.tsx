@@ -24,6 +24,7 @@ import {
 } from "@/lib/person-format";
 import { PersonCard } from "@/components/app/crm-items";
 import { Avatar } from "@/components/app/Avatar";
+import { OrgLogo } from "@/components/app/OrgLogo";
 import { EntityNotes } from "@/components/app/EntityNotes";
 import {
   EditOrganizationButton,
@@ -155,15 +156,12 @@ export default async function OrganizationDetailPage({
 
       <div className="mb-5 flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3.5">
-          <div
-            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-[22px]"
-            style={{
-              background: `color-mix(in oklab, ${tone} 16%, transparent)`,
-              color: tone,
-            }}
-          >
-            {org.icon || meta.icon}
-          </div>
+          <OrgLogo
+            logo={org.logo}
+            emoji={org.icon || meta.icon}
+            color={org.color}
+            size={56}
+          />
           <div className="min-w-0">
             <h1 className="truncate text-[22px] font-semibold tracking-tight text-text">
               {org.name}
@@ -203,6 +201,7 @@ export default async function OrganizationDetailPage({
               url: org.url,
               color: org.color,
               icon: org.icon,
+              logo: org.logo,
               email: org.email,
               phone: org.phone,
               location: org.location,

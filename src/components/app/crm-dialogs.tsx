@@ -9,6 +9,7 @@ import { AREA_PALETTE } from "@/lib/task-format";
 import { ORG_KINDS_ORDER, ORG_KIND_META } from "@/lib/person-format";
 import { SOCIAL_META, SOCIAL_KINDS_ORDER, type Social } from "@/lib/socials";
 import { Avatar } from "./Avatar";
+import { OrgLogo } from "./OrgLogo";
 import { SocialIcon } from "./SocialIcon";
 import { ImageCropper } from "./ImageCropper";
 import {
@@ -89,6 +90,54 @@ function AvatarPicker({
           type="button"
           onClick={onClear}
           title="Убрать фото"
+          className="absolute -right-0.5 -top-0.5 flex h-5 w-5 items-center justify-center rounded-full border-2 border-surface bg-danger text-white"
+        >
+          <X size={11} />
+        </button>
+      )}
+      <input ref={ref} type="file" accept="image/*" hidden onChange={onPick} />
+    </div>
+  );
+}
+
+function LogoPicker({
+  logo,
+  emoji,
+  color,
+  onPick,
+  onClear,
+  uploading,
+}: {
+  logo: string | null;
+  emoji: string;
+  color: string;
+  onPick: (e: ChangeEvent<HTMLInputElement>) => void;
+  onClear: () => void;
+  uploading: boolean;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+  return (
+    <div className="relative shrink-0">
+      <button
+        type="button"
+        onClick={() => ref.current?.click()}
+        title="Загрузить логотип"
+        className="block rounded-xl outline-none ring-accent transition-[box-shadow] focus-visible:ring-2"
+      >
+        <OrgLogo logo={logo} emoji={emoji} color={color} size={60} />
+        <span className="absolute -bottom-0.5 -right-0.5 flex h-6 w-6 items-center justify-center rounded-full border-2 border-surface bg-accent text-accent-fg">
+          {uploading ? (
+            <Loader2 size={12} className="animate-spin" />
+          ) : (
+            <Camera size={12} />
+          )}
+        </span>
+      </button>
+      {logo && (
+        <button
+          type="button"
+          onClick={onClear}
+          title="Убрать логотип"
           className="absolute -right-0.5 -top-0.5 flex h-5 w-5 items-center justify-center rounded-full border-2 border-surface bg-danger text-white"
         >
           <X size={11} />
@@ -408,6 +457,7 @@ export type OrganizationForEdit = {
   url: string | null;
   color: string | null;
   icon: string | null;
+  logo: string | null;
   email: string | null;
   phone: string | null;
   location: string | null;
@@ -432,8 +482,27 @@ export function OrganizationDialog({
     organization?.color ?? AREA_PALETTE[0].value,
   );
   const [icon, setIcon] = useState(organization?.icon ?? "");
+  const [logo, setLogo] = useState<string | null>(organization?.logo ?? null);
+  const [uploading, setUploading] = useState(false);
+  const [cropFile, setCropFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+
+  function onPickLogo(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !file.type.startsWith("image/")) return;
+    setCropFile(file);
+  }
+  async function onCropLogo(cropped: File) {
+    setCropFile(null);
+    setUploading(true);
+    const url = await uploadImage(cropped, {
+      compress: { maxDim: 512, quality: 0.9 },
+    });
+    setUploading(false);
+    if (url) setLogo(url);
+  }
 
   function submit() {
     const n = name.trim();
@@ -453,6 +522,7 @@ export function OrganizationDialog({
           location: location.trim() || null,
           color,
           icon: icon || null,
+          logo,
         };
         if (editing && organization)
           await updateOrganization(organization.id, payload);
@@ -499,14 +569,24 @@ export function OrganizationDialog({
       }
     >
       <div className="flex flex-col gap-4">
-        <div className="flex gap-2">
-          <Input
-            value={icon}
-            onChange={(e) => setIcon(e.target.value.slice(0, 2))}
-            placeholder={ORG_KIND_META[kind].icon}
-            className="w-14 text-center text-lg"
-            aria-label="Эмодзи"
+        <div className="flex items-center gap-3">
+          <LogoPicker
+            logo={logo}
+            emoji={icon || ORG_KIND_META[kind].icon}
+            color={color}
+            onPick={onPickLogo}
+            onClear={() => setLogo(null)}
+            uploading={uploading}
           />
+          {cropFile && (
+            <ImageCropper
+              file={cropFile}
+              aspect={1}
+              title="Логотип организации"
+              onCancel={() => setCropFile(null)}
+              onCrop={onCropLogo}
+            />
+          )}
           <div className="flex-1">
             <Field error={error ?? undefined}>
               <Input
@@ -571,8 +651,17 @@ export function OrganizationDialog({
             onChange={(e) => setNote(e.target.value)}
           />
         </Field>
-        <Field label="Цвет">
-          <ColorPicker value={color} onChange={setColor} />
+        <Field label="Эмодзи и цвет" hint="Показываются, если логотип не загружен">
+          <div className="flex items-center gap-3">
+            <Input
+              value={icon}
+              onChange={(e) => setIcon(e.target.value.slice(0, 2))}
+              placeholder={ORG_KIND_META[kind].icon}
+              className="w-14 text-center text-lg"
+              aria-label="Эмодзи"
+            />
+            <ColorPicker value={color} onChange={setColor} />
+          </div>
         </Field>
       </div>
     </Modal>

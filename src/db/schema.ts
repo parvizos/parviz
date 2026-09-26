@@ -939,6 +939,8 @@ export const organizations = sqliteTable(
     body: text("body"),
     color: text("color"),
     icon: text("icon"),
+    /** Логотип организации (URL картинки) — показываем вместо эмодзи-иконки. */
+    logo: text("logo"),
     /** Закреплённая — наверху списка. */
     favorite: integer("favorite", { mode: "boolean" }).notNull().default(false),
     position: integer("position").notNull().default(0),

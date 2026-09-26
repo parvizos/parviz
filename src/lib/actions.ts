@@ -768,6 +768,7 @@ const createOrganizationSchema = z.object({
   location: z.string().max(300).nullable().optional(),
   color: z.string().max(32).nullable().optional(),
   icon: z.string().max(32).nullable().optional(),
+  logo: z.string().max(600).nullable().optional(),
   favorite: z.boolean().optional(),
 });
 
@@ -788,6 +789,7 @@ export async function createOrganization(input: CreateOrganizationInput) {
       location: data.location ?? null,
       color: data.color ?? null,
       icon: data.icon ?? null,
+      logo: data.logo ?? null,
     })
     .returning({ id: organizations.id });
   revalidateAll();

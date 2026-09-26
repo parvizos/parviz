@@ -18,6 +18,7 @@ import { ruMonthDayShort, diffDays } from "@/lib/dates";
 import { togglePersonFavorite, toggleOrganizationFavorite } from "@/lib/actions";
 import type { PersonWithOrg, OrgWithCount } from "@/lib/queries";
 import { Avatar } from "./Avatar";
+import { OrgLogo } from "./OrgLogo";
 
 function plMeetings(n: number): string {
   const a = n % 10;
@@ -177,15 +178,12 @@ export function OrgCard({
         href={`/organizacii/${org.id}`}
         className="flex items-start gap-3.5 p-4 pr-11"
       >
-        <div
-          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-[20px]"
-          style={{
-            background: `color-mix(in oklab, ${tone} 16%, transparent)`,
-            color: tone,
-          }}
-        >
-          {org.icon || meta.icon}
-        </div>
+        <OrgLogo
+          logo={org.logo}
+          emoji={org.icon || meta.icon}
+          color={org.color}
+          size={48}
+        />
         <div className="min-w-0 flex-1">
           <div className="truncate text-[15px] font-medium text-text">
             {org.name}
