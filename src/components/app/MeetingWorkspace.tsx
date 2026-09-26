@@ -240,7 +240,6 @@ export function MeetingWorkspace({
         initialHTML={meeting.body ?? ""}
         placeholder="Как прошло, о чём говорили, что решили, что дальше…"
         onChange={onBody}
-        toolbarStickyClass={focusMode ? "top-0" : undefined}
       />
     </>
   );

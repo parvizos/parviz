@@ -357,7 +357,6 @@ export function PageWorkspace({
       placeholder="Пиши что угодно, вставляй фото, жми «/» для команд…"
       onChange={onBody}
       minHeightClass="min-h-[30vh]"
-      toolbarStickyClass={focusMode ? "top-0" : undefined}
     />
   );
 

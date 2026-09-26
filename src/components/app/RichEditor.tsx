@@ -1,6 +1,8 @@
 "use client";
 
 import { useEditor, EditorContent, type Editor } from "@tiptap/react";
+import { BubbleMenu } from "@tiptap/react/menus";
+import { NodeSelection } from "@tiptap/pm/state";
 import { StarterKit } from "@tiptap/starter-kit";
 import { Placeholder } from "@tiptap/extension-placeholder";
 import { TaskList } from "@tiptap/extension-task-list";
@@ -33,6 +35,7 @@ import {
   Heading2,
   Bold,
   Italic,
+  Strikethrough,
   List,
   ListOrdered,
   ListChecks,
@@ -114,100 +117,59 @@ function Btn({
   );
 }
 
-function Toolbar({
+/**
+ * Плавающая панель форматирования — всплывает над выделенным текстом.
+ * Только строчное оформление; вставка блоков и медиа живёт в меню «/».
+ */
+function SelectionBar({
   editor,
-  onImage,
-  onGallery,
-  onVideo,
-  onFile,
-  onLink,
-  onGoogleDrive,
-  onCamera,
-  onSketch,
+  onInlineLink,
 }: {
   editor: Editor;
-  onImage: () => void;
-  onGallery: () => void;
-  onVideo: () => void;
-  onFile: () => void;
-  onLink: () => void;
-  onGoogleDrive: () => void;
-  onCamera: () => void;
-  onSketch: () => void;
+  onInlineLink: () => void;
 }) {
   const sep = <span className="mx-0.5 h-5 w-px bg-border" />;
   return (
-    <div className="flex flex-wrap items-center gap-0.5">
+    <BubbleMenu
+      editor={editor}
+      appendTo={() => document.body}
+      options={{ placement: "top", offset: 8 }}
+      shouldShow={({ editor, state }) => {
+        const sel = state.selection;
+        if (sel.empty) return false;
+        if (sel instanceof NodeSelection) return false;
+        if (editor.isActive("codeBlock")) return false;
+        return true;
+      }}
+      className="z-[60] flex items-center gap-0.5 rounded-xl border border-border bg-surface p-1 shadow-[var(--shadow-lg)]"
+    >
       <Btn label="Заголовок" active={editor.isActive("heading", { level: 1 })} onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}>
-        <Heading1 size={17} />
+        <Heading1 size={16} />
       </Btn>
       <Btn label="Подзаголовок" active={editor.isActive("heading", { level: 2 })} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}>
-        <Heading2 size={17} />
+        <Heading2 size={16} />
       </Btn>
       {sep}
       <Btn label="Жирный" active={editor.isActive("bold")} onClick={() => editor.chain().focus().toggleBold().run()}>
-        <Bold size={16} />
+        <Bold size={15} />
       </Btn>
       <Btn label="Курсив" active={editor.isActive("italic")} onClick={() => editor.chain().focus().toggleItalic().run()}>
-        <Italic size={16} />
+        <Italic size={15} />
       </Btn>
-      {sep}
-      <Btn label="Список" active={editor.isActive("bulletList")} onClick={() => editor.chain().focus().toggleBulletList().run()}>
-        <List size={17} />
+      <Btn label="Зачёркнутый" active={editor.isActive("strike")} onClick={() => editor.chain().focus().toggleStrike().run()}>
+        <Strikethrough size={15} />
       </Btn>
-      <Btn label="Нумерованный список" active={editor.isActive("orderedList")} onClick={() => editor.chain().focus().toggleOrderedList().run()}>
-        <ListOrdered size={17} />
+      <Btn label="Моноширинный" active={editor.isActive("code")} onClick={() => editor.chain().focus().toggleCode().run()}>
+        <Code2 size={15} />
       </Btn>
-      <Btn label="Чек-лист" active={editor.isActive("taskList")} onClick={() => editor.chain().focus().toggleTaskList().run()}>
-        <ListChecks size={17} />
+      <Btn label={editor.isActive("link") ? "Убрать ссылку" : "Ссылка"} active={editor.isActive("link")} onClick={onInlineLink}>
+        <Link2 size={15} />
       </Btn>
       {sep}
       <Btn label="Цитата" active={editor.isActive("blockquote")} onClick={() => editor.chain().focus().toggleBlockquote().run()}>
-        <Quote size={16} />
+        <Quote size={15} />
       </Btn>
-      <Btn label="Код" active={editor.isActive("codeBlock")} onClick={() => editor.chain().focus().toggleCodeBlock().run()}>
-        <Code2 size={16} />
-      </Btn>
-      {sep}
-      {sep}
-      <Btn label="Выноска" active={editor.isActive("callout")} onClick={() => editor.chain().focus().toggleCallout("info").run()}>
-        <Info size={16} />
-      </Btn>
-      <Btn label="Сворачиваемый блок" active={editor.isActive("details")} onClick={() => (editor.isActive("details") ? editor.chain().focus().unsetDetails().run() : editor.chain().focus().setDetails().run())}>
-        <ChevronRight size={17} />
-      </Btn>
-      <Btn label="Таблица" active={editor.isActive("table")} onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}>
-        <TableIcon size={16} />
-      </Btn>
-      <Btn label="Разделитель" onClick={() => editor.chain().focus().setHorizontalRule().run()}>
-        <Minus size={17} />
-      </Btn>
-      {sep}
-      <Btn label="Картинка" onClick={onImage}>
-        <ImagePlus size={16} />
-      </Btn>
-      <Btn label="Галерея фото" onClick={onGallery}>
-        <Images size={16} />
-      </Btn>
-      <Btn label="Видео" onClick={onVideo}>
-        <Video size={16} />
-      </Btn>
-      <Btn label="Файл" onClick={onFile}>
-        <Paperclip size={16} />
-      </Btn>
-      <Btn label="Ссылка / Google Диск" onClick={onLink}>
-        <Link2 size={16} />
-      </Btn>
-      <Btn label="С Google Диска" onClick={onGoogleDrive}>
-        <HardDrive size={16} />
-      </Btn>
-      <Btn label="Сфоткать доску" onClick={onCamera}>
-        <Camera size={16} />
-      </Btn>
-      <Btn label="Нарисовать" onClick={onSketch}>
-        <Pen size={16} />
-      </Btn>
-    </div>
+    </BubbleMenu>
   );
 }
 
@@ -253,14 +215,12 @@ export function RichEditor({
   onChange,
   toolbar = true,
   minHeightClass = "min-h-[45vh]",
-  toolbarStickyClass = "top-14 lg:top-2",
 }: {
   initialHTML: string;
   placeholder?: string;
   onChange?: (html: string, text: string) => void;
   toolbar?: boolean;
   minHeightClass?: string;
-  toolbarStickyClass?: string;
 }) {
   const router = useRouter();
   const mentionOptions = useMentionOptions();
@@ -275,6 +235,8 @@ export function RichEditor({
   const [cropQueue, setCropQueue] = useState<File[]>([]);
   const [linkOpen, setLinkOpen] = useState(false);
   const [linkUrl, setLinkUrl] = useState("");
+  // «bookmark» — карточка-превью отдельным блоком; «inline» — ссылка на выделенном тексте.
+  const [linkMode, setLinkMode] = useState<"bookmark" | "inline">("bookmark");
   const [gdriveBusy, setGdriveBusy] = useState(false);
   const [gdriveNotice, setGdriveNotice] = useState<{ text: string; settings: boolean } | null>(null);
 
@@ -314,7 +276,7 @@ export function RichEditor({
     { title: "Галерея фото", icon: <Images size={16} />, keywords: ["gallery", "галерея", "фото", "ряд", "коллаж", "альбом"], run: (e, r) => { e.chain().focus().deleteRange(r).run(); galleryInputRef.current?.click(); } },
     { title: "Видео", icon: <Video size={16} />, keywords: ["video", "видео", "ролик", "клип"], run: (e, r) => { e.chain().focus().deleteRange(r).run(); videoInputRef.current?.click(); } },
     { title: "Файл", icon: <Paperclip size={16} />, keywords: ["file", "файл", "вложение", "документ", "pdf", "attach"], run: (e, r) => { e.chain().focus().deleteRange(r).run(); attachInputRef.current?.click(); } },
-    { title: "Ссылка / Google Диск", icon: <Link2 size={16} />, keywords: ["link", "ссылка", "google", "диск", "drive", "закладка", "youtube", "embed", "вставить"], run: (e, r) => { e.chain().focus().deleteRange(r).run(); setLinkUrl(""); setLinkOpen(true); } },
+    { title: "Ссылка / Google Диск", icon: <Link2 size={16} />, keywords: ["link", "ссылка", "google", "диск", "drive", "закладка", "youtube", "embed", "вставить"], run: (e, r) => { e.chain().focus().deleteRange(r).run(); setLinkMode("bookmark"); setLinkUrl(""); setLinkOpen(true); } },
     { title: "С Google Диска", icon: <HardDrive size={16} />, keywords: ["google", "диск", "drive", "гугл", "picker", "выбрать", "файл"], run: (e, r) => { e.chain().focus().deleteRange(r).run(); void onGoogleDrive(); } },
     { title: "Камера", icon: <Camera size={16} />, keywords: ["camera", "фото", "доска", "снимок"], run: (e, r) => { e.chain().focus().deleteRange(r).run(); cameraInputRef.current?.click(); } },
     { title: "Рисунок", icon: <Pen size={16} />, keywords: ["draw", "рисовать", "формула", "схема", "sketch"], run: (e, r) => { e.chain().focus().deleteRange(r).run(); setSketchOpen(true); } },
@@ -623,7 +585,30 @@ export function RichEditor({
     if (!url) return;
     setLinkOpen(false);
     setLinkUrl("");
-    insertBookmark(url);
+    if (linkMode === "inline" && editorRef.current) {
+      editorRef.current
+        .chain()
+        .focus()
+        .extendMarkRange("link")
+        .setLink({ href: url })
+        .run();
+    } else {
+      insertBookmark(url);
+    }
+  }
+
+  // Кнопка «ссылка» в плавающей панели: снять ссылку или задать её на выделении.
+  function onInlineLink() {
+    const ed = editorRef.current;
+    if (!ed) return;
+    if (ed.isActive("link")) {
+      ed.chain().focus().unsetLink().run();
+      return;
+    }
+    const prev = ed.getAttributes("link").href as string | undefined;
+    setLinkMode("inline");
+    setLinkUrl(prev ?? "");
+    setLinkOpen(true);
   }
 
   // Google Диск: выбрать файлы из Диска → скачать байты → положить в R2.
@@ -663,43 +648,34 @@ export function RichEditor({
   }
 
   return (
-    <div>
+    <div className="flex min-h-full flex-col">
+      {/* Форматирование всплывает над выделением — не занимает места на экране. */}
       {toolbar && editor && (
-        <div
-          className={cn(
-            "sticky z-10 -mx-1 mb-3 flex items-center rounded-xl border border-border bg-surface/90 px-1.5 py-1 backdrop-blur",
-            toolbarStickyClass,
-          )}
-        >
-          <Toolbar
-            editor={editor}
-            onImage={() => fileInputRef.current?.click()}
-            onGallery={() => galleryInputRef.current?.click()}
-            onVideo={() => videoInputRef.current?.click()}
-            onFile={() => attachInputRef.current?.click()}
-            onLink={() => {
-              setLinkUrl("");
-              setLinkOpen(true);
-            }}
-            onGoogleDrive={onGoogleDrive}
-            onCamera={() => cameraInputRef.current?.click()}
-            onSketch={() => setSketchOpen(true)}
-          />
-        </div>
+        <SelectionBar editor={editor} onInlineLink={onInlineLink} />
       )}
 
-      {toolbar && editor && editor.isActive("table") && (
-        <TableControls editor={editor} />
-      )}
+      {/* Управление таблицей — только когда курсор внутри таблицы. */}
+      {editor && editor.isActive("table") && <TableControls editor={editor} />}
 
-      {/* Клик по @упоминанию — переход на сущность (делегирование по DOM). */}
+      {/*
+        Вся область — редактор: клик по пустому месту под текстом ставит курсор
+        в конец (поле «работает» до самого низа), клик по @упоминанию — переход.
+      */}
       <div
+        className="relative flex-1 cursor-text"
         onClick={(e) => {
-          const a = (e.target as HTMLElement).closest?.("a.mention");
-          const href = a?.getAttribute("href");
-          if (href && href !== "#") {
-            e.preventDefault();
-            router.push(href);
+          const el = e.target as HTMLElement;
+          const a = el.closest?.("a.mention");
+          if (a) {
+            const href = a.getAttribute("href");
+            if (href && href !== "#") {
+              e.preventDefault();
+              router.push(href);
+              return;
+            }
+          }
+          if (editor && !el.closest?.(".ProseMirror")) {
+            editor.chain().focus("end").run();
           }
         }}
       >

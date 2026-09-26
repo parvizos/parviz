@@ -155,8 +155,7 @@ export function EntityNotes({
               "Пиши что угодно и вставляй фото: перетащи, вставь из буфера или жми «/». Заметки, идеи, контекст…"
             }
             onChange={onBody}
-            minHeightClass="min-h-[30vh]"
-            toolbarStickyClass={expanded ? "top-0" : undefined}
+            minHeightClass={expanded ? "min-h-[40vh]" : "min-h-[30vh]"}
           />
         </div>
       </div>

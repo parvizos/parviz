@@ -200,7 +200,6 @@ export function JournalEditor({
         placeholder="Как прошёл день? Что случилось, что важно, о чём думаешь…"
         onChange={onBody}
         minHeightClass="min-h-[38vh]"
-        toolbarStickyClass={expanded ? "top-0" : undefined}
       />
     </>
   );

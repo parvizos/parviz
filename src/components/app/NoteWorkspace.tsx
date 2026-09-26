@@ -347,7 +347,6 @@ export function NoteWorkspace({
       placeholder="Пиши конспект: заголовки, списки, выноски, фото, видео и файлы. Жми «/» для команд."
       onChange={onBody}
       minHeightClass="min-h-[40vh]"
-      toolbarStickyClass={focusMode ? "top-0" : undefined}
     />
   );
 
