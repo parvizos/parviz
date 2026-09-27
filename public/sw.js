@@ -1,5 +1,5 @@
 /* ParvizOS service worker — оффлайн-оболочка и кэш. */
-const VERSION = "v3";
+const VERSION = "v4";
 const CACHE = `parviz-${VERSION}`;
 const OFFLINE_URL = "/offline";
 const PRECACHE = [

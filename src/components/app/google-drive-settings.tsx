@@ -150,7 +150,7 @@ export function GoogleDriveSettings({
                   <li>
                     4. «Credentials» → «Create credentials» → <b>OAuth client ID</b> → тип <b>Web application</b>. В «Authorized JavaScript origins» впиши адрес приложения:
                     <span className="mt-1 flex items-center gap-1.5">
-                      <code className="min-w-0 flex-1 truncate rounded bg-bg px-1.5 py-0.5 text-[11px]">{origin || "https://твой-домен"}</code>
+                      <code suppressHydrationWarning className="min-w-0 flex-1 truncate rounded bg-bg px-1.5 py-0.5 text-[11px]">{origin || "https://твой-домен"}</code>
                       <button type="button" onClick={copyOrigin} title="Скопировать" className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted hover:bg-bg hover:text-text">
                         <Copy size={12} />
                       </button>
